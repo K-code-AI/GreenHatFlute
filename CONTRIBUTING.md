@@ -73,14 +73,16 @@ To open the game, use `play/run.sh`.
 | `build.sh` | The build script. When you change a command, change the guides in `docs/` too |
 | `tools/install_linux.py` | Installs the desktop entry, the icon and the PATH command |
 
-The `GHF_` prefix is ours: it names GreenHatFlute. The `DKB_` prefix comes from dkb-pc-recomp, the project this one was built on, and it stays so the code remains easy to compare with that project. Comments that mention other games record where a behavior was discovered.
+The `GHF_` prefix is ours: it names GreenHatFlute. The `DKB_` prefix is older than this repository and stays so old
+notes, logs and test vectors still match. Comments that mention other games record where a behavior was discovered.
 
 ## Code rules
 
 - **Do not edit generated code by hand.** It gets recreated. Use `recomp/patches.py` or, if that does not fit, `tools/oot/patch_generated.py`.
 - **`LOCAL TEST` marker:** changes made during investigation that have no final form yet. When you improve one, remove the marker.
 - **Translator patches:** create them with a diff over `build/xlate/ryujinx` and update the count in `tools/build_xlate.py`. Changing the translator recompiles every shader on the next run.
-- **Windows:** `long` is 32 bits. A `1L << 40` dropped every indirect mesh draw for days.
+- **Integer widths:** use `int64_t` / `uint64_t` for addresses, sizes and masks, not `long` or `int`. A `1L << 40` in a
+  type that is 32 bits wide dropped every indirect mesh draw for days.
 - **Copied code:** keep its header and add a row to `THIRD_PARTY_NOTICES.md` with the source commit.
 - **Commits:** use your own git identity.
 

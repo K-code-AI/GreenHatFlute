@@ -33,7 +33,7 @@ The log names the layout in effect (`input: gamepad layout ...`); the menu shows
 | Plus | Start | Tab | menu, inventory |
 | Minus | Back | M | map |
 
-Esc is unbound in the game; it opens the settings menu and releases the mouse cursor (see Mouse camera). Z and X duplicate ZL and ZR so menu pages turn with two neighbouring keys; the menu tabs (L, R) are Q and R. The mouse wheel is unbound. The bindings are the tables of `input_map` in `runtime/input_map.c`: the keys (platform-neutral key ids) and one gamepad table per layout (gamepad inputs by position); `runtime/input_win.c` translates Win32 virtual keys and SDL buttons.
+Esc is unbound in the game; it opens the settings menu and releases the mouse cursor (see Mouse camera). Z and X duplicate ZL and ZR so menu pages turn with two neighbouring keys; the menu tabs (L, R) are Q and R. The mouse wheel is unbound. The bindings are the tables of `input_map` in `runtime/input_map.c`: the keys (platform-neutral key ids) and one gamepad table per layout (gamepad inputs by position). `runtime/input_sdl.c` turns SDL scancodes into those key ids and `runtime/input.c` reads the tables for the held keys and pads.
 
 ## Xbox button prompts
 
@@ -69,7 +69,7 @@ The tab writes `greenhatflute.ini` lines, one per Switch button or stick directi
 - `key:default` and `pad:default` keep that part's defaults (`pad:default` is each layout's own button).
 - `none` leaves the button unbound.
 
-A line replaces every default of that button, pad and keyboard, so list the keys you still want or use `key:default`. Pad names are physical positions, so a line means the same in both layouts and replaces the layout's own button for that Switch button. Stick directions take keys only: the controller's sticks and the mouse camera always work. Buttons without a line keep the table above. Names are case-insensitive. An invalid entry logs one `input: bind ...` line and is skipped; a line without a valid entry changes nothing. The `GHF_BIND_<button>` environment variables work like any other setting. A changed line applies at once (`runtime/input_win.c` builds the tables again at its next poll).
+A line replaces every default of that button, pad and keyboard, so list the keys you still want or use `key:default`. Pad names are physical positions, so a line means the same in both layouts and replaces the layout's own button for that Switch button. Stick directions take keys only: the controller's sticks and the mouse camera always work. Buttons without a line keep the table above. Names are case-insensitive. An invalid entry logs one `input: bind ...` line and is skipped; a line without a valid entry changes nothing. The `GHF_BIND_<button>` environment variables work like any other setting. A changed line applies at once (`runtime/input.c` builds the tables again at its next poll).
 
 A pad that reports its face buttons swapped (A/B and X/Y, as some GuliKit models do) is fixed with:
 
@@ -115,4 +115,4 @@ Switch 2 Pro Controller over Bluetooth may need a bridge to appear as one. With 
 
 ## RenderDoc capture (blocked)
 
-`GHF_RDOC=<frame>[,...]` (`runtime/rdoc_win.c`; `GHF_RDOC_DIR`, `GHF_RDOC_DLL`) loads RenderDoc before `vkCreateInstance`. RenderDoc hides `VK_EXT_external_memory_host`, which the back end requires for guest pool imports (`runtime/vk_memory.c`), so device creation fails under it. A capture needs a copy-based pool fallback first.
+`GHF_RDOC=<frame>[,...]` (`runtime/rdoc.c`; `GHF_RDOC_DIR`, `GHF_RDOC_DLL`) loads RenderDoc before `vkCreateInstance`. RenderDoc hides `VK_EXT_external_memory_host`, which the back end requires for guest pool imports (`runtime/vk_memory.c`), so device creation fails under it. A capture needs a copy-based pool fallback first.
