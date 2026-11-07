@@ -73,7 +73,7 @@ To open the game, use `play/run.sh`.
 | `build.sh` | The build script. When you change a command, change the guides in `docs/` too |
 | `tools/install_linux.py` | Installs the desktop entry, the icon and the PATH command |
 
-The `TOTK_` and `DKB_` prefixes come from the source projects. They stay so the code remains easy to compare with those projects. Comments that mention other games record where a behavior was discovered.
+The `GHF_` prefix is ours: it names GreenHatFlute. The `DKB_` prefix comes from dkb-pc-recomp, the project this one was built on, and it stays so the code remains easy to compare with that project. Comments that mention other games record where a behavior was discovered.
 
 ## Code rules
 
@@ -100,16 +100,16 @@ The `TOTK_` and `DKB_` prefixes come from the source projects. They stay so the 
 
 What solved the biggest bugs so far was **measuring and comparing against a reference**, not guessing.
 
-1. **Make a repeatable scene.** Use an input script (`TOTK_INPUT_SCRIPT`) with `TOTK_INPUT=none`, otherwise your keyboard moves Link while the test window has focus:
+1. **Make a repeatable scene.** Use an input script (`GHF_INPUT_SCRIPT`) with `GHF_INPUT=none`, otherwise your keyboard moves Link while the test window has focus:
    ```text
    700 A 8
    2300 RSTICK 20000 0 150
    2600 LSTICK 0 32000 240
    ```
-2. **Capture.** `GreenHatFlute --seconds 120 --shot output.png`. With `TOTK_SHOTS=lo-hi:step`, it saves thumbnails along the way.
+2. **Capture.** `GreenHatFlute --seconds 120 --shot output.png`. With `GHF_SHOTS=lo-hi:step`, it saves thumbnails along the way.
 3. **Isolate.** Turn off one program at a time until the defect goes away, for example with `OOT_MESH_DENY=4049,4047`.
 4. **Compare with Lichii.** With `EDEN_NX2_RENDER_TRACE=1`, it logs its draws, and you can compare them with ours.
-5. **Read the shader.** Use `TOTK_DUMP=<frame>` and `TOTK_DUMP_DIR=<folder>`, decompile with `spirv-cross` and compare with the native code. An absurd value usually points at the cause: that is how the register bank collision was found.
+5. **Read the shader.** Use `GHF_DUMP=<frame>` and `GHF_DUMP_DIR=<folder>`, decompile with `spirv-cross` and compare with the native code. An absurd value usually points at the cause: that is how the register bank collision was found.
 
 ### Diagnostic tools
 
@@ -118,11 +118,11 @@ What solved the biggest bugs so far was **measuring and comparing against a refe
 | `OOT_DRAW_ARGS=<frame>` | Logs draw kinds, arguments, buffers per stage and per-program statistics |
 | `OOT_MESH_DENY=<a,b,...>` | Drops indirect mesh draws of those programs |
 | `OOT_NO_CULL=1`, `OOT_NO_CULL_PROGS=lo-hi` | Turns off face culling |
-| `OOT_FOLLOW_DISP=<frame>:<k>:<c0>` | Follows a dispatch, together with `TOTK_DUMP_BUF=0:<size>` |
-| `TOTK_XLATE_IR=<folder>` | The translator writes the blocks and IR of each shader with a subroutine |
-| `TOTK_SPV_OVERRIDE=<folder>` | Replaces shaders with `sh_<hash>.spv` files. The hash changes when the translator changes, and the old file silently stops applying |
+| `OOT_FOLLOW_DISP=<frame>:<k>:<c0>` | Follows a dispatch, together with `GHF_DUMP_BUF=0:<size>` |
+| `GHF_XLATE_IR=<folder>` | The translator writes the blocks and IR of each shader with a subroutine |
+| `GHF_SPV_OVERRIDE=<folder>` | Replaces shaders with `sh_<hash>.spv` files. The hash changes when the translator changes, and the old file silently stops applying |
 | `OOT_BIG_CS_WORDS`, `OOT_BIG_CS_OPT=1` | Control background compilation of large compute shaders |
-| `TOTK_TRACE=perf` | Logs memory traffic per frame. Start here when the frame rate is low |
+| `GHF_TRACE=perf` | Logs memory traffic per frame. Start here when the frame rate is low |
 
 **When reading GPU buffers:** read after `VK_MEM_USE`. Before it, you see an old CPU copy.
 

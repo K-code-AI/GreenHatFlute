@@ -1,6 +1,6 @@
-// totk.ini: file-backed defaults for the TOTK_* environment variables (docs/controls.md, totk.ini.example).
+// greenhatflute.ini: file-backed defaults for the GHF_* environment variables (docs/controls.md, greenhatflute.ini.example).
 // Format: "key = value" lines, '#' or ';' at the start of a line begins a comment, [sections] only group. A key is a
-// variable name without "TOTK_" (an optional TOTK_ prefix is accepted), case-insensitive. A value is the rest of the
+// variable name without "GHF_" (an optional GHF_ prefix is accepted), case-insensitive. A value is the rest of the
 // line, trimmed, optionally in double quotes; an empty value counts as unset. The environment wins over the file.
 //
 // Live settings: cfg_set changes a value in memory (readers see the new pointer; the old string is kept, so a pointer
@@ -15,8 +15,9 @@
 #include "host.h"
 #include "platform/platform.h"
 
-#define PREFIX "TOTK_"
-#define PREFIX_LEN 5
+#define PREFIX "GHF_"
+#define PREFIX_LEN (sizeof PREFIX - 1)   // derived, so it cannot drift from PREFIX: a wrong length silently stops
+                                         // strncmp matching the prefix and every setting reads as unset
 #define CFG_MAX_KEYS 512
 
 typedef struct { char *key, *value; int dirty, removed; } CfgEntry;   // key upper-case, without the prefix; value NULL after cfg_reset
@@ -53,7 +54,7 @@ static const char *const known[] = {
     "WB_EXACT", "WB_FENCE_LIMIT", "WINDOW_SIZE", "XLATE", "XLATE_ID", "XLATE_PROCS", "ZSTD_CHECK", "ZSTD_NATIVE",
 };
 
-// The totk.ini section a key cfg_set may write goes to when the file lacks it (totk.ini.example's sections).
+// The greenhatflute.ini section a key cfg_set may write goes to when the file lacks it (greenhatflute.ini.example's sections).
 static const struct { const char *key, *section; } sections[] = {
     {"FPS_LIMIT", "frame rate"}, {"FPS60", "frame rate"},
     {"REALTIME", "frame rate"}, {"CLOTH_REALTIME", "frame rate"}, {"HIGHFPS_FIX", "frame rate"},
@@ -178,7 +179,7 @@ static void add(char *key, char *value, int line) {
     size_t vl = strlen(value);
     if (vl >= 2 && value[0] == '"' && value[vl - 1] == '"') value[vl - 1] = 0, value++;
     if (!*key) return;
-    if (!is_known(key)) rt_log("cfg: totk.ini line %d: unknown key '%s'", line, key);
+    if (!is_known(key)) rt_log("cfg: greenhatflute.ini line %d: unknown key '%s'", line, key);
     if (!*value) return;   // "key =" leaves the setting at its default
     for (int i = 0; i < n_entries; i++)
         if (!strcmp(entries[i].key, key)) {   // a repeated key: the later line wins
@@ -203,7 +204,7 @@ int cfg_load(const char *path) {
         char *s = trim(p);
         char *eq = strchr(s, '=');
         if (*s && *s != '#' && *s != ';' && *s != '[') {
-            if (!eq) rt_log("cfg: totk.ini line %d: no '=' in '%s'", line, s);
+            if (!eq) rt_log("cfg: greenhatflute.ini line %d: no '=' in '%s'", line, s);
             else {
                 *eq = 0;
                 add(trim(s), trim(eq + 1), line);
@@ -216,8 +217,8 @@ int cfg_load(const char *path) {
     return 1;
 }
 
-// ---- device profiles: defaults for a known machine, below the environment and totk.ini and above the table, so any
-// key the player sets wins and resetting a key in the menu returns to the profile's value. TOTK_DEVICE_PROFILE = auto
+// ---- device profiles: defaults for a known machine, below the environment and greenhatflute.ini and above the table, so any
+// key the player sets wins and resetting a key in the menu returns to the profile's value. GHF_DEVICE_PROFILE = auto
 // (default: the Steam Deck when the firmware says so), desktop (none) or deck.
 //
 // The Steam Deck (LCD Jupiter, OLED Galileo; 1280x800, 16:10, 4 Zen 2 cores, RDNA 2 with 8 CUs sharing 16 GB): the game
@@ -265,8 +266,8 @@ static int profile_of(void) {
 
 const char *cfg_device_profile(void) { return profile_of() ? "deck" : "desktop"; }
 
-// DKB_X in the environment stands for TOTK_X and wins over it: the TOTK_ names come from TotK Recomp and stay, so its
-// fixes keep applying without a rename.
+// DKB_X in the environment stands for GHF_X and wins over it: the DKB_ names are what the project this one descends
+// from used, so a setting written for it keeps applying here without a rename.
 static const char *dkb_alias(const char *name) {
     char alias[96];
     if (strncmp(name, PREFIX, PREFIX_LEN) || strlen(name) >= sizeof alias - 1) return NULL;
@@ -296,7 +297,7 @@ const char *cfg_get(const char *name) {
     return NULL;
 }
 
-// Whether name's value comes from the player (the environment or totk.ini), not a profile or the table.
+// Whether name's value comes from the player (the environment or greenhatflute.ini), not a profile or the table.
 int cfg_is_set(const char *name) { return raw_get(name) != NULL; }
 
 unsigned cfg_version(void) { return __atomic_load_n(&version, __ATOMIC_ACQUIRE); }
@@ -475,7 +476,7 @@ static void put(Out *o, const char *s, size_t n) {
     if (o->n + n + 1 > o->cap) {
         o->cap = (o->n + n + 1) * 2;
         o->buf = realloc(o->buf, o->cap);
-        if (!o->buf) rt_fatal("cfg: out of memory writing totk.ini");
+        if (!o->buf) rt_fatal("cfg: out of memory writing greenhatflute.ini");
     }
     memcpy(o->buf + o->n, s, n);
     o->n += n;
@@ -523,7 +524,7 @@ int cfg_save_to(const char *path) {
     // after[i]: entries to write after line i (-1 = none); replace[i]: the entry whose value line i now carries
     int *replace = malloc(sizeof(int) * ((size_t)nl + 1)), *after_key = malloc(sizeof(int) * (size_t)(n + 1));
     char *drop = calloc((size_t)nl + 1, 1);   // lines of a reset key
-    if (!lines || !replace || !after_key || !drop) rt_fatal("cfg: out of memory writing totk.ini");
+    if (!lines || !replace || !after_key || !drop) rt_fatal("cfg: out of memory writing greenhatflute.ini");
     for (int i = 0, at = 0; i < nl; i++) {
         size_t start = (size_t)at;
         while ((uint64_t)at < size && text[at] != '\n') at++;
@@ -637,7 +638,7 @@ static int find_ini(void) {
     char *cut = plat_last_sep(path);
     if (!cut) cut = strrchr(path, '/');
     if (!cut || cut + 10 >= path + sizeof path) return 0;
-    strcpy(cut + 1, "totk.ini");
+    strcpy(cut + 1, "greenhatflute.ini");
     snprintf(ini_path, sizeof ini_path, "%s", path);
     return 1;
 }
@@ -658,13 +659,13 @@ static void load_ini(void) {
     for (int i = 0; i < n_entries; i++) {
         char var[128];
         snprintf(var, sizeof var, PREFIX "%s", entries[i].key);
-        if (env_of(var)) rt_log("cfg: %s (or its DKB_ name) is set in the environment and overrides totk.ini", var);
+        if (env_of(var)) rt_log("cfg: %s (or its DKB_ name) is set in the environment and overrides greenhatflute.ini", var);
     }
 }
 
 void cfg_init(void) {
     load_ini();
     if (profile_of())
-        rt_log("cfg: device profile Steam Deck: defaults for the keys totk.ini does not set (TOTK_DEVICE_PROFILE=desktop "
+        rt_log("cfg: device profile Steam Deck: defaults for the keys greenhatflute.ini does not set (GHF_DEVICE_PROFILE=desktop "
                "turns it off)");
 }

@@ -399,7 +399,7 @@ class CandidateTest(unittest.TestCase):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--xlate', type=Path, required=True, help='native exe or managed totk_xlate.dll')
+    parser.add_argument('--xlate', type=Path, required=True, help='native exe or managed greenhatflute_xlate.dll')
     parser.add_argument('--dotnet', type=Path, required=True)
     parser.add_argument('--ryu-src', type=Path, required=True, help='patched source copy used to build the translator')
     parser.add_argument('--spirv-val', type=Path, required=True)

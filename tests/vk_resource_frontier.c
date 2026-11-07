@@ -55,7 +55,7 @@ void perf_replay(uint64_t start) { (void)start; }
 // the nonwaiting branch; reaching any of these new dependencies is a fixture failure, not a simulated success.
 void perf_end(int kind, uint64_t start) { (void)kind; (void)start; check(0, "retirement never times a prefix wait"); }
 void perf_gpu_wait(uint64_t start) { (void)start; check(0, "retirement never waits for a prefix"); }
-int cfg_bool(const char *key) { check(!strcmp(key, "TOTK_TEX_ALIAS"), "default texture alias setting"); return 1; }
+int cfg_bool(const char *key) { check(!strcmp(key, "GHF_TEX_ALIAS"), "default texture alias setting"); return 1; }
 VkCtx *vk_ctx(void) { return &context; }
 // Upload batch timing (vk_memory.c, inserted with the memory types): the synthetic device has no queue family with timestamps
 // and no query pool, so uploads stay untimed.

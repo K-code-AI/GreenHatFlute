@@ -4,12 +4,12 @@
 # and its original words checked against this build's main. The patch page holds two floats the runtime writes at every
 # present (frame_rate.c): +0 the 30 Hz ratio (seconds * 30), +4 the frame step in seconds.
 
-set fps60    TOTK_FPS60          1
-set realtime TOTK_REALTIME       1
-set cloth    TOTK_CLOTH_REALTIME 1
-set bounce   TOTK_HIGHFPS_FIX    1
-set output   TOTK_PATCH_OUTPUT   0
-set scene    TOTK_PATCH_SCENE    0
+set fps60    GHF_FPS60          1
+set realtime GHF_REALTIME       1
+set cloth    GHF_CLOTH_REALTIME 1
+set bounce   GHF_HIGHFPS_FIX    1
+set output   GHF_PATCH_OUTPUT   0
+set scene    GHF_PATCH_SCENE    0
 
 # 60 fps: the adaptive present-interval controller (main+0x8f26c8, 1.0.0 0x8f6bec) gets the minimum interval 1.
 site fps60 main 90e978 6b08015f 7100055f  # clamp: cmp w10, #1 (was cmp w10, w8 = minimum)
@@ -67,7 +67,7 @@ site scene main cea5e8 bd0cc660 2d420520  # str s0, [x19, #0xcc4] -> ldp s0, s1,
 site scene main cea5ec 5e21d921 bd0cc660  # scvtf s1, s9 -> str s0, [x19, #0xcc4]
 
 # Spin waits, from tools/spin_waits.py --exefs build/extracted/v111/exefs --patches recomp/patches-v111.txt: loops that only
-# another thread can end; their back-edges pass rt_spin_gate (runtime/kernel.c), TOTK_SPIN=0 keeps the core.
+# another thread can end; their back-edges pass rt_spin_gate (runtime/kernel.c), GHF_SPIN=0 keeps the core.
 
 # spin waits found by tools/spin_waits.py on the 1.1.x modules
 # main: 869 spin waits

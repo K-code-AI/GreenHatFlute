@@ -1,4 +1,4 @@
-// --probe-dpi: the process DPI awareness that totk.manifest declares, and what the primary monitor reports under it.
+// --probe-dpi: the process DPI awareness that greenhatflute.manifest declares, and what the primary monitor reports under it.
 // A DPI-unaware process gets every window and monitor size scaled down by the display scale and its output stretched
 // back up by Windows; the probe fails unless the process is per-monitor aware (v2). Needs no game files and no GPU.
 #include <stdio.h>

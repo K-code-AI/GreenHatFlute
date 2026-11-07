@@ -16,7 +16,7 @@ Verified on Gentoo (kernel 6.18, clang 22, .NET 10.0.403), x86-64 AVX2, NVIDIA R
 | clang | 22 | your package manager | compiling the generated C and the runtime |
 | lld | any | optional | `build_game.py` links with `-fuse-ld=lld`; without it it prints a line and uses the system `ld` |
 | ninja, make, cmake, meson, nasm, pkgconf | any | your package manager | the build and the dependency builds |
-| .NET SDK | 10.0 | `curl -sSL https://dot.net/v1/dotnet-install.sh \| bash /dev/stdin --channel 10.0` (no root) | the shader translator (`totk_xlate`) |
+| .NET SDK | 10.0 | `curl -sSL https://dot.net/v1/dotnet-install.sh \| bash /dev/stdin --channel 10.0` (no root) | the shader translator (`greenhatflute_xlate`) |
 | SDL3, Vulkan, opus, zstd, dav1d | any | your package manager | window and input, graphics, audio, movies |
 | libvpx | 1.15 | often not packaged: build it into `toolchain/deps-linux` | the movie decoder (`runtime/ov_movie.c`) |
 | spirv-tools, shaderc | any | your package manager | validating and compiling shaders |
@@ -54,7 +54,7 @@ as `--version oot111`.
 2. Extract the game's executable from your own `.nup`, decompressing it if it is ZBIC-compressed, and check its
    SHA-256 against `tools/data/expected-oot111.json`. Step 3 of [build-by-hand.md](build-by-hand.md) has the commands.
 
-3. Shader translator (once; no game files). This publishes `build/xlate/totk_xlate` for `linux-x64`; NativeAOT links
+3. Shader translator (once; no game files). This publishes `build/xlate/greenhatflute_xlate` for `linux-x64`; NativeAOT links
    it with the system clang:
 
    ```sh
@@ -80,14 +80,14 @@ as `--version oot111`.
 against the system libraries, with `libstdc++` static and an `$ORIGIN` rpath so a `libSDL3.so.0` next to the program
 comes before the system's.
 
-Settings live in `totk.ini` next to the program ([totk.ini.example](../totk.ini.example) lists them). Saves go to
-`~/.local/share/greenhatflute` (`build_game.py --profile` or `TOTK_PROFILE_DIR` changes it).
+Settings live in `greenhatflute.ini` next to the program ([greenhatflute.ini.example](../greenhatflute.ini.example) lists them). Saves go to
+`~/.local/share/greenhatflute` (`build_game.py --profile` or `GHF_PROFILE_DIR` changes it).
 
 ### Portable folder
 
 `.venv/bin/python tools/package_build.py --version oot111` writes `build/oot111-portable`, which runs on another of
 your machines without Python or .NET. `romfs.bin` stays out unless you pass `--with-romfs`; otherwise put it in
-`romfs/` next to the program or point `TOTK_ROMFS` at its folder. Run `GreenHatFlute --prepare-shaders` once in the copied
+`romfs/` next to the program or point `GHF_ROMFS` at its folder. Run `GreenHatFlute --prepare-shaders` once in the copied
 folder. The folder holds code and data derived from your game: for your own machines only.
 
 ## Memory on this port
@@ -97,13 +97,13 @@ Linux, re-protecting imported memory invalidates the driver's userptr buffer on 
 on amdgpu), and importing pins the pages, which drops their write protection. Each CPU-visible pool therefore gets a
 host-visible copy — shadow storage, `runtime/vk_memory.c`: the pages the CPU wrote go in before each submit, and the
 GPU's writes come back at its fence. In play that costs about 0.2 ms a frame and doubles the memory of those pools
-(about 1.1 GB). `TOTK_SHADOW=1` turns it on explicitly.
+(about 1.1 GB). `GHF_SHADOW=1` turns it on explicitly.
 
 When the card cannot give a pool device-local memory, the log says `physical pool of ... device-local allocation failed
 (-2)` and the pool keeps the game's storage in host memory instead. The run continues and renders; it is slower, and
 the log shows textures being released under pressure. Check free VRAM with `nvidia-smi` before blaming the build.
 
-GPUs without native ASTC send those textures through the compute decoder (`runtime/vk_astc.c`, `TOTK_ASTC`).
+GPUs without native ASTC send those textures through the compute decoder (`runtime/vk_astc.c`, `GHF_ASTC`).
 
 Requirements:
 
@@ -133,7 +133,7 @@ change passes these, all run with `.venv`:
 | `tests/jumptables_check.py` | `recomp/jumptables.py` against a Unicorn oracle; must report 0 disagreements | yes |
 
 Many tests under `tests/` are harnesses that need their tools named: pass `--cc`, `--deps`, `--xlate` or
-`--spirv-val` (or set `TOTK_TOOLCHAIN`). Run them with `.venv/bin/python`, and set `TOTK_INPUT=none` so the probes do
+`--spirv-val` (or set `GHF_TOOLCHAIN`). Run them with `.venv/bin/python`, and set `GHF_INPUT=none` so the probes do
 not take the keyboard.
 
 Runtime probes, each a mode of `GreenHatFlute` (the list is at the top of `runtime/main.c`): `--probe-kernel`,

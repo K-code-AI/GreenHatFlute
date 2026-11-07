@@ -36,7 +36,7 @@ def generate(source):
 #include "host.h"
 typedef struct SDL_AudioStream SDL_AudioStream; // opaque type only; SDL is not linked
 '''
-    types = source[source.index('#define MAX_FRAME'):source.index('// TOTK_VOLUME:')]
+    types = source[source.index('#define MAX_FRAME'):source.index('// GHF_VOLUME:')]
     routing = source[source.index('static void splitters_update('):source.index('/* Effect parameters arrive')]
     decoding = source[source.index('typedef struct { ServerVoice *v;'):source.index('/* ---------- mixing ---------- */')]
     mixing = source[source.index('static float *mixbuf('):source.index('/* Guest custom effects exchange')]

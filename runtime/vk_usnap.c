@@ -15,7 +15,7 @@
 // The design follows MacNativeGames' TOTK_UBO_SNAPSHOT (games/totk/third_party/d2r_gfx/gfx/nvn/nvn_mtl.m usnap_take,
 // usnap_drop; MIT, Copyright (c) 2026 jhaizhou); the code is ours.
 // The copy is taken where vk_exec_record starts: at the submit call when the replay runs on the submitting thread, later
-// with TOTK_REPLAY_ASYNC. TOTK_UBO_SNAPSHOT=0 binds live memory as before; =ab alternates (TOTK_AB).
+// with GHF_REPLAY_ASYNC. GHF_UBO_SNAPSHOT=0 binds live memory as before; =ab alternates (GHF_AB).
 #include <stdlib.h>
 #include <string.h>
 

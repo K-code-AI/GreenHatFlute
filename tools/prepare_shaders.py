@@ -7,13 +7,13 @@ the translator answers it was translated for. This tool reads the shaders from t
 (tools/shader_census.py inventory), keeps the list's variants whose shader is in this game version, adds each shader's
 default variant (every texture slot a 2D texture, float vertex inputs and colour outputs, as MacNativeGames' seed
 translates every shader for its default bind state: prepare_shader_seed.py all_default), and writes them next to the
-build's totk.exe in the record layouts of runtime/gfx_shader.c ("answers met in play"):
+build's GreenHatFlute.exe in the record layouts of runtime/gfx_shader.c ("answers met in play"):
 
-    seed-programs.bin  "TOTKSPRG": stage, length, c1 length, runtime code hash, control section, code, c1
-    seed-answers.bin   "TOTKSANS": stage, code hash, input id (zero: the runtime computes it), answers, priority
+    seed-programs.bin  "GHF_SPRG": stage, length, c1 length, runtime code hash, control section, code, c1
+    seed-answers.bin   "GHF_SANS": stage, code hash, input id (zero: the runtime computes it), answers, priority
 
 Priority (the pad byte): 0 shaders the list's warm rows flag as title/menu (t), 1 other warm rows (S, C, R), 2 the
-rest; a default variant takes its shader's priority. Then it runs `totk.exe --prepare-shaders`, which translates every record into the build's shader cache, writes
+rest; a default variant takes its shader's priority. Then it runs `GreenHatFlute.exe --prepare-shaders`, which translates every record into the build's shader cache, writes
 shader-prepared.bin (one record per variant, in priority order) and builds every variant's stage library or compute
 pipeline once, so the GPU driver's own disk cache holds them (vk_pipeline.c "stage library prebuild"). The seed files
 can be deleted afterwards.
@@ -130,7 +130,7 @@ def code_hash(stage, control, code, length, c1):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument('build', type=Path, help='build directory holding totk.exe (build\\v121)')
+    ap.add_argument('build', type=Path, help='build directory holding GreenHatFlute.exe (build\\v121)')
     ap.add_argument('--version', default='v121', help='build/extracted/<version>')
     ap.add_argument('--romfs', type=Path, help='RomFS directory (default build/extracted/<version>/romfs)')
     ap.add_argument('--exefs', type=Path, help='ExeFS directory (default build/extracted/<version>/exefs)')
@@ -178,11 +178,11 @@ def main():
     recs.sort(key=lambda r: r[0])   # stable: list order within a priority
     out = a.build.resolve()
     with open(out / 'seed-programs.bin', 'wb') as f:
-        f.write(b'TOTKSPRG' + struct.pack('<II', 1, 0))
+        f.write(b'GHF_SPRG' + struct.pack('<II', 1, 0))
         for _, body in progs.values():
             f.write(body)
     with open(out / 'seed-answers.bin', 'wb') as f:
-        f.write(b'TOTKSANS' + struct.pack('<II', 1, ANS_REC))
+        f.write(b'GHF_SANS' + struct.pack('<II', 1, ANS_REC))
         for _, rec in recs:
             f.write(rec)
     by = [sum(1 for p, _ in recs if p == i) for i in range(3)]
@@ -191,9 +191,9 @@ def main():
           f'seed written in {time.monotonic() - t0:.1f} s', flush=True)
     if a.no_run:
         return 0
-    exe = out / ('totk.exe' if os.name == 'nt' else 'totk')
+    exe = out / ('GreenHatFlute.exe' if os.name == 'nt' else 'GreenHatFlute')
     r = subprocess.run([str(exe), '--prepare-shaders'], cwd=str(out))
-    print(f'totk.exe --prepare-shaders: rc={r.returncode}; total {time.monotonic() - t0:.1f} s')
+    print(f'GreenHatFlute.exe --prepare-shaders: rc={r.returncode}; total {time.monotonic() - t0:.1f} s')
     return r.returncode
 
 

@@ -75,7 +75,7 @@ Prefer to read every command first? Follow the **[step-by-step build guide](docs
 ### Where your saves go
 
 `~/.local/share/greenhatflute` (or `$XDG_DATA_HOME/greenhatflute`) — not next to the executable, so the build folder
-can be moved or deleted without losing a game. `TOTK_PROFILE_DIR` or `--profile DIR` overrides that.
+can be moved or deleted without losing a game. `GHF_PROFILE_DIR` or `--profile DIR` overrides that.
 
 ### What you need
 

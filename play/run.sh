@@ -8,7 +8,7 @@
 #
 # The window works on both Wayland and X11: SDL3 picks the session's own back end, so nothing here chooses one.
 # Saves live in ~/.local/share/greenhatflute (or $XDG_DATA_HOME/greenhatflute), which the game picks by itself, so
-# this script does not set TOTK_PROFILE_DIR. Set it if you want the saves somewhere else.
+# this script does not set GHF_PROFILE_DIR. Set it if you want the saves somewhere else.
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 builddir="$root/build/oot111"
@@ -16,13 +16,13 @@ builddir="$root/build/oot111"
 [ -x "$builddir/GreenHatFlute" ] || { echo "no $builddir/GreenHatFlute: run the build first (docs/build-by-hand.md)" >&2; exit 1; }
 
 # The settings this port is tuned with.
-TOTK_GPL=0               # bindless set 2 + an allocated vertex set in an independent layout loses the device
-TOTK_ASYNC_PREEMPT=0
+GHF_GPL=0               # bindless set 2 + an allocated vertex set in an independent layout loses the device
+GHF_ASYNC_PREEMPT=0
 DKB_SKIP_CS="3bdfe449de832903,909139c13b510f1f,753f8ab880fe7923,c968ad44272dcbb4,785a41d2df6dc095,db8c39bdb420e068,dec1feb3c7fa967a,09931d0c57c6b67f,13cab66ee383c4f4,3f6f2b1d671badcd"   # the game's upscaler: giant shaders that take many minutes to compile
 case "$(lspci -mm 2>/dev/null | grep -i 'vga\|3d\|display')" in
-    *[Nn][Vv][Ii][Dd][Ii][Aa]*) TOTK_GPU_NAME=NVIDIA ;;
+    *[Nn][Vv][Ii][Dd][Ii][Aa]*) GHF_GPU_NAME=NVIDIA ;;
 esac
-export TOTK_GPL TOTK_ASYNC_PREEMPT DKB_SKIP_CS TOTK_GPU_NAME
+export GHF_GPL GHF_ASYNC_PREEMPT DKB_SKIP_CS GHF_GPU_NAME
 
 # The probes and --shot open a window; over SSH, point at the graphical session's display.
 if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then

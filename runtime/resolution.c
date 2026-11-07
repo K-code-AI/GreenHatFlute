@@ -5,7 +5,7 @@
 // MacNativeGames contributors) make the game read both sizes from the patch page, and the texture heap that holds the
 // output- and scene-sized render targets grows with them.
 //
-// Settings, read at start: TOTK_OUTPUT_RES = <w>x<h> (default 1920x1080, the game's own), TOTK_RENDER_SCALE = the
+// Settings, read at start: GHF_OUTPUT_RES = <w>x<h> (default 1920x1080, the game's own), GHF_RENDER_SCALE = the
 // scene's size relative to the output: "game" (default, 5/6, the game's 1600x900 at 1080p) or a percentage; above 100
 // the game supersamples its scene, which smooths edges (anti-aliasing) at the cost of GPU time. The game's own final
 // pass (FSR 1 EASU) scales the scene to the output; the present scales the output to the window (vk_fsr.c).
@@ -57,16 +57,16 @@ static void decide(void) {
     R.decided = 1;
     R.ow = BASE_W;
     R.oh = BASE_H;
-    const char *o = cfg_value("TOTK_OUTPUT_RES");
+    const char *o = cfg_value("GHF_OUTPUT_RES");
     unsigned w = 0, h = 0;
     char tail;
     if (sscanf(o, "%ux%u%c", &w, &h, &tail) == 2 && w >= 1280 && h >= 720 && w <= 7680 && h <= 4320) {
         R.ow = w & ~1u;
         R.oh = h & ~1u;
     } else {
-        rt_log("resolution: TOTK_OUTPUT_RES=%s is not <width>x<height> in 1280x720..7680x4320; 1920x1080", o);
+        rt_log("resolution: GHF_OUTPUT_RES=%s is not <width>x<height> in 1280x720..7680x4320; 1920x1080", o);
     }
-    const char *s = cfg_value("TOTK_RENDER_SCALE");
+    const char *s = cfg_value("GHF_RENDER_SCALE");
     double k = 5.0 / 6.0;
     if (strcmp(s, "game")) {
         char *end;
@@ -75,7 +75,7 @@ static void decide(void) {
             k = pct / 100.0;
             R.scene_set = 1;
         } else {
-            rt_log("resolution: TOTK_RENDER_SCALE=%s is not game or a percentage 25..400; game", s);
+            rt_log("resolution: GHF_RENDER_SCALE=%s is not game or a percentage 25..400; game", s);
         }
     }
     double sw = R.ow * k, sh = R.oh * k;
@@ -254,7 +254,7 @@ int res_wants_wide_overlay(const unsigned out[2]) {
     return !res_is_16x9(out[0], out[1]) && rt_patch_set("aspect") >= 0;
 }
 
-// Field of view (TOTK_FOV, percent of the game's own, 70..140, live): the camera's vertical view angle times the
+// Field of view (GHF_FOV, percent of the game's own, 70..140, live): the camera's vertical view angle times the
 // factor on page +60 (recomp/patches-v143.txt, set fov). The horizontal angle follows through the aspect ratio. 100
 // switches the set off, so the camera code is the game's own. Runs on a settings change (gfx_present.c
 // window_settings_live), the first time at the first present.
@@ -263,12 +263,12 @@ int res_wants_wide_overlay(const unsigned out[2]) {
 void res_fov_live(void) {
     static int set = -2, shown = 100;
     if (set == -2) set = rt_patch_set("fov");
-    int pct = cfg_int("TOTK_FOV");
+    int pct = cfg_int("GHF_FOV");
     pct = pct < FOV_MIN ? FOV_MIN : pct > FOV_MAX ? FOV_MAX : pct;
     if (pct == shown) return;
     shown = pct;
     if (set < 0) {
-        rt_log("resolution: this game version has no field-of-view patch; TOTK_FOV=%d does nothing", pct);
+        rt_log("resolution: this game version has no field-of-view patch; GHF_FOV=%d does nothing", pct);
         return;
     }
     float k = pct / 100.0f;

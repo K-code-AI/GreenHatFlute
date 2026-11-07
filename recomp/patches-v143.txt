@@ -4,12 +4,12 @@
 # veneer's body is the site's replacement. The patch page holds three floats the runtime writes at every present
 # (frame_rate.c): +0 the 30 Hz ratio (seconds * 30), +4 the frame step in seconds, +8 the step in 60 Hz ticks.
 
-set fps60    TOTK_FPS60          1
-set realtime TOTK_REALTIME       1
-set cloth    TOTK_CLOTH_REALTIME 1
-set bounce   TOTK_HIGHFPS_FIX    1
-set output   TOTK_PATCH_OUTPUT   0
-set scene    TOTK_PATCH_SCENE    0
+set fps60    GHF_FPS60          1
+set realtime GHF_REALTIME       1
+set cloth    GHF_CLOTH_REALTIME 1
+set bounce   GHF_HIGHFPS_FIX    1
+set output   GHF_PATCH_OUTPUT   0
+set scene    GHF_PATCH_SCENE    0
 
 # 60 fps: the adaptive present-interval controller (main+0x2db174, 1.2.1 0x8f26c8) gets the minimum interval 1.
 site fps60 main 2db204 6b08015f 7100055f   # clamp: cmp w10, #1 (was cmp w10, w8 = minimum)
@@ -60,7 +60,7 @@ site bounce main 562a64 bd402920 bd402920 bd403921 1e210800   # ldr s0, [x9, #0x
 # it on. Each site floors the increment at 1 without the flags: clz is 32 only for 0, so increment += clz >> 5. The
 # scratch register is one the next instruction writes (w10 at 0x0a7ac4: ldrb w10; w11 at the pre-actor sites: add
 # w11), or at 0x95dd24 a temporary the function no longer reads (add, strb, return).
-set fade     TOTK_HIGHFPS_FIX    1
+set fade     GHF_HIGHFPS_FIX    1
 site fade main 0a7ac4 1e380008 1e380008 5ac0110a 53057d4a 0b0a0108   # fcvtzs w8, s0; clz w10, w8; lsr w10, w10, #5; add w8, w8, w10
 site fade main 95dd24 1e380008 1e380008 5ac0110a 53057d4a 0b0a0108   # the same, second mesh fade
 site fade main 6155e4 1e38000a 1e38000a 5ac0114b 53057d6b 0b0b014a   # fcvtzs w10, s0; clz w11, w10; lsr w11, w11, #5; add w10, w10, w11
@@ -86,18 +86,18 @@ site scene main 585e60 bd0cca60 bd0cca61    # str s0, [x19, #0xcc8] -> str s1, [
 # (update and setup) load the camera's copy of DefaultAspect 1.777778, two viewport routines divide width by height.
 # The replacement loads the ratio from the page instead, so a 21:9 output shows more of the world at the sides with
 # the vertical view kept (Hor+). x10 is kept on the stack, so no register liveness is assumed.
-set aspect   TOTK_ASPECT_PATCH   0
+set aspect   GHF_ASPECT_PATCH   0
 site aspect main 628c74 bd414260 f81f0fea @page:x10 bd403940 f84107ea   # ldr s0, [x19, #0x140] (camera update)
 site aspect main b43460 bd406ac0 f81f0fea @page:x10 bd403940 f84107ea   # ldr s0, [x22, #0x68] (camera setup)
 site aspect main 1ff04f4 1e211800 f81f0fea @page:x10 bd403940 f84107ea  # fdiv s0, s0, s1 (viewport)
 site aspect main 253fbb0 1e211800 f81f0fea @page:x10 bd403940 f84107ea  # fdiv s0, s0, s1 (viewport)
 
-# Field of view (runtime/resolution.c res_fov_live writes TOTK_FOV / 100 to page +60 and switches the set). The same two
+# Field of view (runtime/resolution.c res_fov_live writes GHF_FOV / 100 to page +60 and switches the set). The same two
 # camera routines as the aspect set load the camera's vertical view angle (radians) a few words before the ratio and
 # hand it to sead's perspective projection (+0xa0, then sin / cos / tan of half of it at +0xa4..+0xac). The replacement
 # loads the angle as before and multiplies it by the factor on the page; s8 holds the factor because the next
 # instruction (fmul s8, s0, s1) overwrites it. Zooms the game makes itself (the bow, the scope) scale with it.
-set fov      TOTK_FOV_PATCH      0
+set fov      GHF_FOV_PATCH      0
 site fov    main 628c3c bd413e60 f81f0fea @page:x10 bd413e60 bd403d48 1e280800 f84107ea   # ldr s0, [x19, #0x13c] (camera update)
 site fov    main b4342c bd4066c0 f81f0fea @page:x10 bd4066c0 bd403d48 1e280800 f84107ea   # ldr s0, [x22, #0x64] (camera setup)
 
@@ -108,7 +108,7 @@ site fov    main b4342c bd4066c0 f81f0fea @page:x10 bd4066c0 bd403d48 1e280800 f
 # same frames several times faster and gives the virtual core up for large inputs. Not main+0x547a04: that caller
 # (main+0x547964) resets a static DCtx of its own with which the game's zstd rejects some valid frames
 # (corruption_detected on a 473 KB frame the host decodes), and the game relies on that result.
-set zstd     TOTK_ZSTD_NATIVE    1
+set zstd     GHF_ZSTD_NATIVE    1
 site zstd   main 5f5358 97e913a6 94d3ab26   # bl ZSTD_decompressMultiFrame -> page+0xff0
 site zstd   main 6d7788 97e58a9a 94d0221a   # bl ZSTD_decompressMultiFrame -> page+0xff0
 site zstd   main bdc8e8 97d17642 94bc0dc2   # bl ZSTD_decompressMultiFrame -> page+0xff0
@@ -118,7 +118,7 @@ site zstd   main bdc910 97d17634 94bc0db4   # bl ZSTD_decompress_usingDDict -> p
 site zstd   main 1852314 979f9fb3 948a3733  # bl ZSTD_decompress_usingDDict -> page+0xfe0
 
 # Spin waits, from tools/spin_waits.py --exefs build/extracted/v143/exefs --patches recomp/patches-v143.txt: loops that only
-# another thread can end; their back-edges pass rt_spin_gate (runtime/kernel.c), TOTK_SPIN=0 keeps the core.
+# another thread can end; their back-edges pass rt_spin_gate (runtime/kernel.c), GHF_SPIN=0 keeps the core.
 spin main 231dc 231ec   # 5 instructions; loads
 spin main 24780 24790   # 5 instructions; loads
 spin main 5748c 574a0   # 6 instructions; loads

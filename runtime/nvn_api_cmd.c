@@ -569,14 +569,14 @@ NVN_API(nvnCommandBufferSetDepthClamp) { REC(cmd_of(c), OP_DEPTH_CLAMP, p_flag)-
 NVN_API(nvnCommandBufferSetRenderEnable) { REC(cmd_of(c), OP_RENDER_ENABLE, p_flag)->value = nvn_arg_bool(c, 1) != 0; }
 // Rasterizer discard runs vertex work without rasterising; with no transform feedback that equals not drawing.
 NVN_API(nvnCommandBufferSetRasterizerDiscard) { REC(cmd_of(c), OP_RASTER_DISCARD, p_flag)->value = nvn_arg_bool(c, 1) != 0; }
-// void nvnCommandBufferSetPrimitiveRestart(NVNcommandBuffer *cmd, NVNboolean enable, int index): TOTK draws its
+// void nvnCommandBufferSetPrimitiveRestart(NVNcommandBuffer *cmd, NVNboolean enable, int index): TotK draws its
 // terrain and cliff strips with 16-bit indices and restart at 0xffff; the replay applies it per indexed draw (op_draw_idx)
 NVN_API(nvnCommandBufferSetPrimitiveRestart) {
     *REC(cmd_of(c), OP_PRIM_RESTART, p_prim_restart) = (p_prim_restart){nvn_arg_bool(c, 1) != 0, (uint32_t)arg_x(c, 2)};
 }
 // void nvnCommandBufferSetRenderEnableConditional(NVNcommandBuffer *cmd, NVNconditionalRenderMode mode,
 // NVNbufferAddress counters): rendering is enabled when the two NVNcounterData.counter values at addr / addr+16
-// compare equal (mode 0) or not equal (mode 1). TOTK gates most of its ClearColor commands with it; the replay
+// compare equal (mode 0) or not equal (mode 1). TotK gates most of its ClearColor commands with it; the replay
 // evaluates it in GPU order.
 NVN_API(nvnCommandBufferSetRenderEnableConditional) {
     int m = (int)arg_x(c, 1);

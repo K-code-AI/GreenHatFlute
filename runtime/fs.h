@@ -41,7 +41,7 @@ size_t romfs_overlay_count(void);
 int romfs_xbox_prompts_ready(void);                        // romfs-patches-xbox was there at start
 int romfs_xbox_prompts_active(void);                       // and was loaded (pad_layout = xbox_prompts at start)
 const char *romfs_overlay(size_t k, const char **file, uint64_t *size, int *is_added);   // RomFS path of overlay k
-void fs_trace(const char *what, const char *path);         // TOTK_TRACE=fs: one line per open
+void fs_trace(const char *what, const char *path);         // GHF_TRACE=fs: one line per open
 
 // ---- fs_host.c
 void fs_host_set_profile(const char *dir);                 // profile directory; before the first storage mount only

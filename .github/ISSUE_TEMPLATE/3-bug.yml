@@ -55,4 +55,4 @@ body:
     id: log
     attributes:
       label: Log
-      description: Attach build/oot111/logs/totk.log, or last-run-errors.log from the folder of play/run.sh, if the game started.
+      description: Attach build/oot111/logs/greenhatflute.log, or last-run-errors.log from the folder of play/run.sh, if the game started.

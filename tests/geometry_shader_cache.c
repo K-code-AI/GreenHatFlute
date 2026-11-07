@@ -29,7 +29,7 @@ int fixture_atomic_write(const char *path,const void *data,size_t n) {
             RecHeader header;
             if(n<sizeof header)forbidden("short migration write");
             memcpy(&header,data,sizeof header);
-            if(memcmp(header.magic,"TOTKSANS",8)||header.version!=2||header.rec_size!=217)
+            if(memcmp(header.magic,"GHF_SANS",8)||header.version!=2||header.rec_size!=217)
                 forbidden("failure target is not the v1-to-v2 migration");
             injected_failures++;return 0;
         }
@@ -250,7 +250,7 @@ int main(int argc, char **argv) {
 #if FIXTURE_GEOMETRY
         ok=answers_read(argv[3],&body,&n,atoi(argv[4]));
 #else
-        ok=rec_read(argv[3],"TOTKSANS",1,216,&body,&n);
+        ok=rec_read(argv[3],"GHF_SANS",1,216,&body,&n);
 #endif
         printf("{\"accepted\":%s,\"body\":\"",ok?"true":"false");hex_bytes(body,n);puts("\"}");free(body);return 0;
     }

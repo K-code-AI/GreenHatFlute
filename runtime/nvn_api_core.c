@@ -279,7 +279,7 @@ NVN_API(nvnMemoryPoolBuilderSetStorage) {
 NVN_API(nvnMemoryPoolBuilderSetFlags) { ((pool_builder_t *)arg_p(c, 0))->flags = (uint32_t)arg_x(c, 1); }
 // NVNboolean nvnMemoryPoolInitialize(NVNmemoryPool *p, const NVNmemoryPoolBuilder *b)
 // Pool setup imports, mirrors and maps memory in the back end (the driver, VirtualAlloc): up to 20 ms on the game's
-// loader threads, which held a virtual core through it while job workers waited (TOTK_CORE_DIAG). The thread gives
+// loader threads, which held a virtual core through it while job workers waited (GHF_CORE_DIAG). The thread gives
 // the core up, as for any blocking host call.
 NVN_API(nvnMemoryPoolInitialize) {
     NVN_BLOCKING();
@@ -607,12 +607,12 @@ NVN_API(nvnQueueFinish) {
 // the replay, and that frame draws other objects' matrices (phantom rocks, flat far field).
 // The guard makes the producer wait, at its commit point, until the newest submit has been replayed and completed.
 // lod_entered / lod_issued count submits that entered QueueSubmitCommands / reached the back end; lod_fence holds
-// the fence of the last LOD_RING. TOTK_LOD_GUARD=0 turns the wait off.
+// the fence of the last LOD_RING. GHF_LOD_GUARD=0 turns the wait off.
 #define LOD_RING 64
 static uint64_t lod_entered, lod_issued, lod_fence[LOD_RING];
 
 // void nvnQueueSubmitCommands(NVNqueue *q, int n, const NVNcommandHandle *handles): replayed on this thread with its
-// core given up (section 2.2), or queued for the replay thread (TOTK_REPLAY_ASYNC, vk_backend.c); the newest fence
+// core given up (section 2.2), or queued for the replay thread (GHF_REPLAY_ASYNC, vk_backend.c); the newest fence
 // value is what QueueFenceSync records. With the queue the fence covers replay and GPU, so the LOD guard below waits
 // for both.
 NVN_API(nvnQueueSubmitCommands) {
@@ -658,7 +658,7 @@ static void obs_release_read(Cpu *c) {
     if (lr != 0x70008c70c8ull) return;
     static int on = -1;
     if (on < 0) {
-        on = cfg_bool("TOTK_LOD_GUARD");
+        on = cfg_bool("GHF_LOD_GUARD");
     }
     if (!on || *(volatile uint8_t *)(uintptr_t)(obj + 0x528) != *(volatile uint8_t *)(uintptr_t)(obj + 0x529)) return;
     uint64_t e = __atomic_load_n(&lod_entered, __ATOMIC_SEQ_CST);

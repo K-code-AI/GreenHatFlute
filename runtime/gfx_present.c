@@ -11,7 +11,7 @@
 // dirty (gfx_window_mark_dirty), the next present (or gfx_window_resize) rebuilds it.
 //
 // The in-game menu (ui/menu.h) draws over the game image in the present's command buffer, after the blit. The window's
-// size and fullscreen state are the settings TOTK_WINDOW_SIZE and TOTK_FULLSCREEN, which the back end applies at start
+// size and fullscreen state are the settings GHF_WINDOW_SIZE and GHF_FULLSCREEN, which the back end applies at start
 // and whenever a cfg_set changes them (window_settings_live -> gfx_window_apply_settings).
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,7 +50,7 @@ void gfx_window_mark_dirty(void) { plat_xchg32(&g_dirty, 1); }
 // The window gained or lost the focus: the game hears it as nn::oe's focus state and a notification message.
 void gfx_window_focus_changed(int in) {
     plat_xchg32(&g_focused, in);
-    oe_set_focus(in);                          // pinned to 1 by TOTK_ASSUME_FOCUS inside
+    oe_set_focus(in);                          // pinned to 1 by GHF_ASSUME_FOCUS inside
     oe_push_message(OE_MSG_FOCUS_STATE_CHANGED);
     plat_inc32(&g_focus_msgs);
     rt_log("gfx: window %s the focus", in ? "gained" : "lost");
@@ -66,19 +66,19 @@ void gfx_window_closed(void) {
     plat_exit(0);
 }
 
-// TOTK_FULLSCREEN=1: borderless window over the monitor. TOTK_WINDOW_SIZE=<w>x<h>: client area of the window (the
+// GHF_FULLSCREEN=1: borderless window over the monitor. GHF_WINDOW_SIZE=<w>x<h>: client area of the window (the
 // swapchain follows the window; the game image is scaled to it).
-int gfx_cfg_fullscreen(void) { return cfg_bool("TOTK_FULLSCREEN"); }
+int gfx_cfg_fullscreen(void) { return cfg_bool("GHF_FULLSCREEN"); }
 
 void gfx_cfg_window_size(int *w, int *h) {
     int x = 0, y = 0;
-    if (sscanf(cfg_value("TOTK_WINDOW_SIZE"), "%dx%d", &x, &y) != 2 || x < 640 || y < 360 || x > 7680 || y > 4320)
+    if (sscanf(cfg_value("GHF_WINDOW_SIZE"), "%dx%d", &x, &y) != 2 || x < 640 || y < 360 || x > 7680 || y > 4320)
         sscanf(cfg_meta("WINDOW_SIZE")->def, "%dx%d", &x, &y);   // unparsable or out of range: the default
     *w = x;
     *h = y;
 }
 
-// The refresh rate of the window's monitor (TOTK_FPS_LIMIT=display), measured by the back end's window thread when the
+// The refresh rate of the window's monitor (GHF_FPS_LIMIT=display), measured by the back end's window thread when the
 // window opens, lands on another monitor or the display mode changes; readers take the stored value.
 static volatile int32_t g_rate_mhz;   // millihertz, 0 unknown
 
@@ -119,7 +119,7 @@ static int g_cap_w, g_cap_h, g_cap_valid;
 static int g_flip_on;            // vk_present_blit submitted the blit of swapchain image g_flip_idx; vk_present_flip presents it
 static uint32_t g_flip_idx;
 
-// ---- TOTK_FLIGHT thumbnails (flight.c; g_pl): each present also blits the swapchain image down into slot frame % g_th_n
+// ---- GHF_FLIGHT thumbnails (flight.c; g_pl): each present also blits the swapchain image down into slot frame % g_th_n
 // of a host-visible ring. A slot's tag names the frame it holds complete; recording a new frame clears the tag first,
 // and the tag is set once the fence of that present has signalled.
 #define TH_BYTES ((VkDeviceSize)FLIGHT_THUMB_W * FLIGHT_THUMB_H * 4)
@@ -212,16 +212,16 @@ int gfx_window_focused(void) { return g_focused; }
 unsigned gfx_window_focus_messages(void) { return (unsigned)g_focus_msgs; }
 
 // Present path (g_pl held): a settings change (cfg_version) reaches the window thread, which applies a changed size or
-// fullscreen; a changed TOTK_VK_PRESENT rebuilds the swapchain at this present.
+// fullscreen; a changed GHF_VK_PRESENT rebuilds the swapchain at this present.
 static void window_settings_live(void) {
     static unsigned seen;
     static int started;
-    static char present[16];   // the TOTK_VK_PRESENT the swapchain was made with
+    static char present[16];   // the GHF_VK_PRESENT the swapchain was made with
     unsigned v = cfg_version();
     if (started && v == seen) return;
     seen = v;
     res_fov_live();
-    const char *e = cfg_value("TOTK_VK_PRESENT");
+    const char *e = cfg_value("GHF_VK_PRESENT");
     if (!started || strncmp(e, present, sizeof present - 1)) {
         snprintf(present, sizeof present, "%s", e);
         if (started) plat_xchg32(&g_dirty, 1);
@@ -231,10 +231,10 @@ static void window_settings_live(void) {
 }
 
 // ---- swapchain
-static const char *g_present_got = "";   // the TOTK_VK_PRESENT value of the mode the swapchain got; "" before one
+static const char *g_present_got = "";   // the GHF_VK_PRESENT value of the mode the swapchain got; "" before one
 
 static VkPresentModeKHR pick_present_mode(VkPhysicalDevice pd) {
-    const char *e = cfg_value("TOTK_VK_PRESENT");
+    const char *e = cfg_value("GHF_VK_PRESENT");
     VkPresentModeKHR want = !strcmp(e, "mailbox") ? VK_PRESENT_MODE_MAILBOX_KHR
                           : !strcmp(e, "immediate") ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR;
     uint32_t n = 0;
@@ -249,7 +249,7 @@ static VkPresentModeKHR pick_present_mode(VkPhysicalDevice pd) {
     static int logged = -1;   // the mode last logged: a change from the menu shows in the log
     if ((int)got != logged) {
         logged = (int)got;
-        rt_log("gfx: present mode %s (TOTK_VK_PRESENT=%s)", name, e);
+        rt_log("gfx: present mode %s (GHF_VK_PRESENT=%s)", name, e);
     }
     return got;
 }
@@ -520,12 +520,12 @@ static void save_capture(const char *path) {
 }
 
 // The rectangle {x, y, w, h} of a dw x dh swapchain image the cw x ch picture goes into: the whole image with
-// TOTK_ASPECT=stretch, else (fit, the default) the largest one of the picture's own aspect ratio, centred (a 16:9 picture
+// GHF_ASPECT=stretch, else (fit, the default) the largest one of the picture's own aspect ratio, centred (a 16:9 picture
 // on the Steam Deck's 1280x800 screen gets bars of 40 rows above and below; a 16:9 picture in a 21:9 window, bars at the
 // sides).
 void gfx_fit_rect(int cw, int ch, int dw, int dh, int out[4]) {
     out[0] = out[1] = 0, out[2] = dw, out[3] = dh;
-    if (cw <= 0 || ch <= 0 || !strcmp(cfg_value("TOTK_ASPECT"), "stretch")) return;
+    if (cw <= 0 || ch <= 0 || !strcmp(cfg_value("GHF_ASPECT"), "stretch")) return;
     if ((int64_t)dw * ch > (int64_t)dh * cw) out[2] = (int)(((int64_t)dh * cw + ch / 2) / ch);   // window wider: pillarbox
     else out[3] = (int)(((int64_t)dw * ch + cw / 2) / cw);                                        // taller: letterbox
     // A side of the window's parity keeps the two bars equal; a picture one pixel short of the window fills it
@@ -613,7 +613,7 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
                      VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                      VK_ACCESS_2_TRANSFER_WRITE_BIT);
     }
-    // Colour adjustment (TOTK_COLOR_*, vk_color.c): an adjusted copy of the crop takes the game image's place below
+    // Colour adjustment (GHF_COLOR_*, vk_color.c): an adjusted copy of the crop takes the game image's place below
     {   // LOCAL TEST (Ocarina): OOT_FLASH_LOG=1 logs, per 96 presents, which ones have a white middle (the NaN flash)
         static int on = -1;
         static VkBuffer pbuf;
@@ -653,7 +653,7 @@ static void present_image(VkImage src, VkImageLayout layout, VkFormat fmt, int w
     VkImage psrc = graded ? graded : src;
     VkFormat pfmt = graded ? VK_FORMAT_R16G16B16A16_SFLOAT : fmt;
     const int *prect = graded ? grect : rect;
-    // FSR (TOTK_UPSCALER) when the picture's rectangle is larger than the crop; else the bilinear blit
+    // FSR (GHF_UPSCALER) when the picture's rectangle is larger than the crop; else the bilinear blit
     int fsr = general && vk_fsr_record(cb, slot, psrc, pfmt, graded ? cw : w, graded ? ch : h, prect, dst, to);
     g_scaler = fsr ? 2 : cw != to[2] || ch != to[3];
     if (!fsr) {

@@ -1,11 +1,11 @@
 // Adapted from MacNativeGames games/totk/runtime/input.c and hid_feedback.c @ b75be8cf (MIT, Copyright (c) 2026
 // MacNativeGames contributors).
 // nn::hid overrides: one connected controller fed by input_poll (gamepad and keyboard,
-// runtime/input_win.c; nothing pressed with TOTK_INPUT=none). Docked (default) it is a full-key controller as player 1 (id 0, style bit 0); with
-// TOTK_OPERATION_MODE=handheld it is the handheld controller (id 0x20, style bit 1) and player 1 is not connected,
+// runtime/input_win.c; nothing pressed with GHF_INPUT=none). Docked (default) it is a full-key controller as player 1 (id 0, style bit 0); with
+// GHF_OPERATION_MODE=handheld it is the handheld controller (id 0x20, style bit 1) and player 1 is not connected,
 // which is the controller the game reads in that mode. Mouse and keyboard report no input. The controller has two
-// vibration devices (left, right) played on the gamepad's motors (TOTK_RUMBLE=0: none) and a six-axis sensor fed by
-// the gamepad's gyro and accelerometer (TOTK_MOTION=0, live: reads at rest). State layouts follow libnx HID.
+// vibration devices (left, right) played on the gamepad's motors (GHF_RUMBLE=0: none) and a six-axis sensor fed by
+// the gamepad's gyro and accelerometer (GHF_MOTION=0, live: reads at rest). State layouts follow libnx HID.
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -186,7 +186,7 @@ static void once(volatile int32_t *flag, const char *fmt, uint32_t v) {
     if (!plat_xchg32(flag, 1)) rt_log(fmt, v);
 }
 
-// TOTK_RUMBLE_STRENGTH (percent, 0..300, default 130; 0 = off) and TOTK_RUMBLE_CURVE (exponent on the amplitude, 0.2..1.5,
+// GHF_RUMBLE_STRENGTH (percent, 0..300, default 130; 0 = off) and GHF_RUMBLE_CURVE (exponent on the amplitude, 0.2..1.5,
 // default 0.6). HD rumble is strong at low amplitude, an ERM motor hardly turns there, so weak values are lifted by the
 // curve (0.1 -> 0.25) and the strength scales the result (saturating at 65535; 0.66 and up reach full drive at 130 %).
 // Both are live settings (the menu): read again whenever cfg_version changes.
@@ -201,8 +201,8 @@ static void rumble_cfg(void) {
     unsigned v = cfg_version();
     if (v == rumble_cfg_seen) return;
     rumble_cfg_seen = v;
-    rumble_strength = cfg_float("TOTK_RUMBLE_STRENGTH", 0, 300) / 100;
-    rumble_curve = cfg_float("TOTK_RUMBLE_CURVE", 0.2f, 1.5f);
+    rumble_strength = cfg_float("GHF_RUMBLE_STRENGTH", 0, 300) / 100;
+    rumble_curve = cfg_float("GHF_RUMBLE_CURVE", 0.2f, 1.5f);
     int trig = input_rumble_triggers_enabled();
     if (!plat_xchg32(&rumble_cfg_logged, 1))
         rt_log("hid: rumble strength %.0f%%, curve %.2f, triggers %s", rumble_strength * 100, rumble_curve, trig ? "on" : "off");
@@ -220,7 +220,7 @@ static uint32_t handle_id(Cpu *c, const char *fn) {
 }
 
 // int GetVibrationDeviceHandles(VibrationDeviceHandle *out, int count, const NpadIdType &id, NpadStyleSet style):
-// utility::GetVibrationDeviceHandles' table, the first style bit in its order; none with TOTK_RUMBLE=0.
+// utility::GetVibrationDeviceHandles' table, the first style bit in its order; none with GHF_RUMBLE=0.
 static void ov_vibration_handles(Cpu *c) {
     uint32_t *out = arg_p(c, 0), style = (uint32_t)arg_x(c, 3);
     int max = (int)arg_x(c, 1);
@@ -230,7 +230,7 @@ static void ov_vibration_handles(Cpu *c) {
     static volatile int32_t asked;
     rumble_cfg();
     // strength 0 keeps the devices (silent), so the menu can turn rumble up again
-    if (env_zero("TOTK_RUMBLE")) { once(&asked, "hid: no vibration devices (TOTK_RUMBLE=%u)", 0); ret_x(c, 0); return; }
+    if (env_zero("GHF_RUMBLE")) { once(&asked, "hid: no vibration devices (GHF_RUMBLE=%u)", 0); ret_x(c, 0); return; }
     static const struct { uint8_t bit, n; uint32_t base; } t[] = {
         {0, 2, 0x3}, {1, 2, 0x4}, {2, 2, 0x5}, {3, 1, 0x6}, {4, 1, 0x10007}, {5, 1, 0x8}, {10, 1, 0xd}, {8, 2, 0x4},
         {30, 2, 0x21}, {29, 2, 0x20}};
@@ -245,7 +245,7 @@ static void ov_vibration_handles(Cpu *c) {
 }
 
 // int GetSixAxisSensorHandles(SixAxisSensorHandle *out, int count, const NpadIdType &id, NpadStyleSet style):
-// utility::GetSixAxisSensorHandle's order (one sensor per style, two for the Joy-Con pair). Also with TOTK_MOTION=0: the
+// utility::GetSixAxisSensorHandle's order (one sensor per style, two for the Joy-Con pair). Also with GHF_MOTION=0: the
 // sensor then reads at rest (six_fill), so the menu can turn motion on while the game runs.
 static void ov_six_axis_handles(Cpu *c) {
     uint32_t *out = arg_p(c, 0), style = (uint32_t)arg_x(c, 3);
@@ -443,7 +443,7 @@ static void ov_six_stop(Cpu *c) {
 }
 
 // All max entries, newest first: the game reads all 16 it asks for and ignores the count (main+0x2a268e0). A short
-// history repeats its oldest sample. No motion (sensor not started, no gamepad, one without a gyro, TOTK_MOTION=0):
+// history repeats its oldest sample. No motion (sensor not started, no gamepad, one without a gyro, GHF_MOTION=0):
 // a controller lying still, not marked connected.
 static int six_fill(MotionState *s, int max, const uint32_t *h, const char *fn) {
     if (max <= 0) return 0;

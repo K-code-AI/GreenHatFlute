@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
 import pack_shader_cache as psc  # noqa: E402
 
-USE = struct.pack('<5I', 0x4d554b54, 1, 3, 0, 1)   # gfx_shader.c use_store
+USE = struct.pack('<5I', 0x4d464847, 1, 3, 0, 1)   # gfx_shader.c use_store
 
 
 def name(seed):
@@ -52,7 +52,7 @@ class PackTest(unittest.TestCase):
         (self.cache / f'{k}.res.json').write_bytes(res)
         (self.cache / f'{name("use" + seed)}.use').write_bytes(USE)
         (self.cache / 'in').mkdir(exist_ok=True)   # in_store makes it again after a pack removed it
-        (self.cache / 'in' / f'{name("in" + seed)}.in').write_bytes(b'TKSI' + seed.encode())
+        (self.cache / 'in' / f'{name("in" + seed)}.in').write_bytes(b'GHFI' + seed.encode())
         return k
 
     def test_pack_holds_every_file_and_deletes_the_loose_ones(self):
@@ -65,7 +65,7 @@ class PackTest(unittest.TestCase):
         self.assertEqual(got[(1, keys[3])], b'\x03\x02\x23\x07spirv3')
         self.assertEqual(got[(2, keys[3])], b'{"x":1}')
         self.assertEqual(got[(3, name('use3'))], USE)
-        self.assertEqual(got[(4, name('in3'))], b'TKSI3')
+        self.assertEqual(got[(4, name('in3'))], b'GHFI3')
         left = sorted(p.name for p in self.cache.iterdir())
         self.assertEqual(left, sorted([psc.PACK, 'notes.txt', f'{keys[0]}.code']))   # in/ removed when empty
 

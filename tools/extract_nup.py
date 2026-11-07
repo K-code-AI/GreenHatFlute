@@ -1,18 +1,19 @@
 """Extract the ExeFS and RomFS folders of a NUP (NX Package) container, the single file Eglantine/Eden loads.
 
 A NUP holds loose ExeFS and RomFS trees for a base program, its updates and add-on content, with every file raw or
-zstd-compressed and listed with its SHA-256. The Bananza build takes those trees as folders (README, "Building from
-source"), so this tool writes them out:
+zstd-compressed and listed with its SHA-256. The build takes those trees as folders (docs/build-by-hand.md, steps 3 and
+6), so this tool writes them out:
 
-    .venv-py314\\Scripts\\python tools\\extract_nup.py <game>.nup --out build\\extracted\\dkb100-dump
-    .venv-py314\\Scripts\\python tools\\extract_nup.py <game>.nup --list
+    python3 tools/extract_nup.py <game>.nup --out build/dump --only exefs --package 0
+    python3 tools/extract_nup.py <game>.nup --list
 
-It writes <out>\\exefs and <out>\\romfs, the folders `recomp\\gen.py --exefs` and `tools\\dkb_pack_romfs.py --dir` take.
+It writes <out>/exefs and <out>/romfs, the folders `recomp/gen.py --exefs` and `tools/pack_romfs.py --dir` take.
 The output is game data: keep it under build/. Every extracted file is checked against the SHA-256 in the container
 (--no-verify skips that), and the table of contents against the one in the superblock.
 
-By default the base package is extracted (DKB Recomp supports base 1.0.0 only). --package picks another package by
-index (see --list); --overlay-update also lays the newest update package over the base, as Eglantine's loader does.
+By default the base package is extracted. --package picks another package by index (see --list): the `oot111` build takes
+`--package 0` of a standalone update; --overlay-update also lays the newest update package over the base, as Eglantine's
+loader does.
 
 zstd comes from `compression.zstd` (Python 3.14), the `zstandard` module, or a `zstd` program on PATH, in that order.
 Everything else is the standard library.

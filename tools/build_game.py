@@ -1,25 +1,26 @@
-"""Compile the generated C for one game version and link it with the runtime into build/<version>/totk.exe.
+"""Compile the generated C for one game version and link it with the runtime into build/<version>/GreenHatFlute.
 
-Writes build/<version>/build.ninja and runs MSYS2 UCRT64 Ninja on it. Ninja keeps the build incremental: a chunk is
+Writes build/<version>/build.ninja and runs ninja on it. Ninja keeps the build incremental: a chunk is
 recompiled only when it, a header it includes or its flags change.
 
-On Linux the same steps make build/<version>/totk with the clang, lld and ninja on PATH (or the clang and lld in --toolchain DIR/bin): the
-runtime's *_sdl.* and platform/linux.c take the place of its *_win.*, platform/win32.c and totk.rc, the libraries are
+On Windows the same steps make build/<version>/GreenHatFlute.exe with the MSYS2 UCRT64 toolchain of docs/building.md;
+the runtime's *_win.* and platform/win32.c take the place of its *_sdl.* and platform/linux.c.
+On Linux the same steps make build/<version>/GreenHatFlute with the clang, lld and ninja on PATH (or the clang and lld in --toolchain DIR/bin): the
+runtime's *_sdl.* and platform/linux.c take the place of its *_win.*, platform/win32.c and greenhatflute.rc, the libraries are
 the system's (Vulkan, SDL3, Opus, libvpx, zstd; libstdc++ static), and the executable finds a libSDL3.so.0 beside it
 first (rpath $ORIGIN). docs/building.md lists the packages.
 
-    .venv\\Scripts\\python tools\\build_game.py                     # generated/v121 -> build/v121/totk.exe
-    .venv\\Scripts\\python tools\\build_game.py --modules subsdk0   # one module (links if it has no calls into others)
-    .venv\\Scripts\\python tools\\build_game.py --jobs 8
-    .venv\\Scripts\\python tools\\build_game.py --out build/v121-t2   # a separate build directory
-    .venv\\Scripts\\python tools\\build_game.py --toolchain toolchain/llvm-mingw-<version>/llvm-mingw-<version>-ucrt-x86_64 \\
-        --out build/v121-llvmmingw                                    # llvm-mingw instead of MSYS2 UCRT64
+    .venv/bin/python tools/build_game.py --version oot111 --gen generated/oot111 --out build/oot111 \
+        --expected tools/data/expected-oot111.json --exefs build/exefs --romfs build/romfs --jobs "$(nproc)"
+    .venv/bin/python tools/build_game.py --version oot111 ... --modules subsdk0   # one module (links if it has no calls into others)
+    .venv/bin/python tools/build_game.py --version oot111 ... --out build/oot111-t2   # a separate build directory
+    .venv/bin/python tools/build_game.py --version oot111 ... --toolchain toolchain/clang-<version>   # a clang other than the system's
 
 Every runtime/*.c is compiled. build/<version>/modules.c carries the layout, the linked function tables, the
 expected SHA-256 of each ExeFS file (tools/data/expected-<display version>.json) and the default game paths
 (--exefs, --romfs, --profile), which GreenHatFlute uses unless its own command line names others. tools/romfs_index.py
 writes build/<version>/romfs-index.bin and romfs_config.h from the RomFS directory's index.json (runtime/romfs.c reads
-the index next to totk.exe).
+the index next to GreenHatFlute.exe).
 
 Private builds reuse the main build's objects. When --out differs from build/<version>, the main build's generated
 objects are up to date (checked with a dry run of its build.ninja) and every header they include from runtime/ is
@@ -47,7 +48,7 @@ from MSYS2. The libraries and headers MSYS2 supplies (Vulkan, SDL3, Opus, libvpx
 (default toolchain/deps-mingw: include/, lib/ with the import libraries and libvpx.a, bin/ with the DLLs), and the C++
 runtime is libc++ from llvm-mingw. Such a build never reuses another build's generated objects.
 
-Split build. --make-runtime-lib compiles only runtime/ into <out>/libtotkrt.a (what CI prebuilds). --runtime-lib PATH
+Split build. --make-runtime-lib compiles only runtime/ into <out>/libgreenhatflutert.a (what CI prebuilds). --runtime-lib PATH
 then compiles only the generated C and the install-time files (modules.c and INSTALL_SIDE, which bake the player's
 game hashes and version in) and links them with that library. The library holds no game-derived data.
 
@@ -100,14 +101,14 @@ if WIN:
     # to Windows 7, which hides the per-monitor DPI functions gfx_window_win.c and dpi_probe_win.c call.
     RT_FLAGS.append('-D_WIN32_WINNT=0x0A00')
     # -Xlinker passes the map path as one argument; -Wl, would split it at any comma in the build dir path
-    LINK_FLAGS = ['-fuse-ld=lld', '-Wl,--stack,16777216', '-Xlinker', '"--Map=$builddir/totk.map"']   # the map feeds tools/prof_report.py
+    LINK_FLAGS = ['-fuse-ld=lld', '-Wl,--stack,16777216', '-Xlinker', '"--Map=$builddir/greenhatflute.map"']   # the map feeds tools/prof_report.py
     LINK_LIBS = ['-lpsapi', '-lbcrypt', '-lvulkan-1', '-luser32', '-lgdi32', '-ldwmapi', '-limm32', '-lwinmm', '-lSDL3', '-lopus', '-l:libdav1d.a', '-l:libvpx.a', '-l:libzstd.a', '-l:libstdc++.a', '-l:libwinpthread.a']   # Vulkan back end; libvpx static (movies); libzstd static (resolution.c)
     VMA_INCLUDE = UCRT.parent / 'include' / 'vma'   # vk_mem_alloc.h; MSYS2 package vulkan-memory-allocator
 else:
     # -no-pie: the lifted modules' function tables (hundreds of thousands of pointers) need no load-time relocation.
-    # $ORIGIN: a libSDL3.so.0 next to totk comes before the system's (the release's portable folder).
+    # $ORIGIN: a libSDL3.so.0 next to GreenHatFlute comes before the system's (the release's portable folder).
     LINK_FLAGS = ['-fuse-ld=lld', '-no-pie', '-Wl,-z,noexecstack', "'-Wl,-rpath,$$ORIGIN'",
-                  '"-Wl,-Map=$builddir/totk.map"']
+                  '"-Wl,-Map=$builddir/greenhatflute.map"']
     LINK_LIBS = ['-lvulkan', '-lSDL3', '-lopus', '-lvpx', '-ldav1d', '-lzstd', '-l:libstdc++.a', '-lm', '-lpthread',
                  '-ldl']   # libvpx (movies) and dav1d (AV1, ov_codec.c) as on Windows
     VMA_INCLUDE = Path('/usr/include')   # vk_mem_alloc.h; Arch (AUR) vulkan-memory-allocator, Debian libvulkan-memory-allocator-dev
@@ -145,9 +146,9 @@ DEFAULT_DEPS = ROOT / 'toolchain' / 'deps-mingw'
 # the patches.h of the player's game version (its patch page is the page after that version's main; ov_zstd.c's host
 # functions sit on it).
 INSTALL_SIDE = {'romfs.c', 'patches.c', 'ov_zstd.c'}
-LIB_NAME = 'libtotkrt.a'
+LIB_NAME = 'libgreenhatflutert.a'
 AR = UCRT / 'llvm-ar.exe' if WIN else on_path('llvm-ar')
-WINDRES = UCRT / 'windres.exe'   # runtime/totk.rc: the manifest of totk.exe
+WINDRES = UCRT / 'windres.exe'   # runtime/greenhatflute.rc: the manifest of GreenHatFlute.exe
 TOOLCHAIN_BIN = None   # llvm-mingw bin directory, set by main() for --toolchain
 DEPS = None            # the deps directory of an llvm-mingw build
 # tools/data/expected-<display version>.json for each build version name.
@@ -226,7 +227,7 @@ def write_if_changed(path, text):
 
 
 def copy_romfs_patches(version, out):
-    """totk.exe loads romfs-patches beside romfs-index.bin (runtime/romfs.c overlay_init). tools/make_romfs_patches.py
+    """GreenHatFlute.exe loads romfs-patches beside romfs-index.bin (runtime/romfs.c overlay_init). tools/make_romfs_patches.py
     writes them into build/<version> only, so a build in another directory ran without the 60 fps overlay (the quick
     menus' captured background turned black). Copies them when their manifest differs; romfs-patches-xbox (the same with
     the A/B and X/Y prompts swapped, pad_layout = xbox_prompts) the same way when it was made."""
@@ -250,12 +251,12 @@ RUNTIME = ROOT / 'runtime'   # --runtime: a copy of runtime/ lets a task build w
 
 
 def other_os(name):
-    """A runtime file for another OS: Win32 ones (*_win.*, platform/win32.c, totk.rc) off Windows, the SDL window's
+    """A runtime file for another OS: Win32 ones (*_win.*, platform/win32.c, greenhatflute.rc) off Windows, the SDL window's
     (*_sdl.*) and platform/linux.c on Windows."""
     stem = name.rsplit('.', 1)[0]
     if WIN:
         return stem.endswith('_sdl') or name == 'linux.c'
-    return stem.endswith('_win') or name in ('win32.c', 'totk.rc')
+    return stem.endswith('_win') or name in ('win32.c', 'greenhatflute.rc')
 
 
 def runtime_sources(skip=()):
@@ -387,9 +388,9 @@ def ninja_file(gen, out, mods, pool_depth, skip=(), prebuilt=False, runtime_lib=
         sources += [out / 'modules.c']
     for src in sources:
         o = runtime_object(out, src)
-        if src.suffix == '.rc':   # windres writes no depfile: the files totk.rc embeds are listed by hand
-            lines.append(f'build {ninja_path(o)}: rc {ninja_path(src)} | {ninja_path(RUNTIME / "totk.manifest")} '
-                         f'{ninja_path(RUNTIME / "totk.ico")}')
+        if src.suffix == '.rc':   # windres writes no depfile: the files greenhatflute.rc embeds are listed by hand
+            lines.append(f'build {ninja_path(o)}: rc {ninja_path(src)} | {ninja_path(RUNTIME / "greenhatflute.manifest")} '
+                         f'{ninja_path(RUNTIME / "greenhatflute.ico")}')
         else:
             lines.append(f'build {ninja_path(o)}: cc_rt {ninja_path(src)}')
             if src.suffix == '.cpp':   # the Ampere lowering headers (runtime/third_party/eglantine) need C++20
@@ -406,7 +407,7 @@ def ninja_file(gen, out, mods, pool_depth, skip=(), prebuilt=False, runtime_lib=
     rule = 'link'
     if runtime_lib:
         # Whole archive: the runtime's weak defaults (nvn_procs.c, nvn_api_core.c, vk_sync.c) would otherwise satisfy
-        # references before the linker pulls the members with the strong definitions, which would stay out of totk.exe.
+        # references before the linker pulls the members with the strong definitions, which would stay out of GreenHatFlute.exe.
         rule = 'link_lib'
         lines += ['', 'rule link_lib',
                   f'  command = $cc $ldflags @$out.rsp -Wl,--whole-archive {cmd_path(runtime_lib)} -Wl,--no-whole-archive $libs -o $out',
@@ -722,10 +723,10 @@ def main():
                     help='comma-separated runtime/*.c names to leave out (the link needs another definition of what they '
                          'define)')
     ap.add_argument('--exefs', type=Path,
-                    help="totk.exe's default ExeFS directory (default build/extracted/<version>/exefs)")
-    ap.add_argument('--romfs', type=Path, help="totk.exe's default RomFS directory with romfs.bin and index.json "
+                    help="GreenHatFlute.exe's default ExeFS directory (default build/extracted/<version>/exefs)")
+    ap.add_argument('--romfs', type=Path, help="GreenHatFlute.exe's default RomFS directory with romfs.bin and index.json "
                                                '(default build/extracted/<version>/romfs)')
-    ap.add_argument('--profile', type=Path, help="totk.exe's default profile directory (default build/profile for v121, "
+    ap.add_argument('--profile', type=Path, help="GreenHatFlute.exe's default profile directory (default build/profile for v121, "
                                                  "build/profile-<version> otherwise, so trying another version leaves "
                                                  "the main profile alone; saves load on 1.2.1 and 1.4.3 alike)")
     ap.add_argument('--toolchain', type=Path, help='llvm-mingw directory (with bin/clang.exe) to build with instead of '
@@ -738,7 +739,7 @@ def main():
     ap.add_argument('--deps', type=Path, help=f'with --toolchain: include/, lib/ and bin/ of Vulkan, SDL3, Opus, libvpx '
                                               f'and VMA (default {DEFAULT_DEPS.relative_to(ROOT).as_posix()})')
     ap.add_argument('--make-runtime-lib', action='store_true',
-                    help=f'build only <out>/{LIB_NAME} from runtime/ (no generated C, no totk.exe)')
+                    help=f'build only <out>/{LIB_NAME} from runtime/ (no generated C, no GreenHatFlute.exe)')
     ap.add_argument('--runtime-lib', type=Path, help=f'link against this {LIB_NAME} instead of compiling runtime/ '
                                                     f'({", ".join(sorted(INSTALL_SIDE))} and modules.c still compile)')
     ap.add_argument('--expected', type=Path,
@@ -874,13 +875,13 @@ def main():
     code, dt, peak_one, _ = run_measured(base + [flag_path(exe)], env)
     print(f'link: {dt:.1f} s, peak {mib(peak_one)}')
     if code:
-        print(f'build_game: link failed, {flag_path(exe)} is the old one (a running totk.exe from this dir locks it)',
+        print(f'build_game: link failed, {flag_path(exe)} is the old one (a running GreenHatFlute.exe from this dir locks it)',
               file=sys.stderr)
         sys.exit(code)
     if args.make_runtime_lib:
         print(f'{below_root(exe)}: {mib(exe.stat().st_size)}')
         return
-    for dll in dlls:   # dynamic SDL3 (zlib) and its libiconv (LGPL, unmodified DLL), found next to totk.exe
+    for dll in dlls:   # dynamic SDL3 (zlib) and its libiconv (LGPL, unmodified DLL), found next to GreenHatFlute.exe
         shutil.copy2(dll, exe.parent / dll.name)
     sections, image = pe_sections(exe) if WIN else elf_sections(exe)
     print(f'{below_root(exe)}: file {mib(exe.stat().st_size)}, '

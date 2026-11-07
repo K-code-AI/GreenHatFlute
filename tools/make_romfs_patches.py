@@ -1,6 +1,6 @@
 # Adapted from MacNativeGames games/totk/scripts/make_romfs_patches.py @ ebe621d (MIT, Copyright (c) 2026
 # MacNativeGames contributors).
-"""Build the 60 fps RomFS overlay for TotK 1.1.1, 1.2.1 or 1.4.3 (runtime/romfs.c, TOTK_ROMFS_PATCHES).
+"""Build the 60 fps RomFS overlay for TotK 1.1.1, 1.2.1 or 1.4.3 (runtime/romfs.c, GHF_ROMFS_PATCHES).
 
 UI/LayoutArchive/Common.Product.<110 or 140>.Nin_NX_NVN.blarc.zs: the weapon / shield / material quick menus capture the game
 picture for their background when the panes C_CaptureBG_00, C_CaptureClearBG_00 and P_CaptureClearBG_00 become
@@ -13,7 +13,7 @@ left out.
 
 --aspect <w>x<h> (a game resolution of another shape than 16:9, such as 3440x1440 or 1280x800) also lays the UI out
 for that shape (tools/ultrawide_layout.py): menus keep their 16:9 proportions in the middle, full-screen backgrounds
-cover the screen and the HUD moves to the screen's corners (wider) or its top and bottom edges (narrower). totk.exe
+cover the screen and the HUD moves to the screen's corners (wider) or its top and bottom edges (narrower). GreenHatFlute.exe
 loads that overlay from romfs-patches-<w>x<h> when the game resolution is that size (runtime/romfs.c overlay_init);
 the camera's side of it is the patch set aspect (recomp/patches-v121.txt, patches-v143.txt).
 

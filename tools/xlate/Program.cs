@@ -1,11 +1,11 @@
-// TOTK Vulkan adaptation of MacNativeGames games/totk/tools/totk_xlate/Program.cs (MIT, see LICENSE; MNG commit b75be8cf).
+// TotK Vulkan adaptation of MacNativeGames games/totk/tools/greenhatflute_xlate/Program.cs (MIT, see LICENSE; MNG commit b75be8cf).
 // Provenance: that file is based on D2R Mobile dm/gfx/tools/dmsh_xlate/Program.cs. Changes here: SPIR-V for Vulkan is the final
 // output (no MSL service, no VertexCounterLowering, no NEAR_IS_MINUS_W rewrite), depth clip control reported as supported,
 // non-constant texture offsets reported as unsupported, --disasm dropped.
 // Protocol (stdout carries replies only; diagnostics go to stderr):
-//   totk_xlate --serve              one request per stdin line: {"job": {...}, "out": "<dir>"}; one reply line per request:
+//   greenhatflute_xlate --serve              one request per stdin line: {"job": {...}, "out": "<dir>"}; one reply line per request:
 //                                   "ok <key>" or "fail <key> <message>"; a malformed line gets "fail ? <message>" and the loop continues.
-//   totk_xlate <jobs.json> <outdir> batch mode: a JSON array of jobs, prints a summary, exit 1 if any failed.
+//   greenhatflute_xlate <jobs.json> <outdir> batch mode: a JSON array of jobs, prints a summary, exit 1 if any failed.
 //   job: { "key", "stage": "vs|gs|ps|cs", "code": path (graphics = 0x50-byte SPH + instructions, compute = instructions), "c1": hex,
 //          "tex": {slot: type}, "img": {slot: {type, fmt}}, "attr": {loc: float|sint|uint}, "fout": {idx: float|sint|uint},
 //          "local": [x, y, z], "shared": bytes, "debug": bool, "reduced": bool, "softfloat64": bool,

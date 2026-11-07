@@ -4,7 +4,7 @@
 Nothing in the build changes; this only writes the three files a desktop session reads:
 
   ~/.local/share/applications/greenhatflute.desktop   from play/greenhatflute.desktop, with the launcher's path
-  ~/.local/share/icons/hicolor/<N>x<N>/apps/greenhatflute.png   the sizes carried in runtime/totk.ico
+  ~/.local/share/icons/hicolor/<N>x<N>/apps/greenhatflute.png   the sizes carried in runtime/greenhatflute.ico
   ~/.local/bin/greenhatflute                          a link to play/run.sh
 
 XDG paths are used, so no root is needed and nothing is written under /usr. The app id the game sets on Wayland
@@ -25,7 +25,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = 'greenhatflute'
-ICO = ROOT / 'runtime' / 'totk.ico'
+ICO = ROOT / 'runtime' / 'greenhatflute.ico'
 DESKTOP = ROOT / 'play' / f'{APP}.desktop'
 LAUNCHER = ROOT / 'play' / 'run.sh'
 

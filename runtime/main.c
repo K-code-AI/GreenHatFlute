@@ -1,6 +1,6 @@
-// totk.exe entry: reserves the guest address space, parses the command line and runs one mode.
+// GreenHatFlute.exe entry: reserves the guest address space, parses the command line and runs one mode.
 //
-//   totk.exe [--exefs DIR] [--romfs DIR] [--profile DIR] <mode>
+//   GreenHatFlute.exe [--exefs DIR] [--romfs DIR] [--profile DIR] <mode>
 //     --selftest        layout, dispatch table and host-function registry; needs no game files
 //     --probe-loader    load and relocate the modules, check them against the measured 1.2.1 values
 //     --probe-kernel, --probe-ipc, --probe-ipc-lifetime, --probe-services, --probe-fs    host probes
@@ -12,7 +12,7 @@
 //     --boot            run the game to the first NVN call
 //     --seconds S       run the game (implies --boot's start-up) until the world clock (game time since the loaded
 //                       save's first frame) passed S seconds, then exit 0 at that present
-//     --shot PNG        with --seconds: save that frame; env TOTK_GPU=null|vulkan selects the back end
+//     --shot PNG        with --seconds: save that frame; env GHF_GPU=null|vulkan selects the back end
 //     (no mode)         run the game
 //
 // Also here: the runtime services the generated code calls besides rt_dispatch and rt_svc (rt_brk, rt_udf,
@@ -34,9 +34,9 @@
 unsigned rt_trace;
 
 // Log file. A game run whose stderr is not a file already (started from Explorer, a shortcut or a console) also
-// writes its log to logs\totk.log next to totk.exe, so a player has one to attach to a report; run_game.py and
-// `2> file` keep their own file. Each start moves the earlier logs to totk.1.log .. totk.4.log. A file stops at 64 MiB
-// (TOTK_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
+// writes its log to logs\greenhatflute.log next to GreenHatFlute.exe, so a player has one to attach to a report; run_game.py and
+// `2> file` keep their own file. Each start moves the earlier logs to greenhatflute.1.log .. greenhatflute.4.log. A file stops at 64 MiB
+// (GHF_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
 // nothing else lands in the guest address space, and an earlier open would put the CRT's heap there.
 #define LOG_KEEP 5
 #define LOG_CAP (64ull << 20)
@@ -107,13 +107,13 @@ static void log_open(int game) {
     if (cut && (size_t)(cut - dir) + sizeof "/logs" <= sizeof dir) {
         strcpy(cut, "/logs");
         plat_file_mkdir_p(dir);
-        for (int i = LOG_KEEP - 1; i > 0; i--) {   // totk.3.log -> totk.4.log, ..., totk.log -> totk.1.log
-            if (i > 1) snprintf(from, sizeof from, "%s/totk.%d.log", dir, i - 1);
-            else snprintf(from, sizeof from, "%s/totk.log", dir);
-            snprintf(to, sizeof to, "%s/totk.%d.log", dir, i);
+        for (int i = LOG_KEEP - 1; i > 0; i--) {   // greenhatflute.3.log -> greenhatflute.4.log, ..., greenhatflute.log -> greenhatflute.1.log
+            if (i > 1) snprintf(from, sizeof from, "%s/greenhatflute.%d.log", dir, i - 1);
+            else snprintf(from, sizeof from, "%s/greenhatflute.log", dir);
+            snprintf(to, sizeof to, "%s/greenhatflute.%d.log", dir, i);
             if (plat_file_exists(from)) plat_file_replace(from, to);
         }
-        snprintf(g_log_path, sizeof g_log_path, "%s/totk.log", dir);
+        snprintf(g_log_path, sizeof g_log_path, "%s/greenhatflute.log", dir);
         g_log_file = plat_append_open(g_log_path);
     }
     if (!g_log_file) {
@@ -129,7 +129,7 @@ static void log_open(int game) {
 }
 
 static void parse_trace(void) {
-    const char *e = cfg_get("TOTK_TRACE");   // no default: nothing is traced when unset
+    const char *e = cfg_get("GHF_TRACE");   // no default: nothing is traced when unset
     if (!e) return;
     static const struct { const char *name; unsigned bit; } names[] = {
         {"svc", RT_TRACE_SVC}, {"host", RT_TRACE_HOSTCALL}, {"ipc", RT_TRACE_IPC}, {"fs", RT_TRACE_FS},
@@ -140,7 +140,7 @@ static void parse_trace(void) {
         int known = 0;
         for (unsigned i = 0; i < sizeof names / sizeof *names; i++)
             if (strlen(names[i].name) == n && !strncmp(p, names[i].name, n)) rt_trace |= names[i].bit, known = 1;
-        if (!known && n) rt_log("TOTK_TRACE: unknown item '%.*s' (svc, host, ipc, fs, gfx, perf, sched, audio, present, codec, all)", (int)n, p);
+        if (!known && n) rt_log("GHF_TRACE: unknown item '%.*s' (svc, host, ipc, fs, gfx, perf, sched, audio, present, codec, all)", (int)n, p);
         p += n + (p[n] == ',');
     }
 }
@@ -223,7 +223,7 @@ static void crash_handler(const PlatCrash *x) {
     if (plat_xchg32(&busy, 1)) plat_exit(71);
     char d[160];
     uintptr_t rip = x->rip;
-    rt_logf("FATAL: %s (%#x) at host %p (totk+%#llx)", x->what, x->code, (void *)rip, (unsigned long long)x->offset);
+    rt_logf("FATAL: %s (%#x) at host %p (GreenHatFlute+%#llx)", x->what, x->code, (void *)rip, (unsigned long long)x->offset);
     if (x->access >= 0)
         rt_logf(", %s address %#llx", x->access == 1 ? "writing" : x->access == 8 ? "executing" : "reading",
                 (unsigned long long)x->addr);
@@ -232,7 +232,7 @@ static void crash_handler(const PlatCrash *x) {
     if (f) rt_logf("  in lifted function f_%llx = %s\n", (unsigned long long)f, ldr_describe(f, d, sizeof d));
     for (int i = 0; i < x->nframes; i++) {   // abort and invalid parameter: where the host code called it
         uint64_t g = lifted_function(x->frames[i]);
-        rt_logf("  host frame %2d: totk+%#llx", i, (unsigned long long)(x->frames[i] - (rip - x->offset)));
+        rt_logf("  host frame %2d: GreenHatFlute+%#llx", i, (unsigned long long)(x->frames[i] - (rip - x->offset)));
         if (g) rt_logf(" in lifted function f_%llx", (unsigned long long)g);
         rt_log_raw("\n", 1);
     }
@@ -445,9 +445,9 @@ static int usage(const char *argv0) {
     return 2;
 }
 
-// Paths for a copied folder (tools/package_build.py). Per path: TOTK_EXEFS, TOTK_ROMFS, TOTK_PROFILE_DIR, else the
-// folder next to totk.exe (exefs with main.npdm, romfs with romfs.bin, any profile folder) if it is there, else the
-// path baked in at build time. A relative value is relative to totk.exe's folder.
+// Paths for a copied folder (tools/package_build.py). Per path: GHF_EXEFS, GHF_ROMFS, GHF_PROFILE_DIR, else the
+// folder next to GreenHatFlute.exe (exefs with main.npdm, romfs with romfs.bin, any profile folder) if it is there, else the
+// path baked in at build time. A relative value is relative to GreenHatFlute.exe's folder.
 static char pp_exefs[PLAT_PATH_MAX * 2], pp_romfs[PLAT_PATH_MAX * 2], pp_profile[PLAT_PATH_MAX * 2],
           pp_data[PLAT_PATH_MAX * 3];
 
@@ -484,27 +484,27 @@ static void portable_paths(RtConfig *c) {
     char *cut = n && n < sizeof exe ? plat_last_sep(exe) : NULL;
     if (!cut) return;
     *cut = 0;
-    c->exefs = portable_path(exe, "TOTK_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, c->exefs);
-    c->romfs = portable_path(exe, "TOTK_ROMFS", "romfs", "romfs.bin", pp_romfs, sizeof pp_romfs, c->romfs);
-    c->profile = portable_path(exe, "TOTK_PROFILE_DIR", "profile", NULL, pp_profile, sizeof pp_profile,
+    c->exefs = portable_path(exe, "GHF_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, c->exefs);
+    c->romfs = portable_path(exe, "GHF_ROMFS", "romfs", "romfs.bin", pp_romfs, sizeof pp_romfs, c->romfs);
+    c->profile = portable_path(exe, "GHF_PROFILE_DIR", "profile", NULL, pp_profile, sizeof pp_profile,
                                profile_home(c->profile));
 }
 
 int main(int argc, char **argv) {
-    mem_init();   // first: claim the guest address space before anything else can land there; reads totk.ini
+    mem_init();   // first: claim the guest address space before anything else can land there; reads greenhatflute.ini
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
     plat_crash_hook(crash_handler);
     parse_trace();
     prof_start();
     // Timed guest waits (kernel.c block_inner) sleep in whole milliseconds; at the default 15.6 ms tick a 1 ms wait
-    // costs a full tick. TOTK_TIMER_1MS=0 keeps the default for comparison.
-    if (cfg_bool("TOTK_TIMER_1MS")) plat_timer_1ms();
+    // costs a full tick. GHF_TIMER_1MS=0 keeps the default for comparison.
+    if (cfg_bool("GHF_TIMER_1MS")) plat_timer_1ms();
     cfg = (RtConfig){.exefs = rt_default_exefs, .romfs = rt_default_romfs, .profile = rt_default_profile,
-                     .gpu = cfg_get("TOTK_GPU")};
+                     .gpu = cfg_get("GHF_GPU")};
     portable_paths(&cfg);   // command-line paths below still win
     if (cfg.gpu && strcmp(cfg.gpu, "null") && strcmp(cfg.gpu, "vulkan")) {
-        rt_logf("TOTK_GPU must be null or vulkan, not '%s'\n", cfg.gpu);
+        rt_logf("GHF_GPU must be null or vulkan, not '%s'\n", cfg.gpu);
         return 2;
     }
     const char *mode = NULL;
@@ -541,7 +541,7 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "--probe-loader")) return probe_loader();
     if (!strcmp(mode, "--probe-cfg")) return probe_cfg();
 #ifdef _WIN32
-    if (!strcmp(mode, "--probe-dpi")) return probe_dpi();   // the Win32 DPI awareness of totk.manifest
+    if (!strcmp(mode, "--probe-dpi")) return probe_dpi();   // the Win32 DPI awareness of greenhatflute.manifest
 #endif
     if (!strcmp(mode, "--probe-kernel")) return probe_kernel();
     if (!strcmp(mode, "--probe-ipc")) return probe_ipc();

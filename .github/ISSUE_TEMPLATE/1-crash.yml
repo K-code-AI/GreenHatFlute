@@ -20,7 +20,7 @@ body:
     id: version
     attributes:
       label: Commit
-      description: The commit you built, from `git rev-parse --short HEAD`. The game must be base version 1.0.0.
+      description: The commit you built, from `git rev-parse --short HEAD`. The game must be Ocarina of Time 1.1.1.
     validations:
       required: true
   - type: input
@@ -64,6 +64,6 @@ body:
     id: log
     attributes:
       label: Log
-      description: Attach build/oot111/logs/totk.log, or last-run-errors.log from the folder of play/run.sh. Copy it before you start the game again, because the next start renames it.
+      description: Attach build/oot111/logs/greenhatflute.log, or last-run-errors.log from the folder of play/run.sh. Copy it before you start the game again, because the next start renames it.
     validations:
       required: true

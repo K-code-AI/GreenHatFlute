@@ -54,7 +54,7 @@ static inline int nvn_geometry_control_context(const uint8_t *control, size_t co
 // No native address/context contract is admitted. Output is cleared on failure.
 static inline int nvn_geometry_control_get(const uint8_t *control, size_t control_size,
                                             const uint8_t *code, uint64_t code_size, uint32_t skip[8]) {
-    static const char magic[8] = {'T','K','G','S','M','E','T','A'};
+    static const char magic[8] = {'G','H','F','G','M','E','T','A'};
     if (skip) memset(skip, 0, 32);
     if (!control || control_size < 0x880) return -1;
     if (nvn_geometry_control_u32(control) == 0x98761234u &&
@@ -84,7 +84,7 @@ static inline int nvn_geometry_control_pack_portable(uint8_t *control, size_t co
     for (unsigned i = 0; i < NVN_GEOMETRY_CONTROL_SIZE; i++) nonzero |= p[i];
     if (nonzero && nvn_geometry_control_get(control, control_size, code, code_size, NULL) != 1) return 0;
     uint8_t envelope[NVN_GEOMETRY_CONTROL_SIZE] = {0};
-    memcpy(envelope, "TKGSMETA", 8);
+    memcpy(envelope, "GHFGMETA", 8);
     nvn_geometry_control_put(envelope + 8, 1);
     nvn_geometry_control_put(envelope + 12, NVN_GEOMETRY_CONTROL_SIZE);
     nvn_geometry_control_put(envelope + 16, NVN_GEOMETRY_CONTROL_PORTABLE);

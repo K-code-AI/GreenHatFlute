@@ -145,7 +145,7 @@ static struct {
 #define DS_SIG_BYTES (MAX_DESC * sizeof(VkDescSlot))
 static struct { uint32_t n[2], pn[2]; uint8_t sig[2][DS_SIG_BYTES], psig[2][DS_SIG_BYTES]; } DS;
 
-// TOTK_BIND_STATS counters (bind_stats).
+// GHF_BIND_STATS counters (bind_stats).
 static struct {
     int on;
     uint64_t draws, bind[2], desc[2], push, push_skip, set_new, set_reuse, ac_miss, same_prog, same_all, bind_skip;
@@ -157,7 +157,7 @@ static struct {
 #define RS_BYTES (MAX_BINDINGS * sizeof(((VkExec *)0)->ssbo[0]) + MAX_DESC * sizeof(p_bind_buf))
 typedef struct { int cls, use; uint64_t bytes; } RsCount;
 static struct {
-    int on;                              // TOTK_BIND_SKIP: 1 skip (default), 2 check, 0 off
+    int on;                              // GHF_BIND_SKIP: 1 skip (default), 2 check, 0 off
     uint32_t hn;                         // words of h the last signature filled; 0: none
     uint64_t h[32];                      // generations, descriptor tables, feedback images, support inputs, base instance
     const VkPipeInfo *info;              // the pipeline whose RsList ranges body holds, as of bind op generation gen
@@ -823,7 +823,7 @@ static void answers_for(VkExec *ex, int st, const uint8_t *ctl, uint32_t mask, G
         if ((tmiss || imiss || check) && !locked) vk_texture_lock(), locked = 1, BS.ac_miss++;
         if (tmiss) c->tt[slot] = type_of_handle(ex, h), c->tex[slot] = h, c->ttok[slot] = tt, c->tgen[slot] = gen;
         if (imiss) c->it[slot] = type_of_handle(ex, hi), c->img[slot] = hi, c->itok[slot] = it, c->igen[slot] = gen;
-        if (check && (type_of_handle(ex, h) != c->tt[slot] || type_of_handle(ex, hi) != c->it[slot]))   // TOTK_SHADER_MEMO=check
+        if (check && (type_of_handle(ex, h) != c->tt[slot] || type_of_handle(ex, hi) != c->it[slot]))   // GHF_SHADER_MEMO=check
             rt_fatal("vk_exec: kept texture types of stage %d slot %d differ from a lookup", st, slot);
         a->tex_type[slot] = c->tt[slot], a->img_type[slot] = c->it[slot];
     }
@@ -837,7 +837,7 @@ static void answers_for(VkExec *ex, int st, const uint8_t *ctl, uint32_t mask, G
 // does; a stage whose real mask differs would forward the wrong set.
 static int native_gs_on(void) {
     static int on = -1;
-    if (on < 0) on = cfg_bool("TOTK_NATIVE_GS");
+    if (on < 0) on = cfg_bool("GHF_NATIVE_GS");
     return on;
 }
 
@@ -1181,10 +1181,10 @@ void vk_c0_fill(uint8_t bank[VK_C0_BYTES], int stage, const p_bind_buf ssbo[16],
     memcpy(bank + 0x644, &base_instance, 4);
 }
 
-static int c0_on(void) {   // TOTK_FIX_C0=0: c0 reads zeros instead of the driver constants
+static int c0_on(void) {   // GHF_FIX_C0=0: c0 reads zeros instead of the driver constants
     static int on = -1;
     if (on < 0) {
-        on = cfg_bool("TOTK_FIX_C0");
+        on = cfg_bool("GHF_FIX_C0");
     }
     return on;
 }
@@ -1285,7 +1285,7 @@ static VkDescriptorBufferInfo ubo_info(VkExec *ex, int st, int slot) {
 // (cbuf_slot 0, handle = word offset): 16-byte entries at byte 0x110 (vertex), 0x510 (fragment) and 0x310 (compute).
 // A compute address at c0 0x210..0x30f is uniform block (offset - 0x210) / 16 read as storage: *ubo is set. -1: the
 // address is not in c0 (the shader loads it from a user uniform block: ubo_ptr) or the stage has no known table.
-// Mapping: MacNativeGames games/totk/tools/totk_xlate/Service.cs:206-222 @ b75be8cf (MIT, Copyright (c) 2026 jhaizhou).
+// Mapping: MacNativeGames games/totk/tools/greenhatflute_xlate/Service.cs:206-222 @ b75be8cf (MIT, Copyright (c) 2026 jhaizhou).
 static int ssbo_slot(const GfxShaderRes *r, int st, int *ubo) {
     *ubo = 0;
     if (r->cbuf_slot != 0) return -1;
@@ -1508,11 +1508,11 @@ static uint32_t attached_as(const VkExec *ex, const SubRange *r) {
     return m;
 }
 
-// TOTK_TEX_MEMO (tex_info, feedback_scan): 0 off, 1 on, 2 (=check) computes every hit again and stops on a difference.
+// GHF_TEX_MEMO (tex_info, feedback_scan): 0 off, 1 on, 2 (=check) computes every hit again and stops on a difference.
 static int td_mode(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_value("TOTK_TEX_MEMO");
+        const char *e = cfg_value("GHF_TEX_MEMO");
         on = !strcmp(e, "check") ? 2 : strcmp(e, "0") != 0;
     }
     return on;
@@ -1635,7 +1635,7 @@ static void tex_info_full(VkExec *ex, const GfxShaderRes *r, uint64_t h, int sto
 // for its storage check; a re-upload writes the same image, so the descriptor stays. Draws bind the same textures
 // thousands of times a frame (15,000 lookups a frame in the monsters fight); a hit skips the slot lookup, the view key
 // with its hash probe and the sampler lookup. Storage images, which note their binding per submission, are
-// not kept. Direct-mapped; texture lock held. TOTK_TEX_MEMO=0 turns it off; =check computes every hit again and stops
+// not kept. Direct-mapped; texture lock held. GHF_TEX_MEMO=0 turns it off; =check computes every hit again and stops
 // on a difference.
 #define TD_N 8192
 static struct {
@@ -1717,7 +1717,7 @@ static void tex_info_full(VkExec *ex, const GfxShaderRes *r, uint64_t h, int sto
 // size and bits (R32_SFLOAT -> D32_SFLOAT, R16_UNORM -> D16_UNORM), copied through a buffer right before each dispatch
 // that samples it (a dispatch is outside any render pass), and the dispatch samples the twin. Draws keep the colour
 // image: a copy cannot go inside their pass. Design: Savage Wind Recomp runtime/nvn/vulkan/exec.c depth_twin_update
-// (https://github.com/Revivedx/SavageWindRecomp, MIT); the code is ours. TOTK_DEPTH_TWIN=0: off.
+// (https://github.com/Revivedx/SavageWindRecomp, MIT); the code is ours. GHF_DEPTH_TWIN=0: off.
 #define TWINS 8
 typedef struct { VkImage src, img; VmaAllocation mem; VkImageView view[2]; uint32_t w, h, layers; VkFormat fmt; } Twin;
 static Twin twins[TWINS];
@@ -1929,14 +1929,14 @@ static void support_fill(uint8_t *b, float w, float h, float point_size) {
     for (int i = 0; i < 73; i++) memcpy(b + 192 + 16 * i, &one, 4);   // render scale 1: the host renders at guest size
 }
 
-// TOTK_BIND_STATS=1: bindings and descriptors per draw of each stage (Task 2.2's choice of the pushed stage), and how
+// GHF_BIND_STATS=1: bindings and descriptors per draw of each stage (Task 2.2's choice of the pushed stage), and how
 // often a draw repeats the previous one, logged every 20000 draws: pushes recorded and skipped, allocated sets written
 // and reused, stage texture-type recomputations (answers_for), draws with the previous draw's program, bound state
 // and textures (shaders and pipeline would be the same) and those that also have its buffers and viewport (all
 // descriptors would be the same). BS is declared beside DS.
 static int bind_stats_on(void) {
     if (BS.on < 0) {
-        const char *e = cfg_get("TOTK_BIND_STATS");
+        const char *e = cfg_get("GHF_BIND_STATS");
         BS.on = e && *e && strcmp(e, "0");
     }
     return BS.on;
@@ -1960,7 +1960,7 @@ static void bind_stats(const VkPipeInfo *info) {
     }
 }
 
-// The bound state a draw reads, compared with the previous draw's (TOTK_BIND_STATS only).
+// The bound state a draw reads, compared with the previous draw's (GHF_BIND_STATS only).
 static void repeat_stats(const VkExec *ex, const VkPipeInfo *info) {
     static struct {
         const prog_t *prog;
@@ -1987,17 +1987,17 @@ static void repeat_stats(const VkExec *ex, const VkPipeInfo *info) {
     last = cur;
 }
 
-static int push_skip_on(void) {   // TOTK_PUSH_SKIP=0: every graphics draw pushes its set again
+static int push_skip_on(void) {   // GHF_PUSH_SKIP=0: every graphics draw pushes its set again
     static int on = -1;
     if (on < 0) {
-        on = cfg_bool("TOTK_PUSH_SKIP");
+        on = cfg_bool("GHF_PUSH_SKIP");
     }
     return on;
 }
 
 // A graphics draw whose descriptor inputs equal the previous graphics draw's in this command buffer skips building its
 // sets: every write would be the same, the push would be skipped and the allocated set reused without a bind (about a
-// quarter of field and monsters2 draws, TOTK_BIND_STATS). The inputs, compared and stored in place, are what
+// quarter of field and monsters2 draws, GHF_BIND_STATS). The inputs, compared and stored in place, are what
 // bind_resources and its helpers read beyond the pipeline info's fixed bindings and Z's stand-ins:
 // - the info (bindings, layouts), the program and its serial (the compiler-constant range of UBO slot 1);
 // - vk_texture_slots_gen, vk_texture_epoch (a slot's image, view and once-per-submit storage check), vk_sampler_gen;
@@ -2012,11 +2012,11 @@ static int push_skip_on(void) {   // TOTK_PUSH_SKIP=0: every graphics draw pushe
 // the views cached per submission. The census counts are added again. A build that copied guest bytes into transient
 // memory (an unaligned host range) is never skipped after: the copy may differ. B.res_valid says the sets bound hold
 // the last build; vk_exec_draw_new_cb's memset clears it, and every build clears it until it ends.
-// TOTK_BIND_SKIP=0 builds every draw; =check builds every draw and stops when a draw with equal inputs gets other
+// GHF_BIND_SKIP=0 builds every draw; =check builds every draw and stops when a draw with equal inputs gets other
 // writes, census counts or descriptor commands.
 static int bind_skip_on(void) {
     if (RS.on < 0) {
-        const char *e = cfg_value("TOTK_BIND_SKIP");
+        const char *e = cfg_value("GHF_BIND_SKIP");
         RS.on = !strcmp(e, "check") ? 2 : strcmp(e, "0") != 0;
         if (RS.on != 1) rt_log("vk_exec: descriptor build skip %s", RS.on ? "check" : "off");
     }
@@ -2478,7 +2478,7 @@ static void bind_resources(VkExec *ex, const VkPipeInfo *info) {
     }
     if (skip) {
         RS.rec = 0;
-        // An equal next draw records nothing when every push set holds its push (TOTK_PUSH_SKIP on) and nothing made
+        // An equal next draw records nothing when every push set holds its push (GHF_PUSH_SKIP on) and nothing made
         // the build unrepeatable; allocated sets are always bound to the one written last.
         int valid = !RS.volatile_ && !RS.cnt_over && RS.hn;
         for (uint32_t s = 0; s < n_sets; s++)
@@ -2588,7 +2588,7 @@ static void bind_vertex_buffers(VkExec *ex) {
     B.vb_valid = 1;
 }
 
-// TOTK_PIPE_SKIP: which draws are skipped, rather than waited for, while their shaders or pipeline build.
+// GHF_PIPE_SKIP: which draws are skipped, rather than waited for, while their shaders or pipeline build.
 // strict (0): only draws whose pass targets were all rendered in the previous presented frame; a pass with a target
 //   that was not counts as one-shot and waits.
 // any (1): also draws in a pass with at least one target rendered in the previous frame (a per-frame depth
@@ -2601,11 +2601,11 @@ static void bind_vertex_buffers(VkExec *ex) {
 static int pipe_skip_mode(void) {
     static int mode = -1;
     if (mode < 0) {
-        const char *e = cfg_value("TOTK_PIPE_SKIP");
+        const char *e = cfg_value("GHF_PIPE_SKIP");
         mode = !strcmp(e, "strict") || !strcmp(e, "0") ? 0 : !strcmp(e, "fullscreen") || !strcmp(e, "2") ? 2 : 1;
-        static const char *const what[3] = {"only draws into per-frame passes (TOTK_PIPE_SKIP=strict)",
+        static const char *const what[3] = {"only draws into per-frame passes (GHF_PIPE_SKIP=strict)",
                                             "draws into passes with a target the previous frame rendered",
-                                            "those and full-screen draws (TOTK_PIPE_SKIP=fullscreen)"};
+                                            "those and full-screen draws (GHF_PIPE_SKIP=fullscreen)"};
         rt_log("vk_exec: draws skipped while their pipeline builds: %s", what[mode]);
     }
     return mode;
@@ -2615,7 +2615,7 @@ static int pipe_skip_mode(void) {
 // texture and image handles and every slot's resolution (vk_texture_slots_gen, read unlocked: a registration racing
 // with it is ordered after this draw, as answers_for's own check would order it) stay the same: answers_for reads
 // nothing else, so shader_for would return the same shaders. About 65% of field draws repeat them
-// (TOTK_BIND_STATS). TOTK_SHADER_MEMO=0 turns it off; =check looks the shaders up on every hit too, and every slot's
+// (GHF_BIND_STATS). GHF_SHADER_MEMO=0 turns it off; =check looks the shaders up on every hit too, and every slot's
 // texture type in answers_for, and stops on a difference.
 // tex_serial (bumped by every texture and image bind) equal to the key's means the handles were not rebound since
 // they were compared, so the 1 KiB compare is skipped; a rebind to the same handles still matches by the compare.
@@ -2635,7 +2635,7 @@ typedef struct {
 // family, and the same SPIR-V drawn on its own does not fault, so the cause is still open. Skipping these draws
 // loses those lights; the family's quads without an input at Location 9 draw as before. It is a mitigation, not a fix:
 // in 600 s runs on an RTX 5060 Ti the fault came minutes later in one run of two (another shader), where without it
-// every run faulted right after the first guide movie. TOTK_FIX_VS_FAULT=0 draws them.
+// every run faulted right after the first guide movie. GHF_FIX_VS_FAULT=0 draws them.
 //
 // The later fault, around seven minutes in, comes from one more quad of the same shape whose fragment stage does not
 // read c0+0x530: NVN 2 vertex stage cae0ef8e9fe9147f, nine per-instance RGBA32F streams, one instance. In 9 runs of
@@ -2682,7 +2682,7 @@ static int stage_diag_skip(const VkExec *ex, const GfxShader *vs) {
 
 static int light_quad_fault_skip(const VkExec *ex, const GfxShader *vs, const GfxShader *fs) {
     static int on = -1;
-    if (on < 0) on = 0 && !rt_game_version && cfg_bool("TOTK_FIX_VS_FAULT") && vk_ctx()->props.vendorID == 0x10de;   // LOCAL TEST (Ocarina): this filter matches the world materials here   // 0: Bananza
+    if (on < 0) on = 0 && !rt_game_version && cfg_bool("GHF_FIX_VS_FAULT") && vk_ctx()->props.vendorID == 0x10de;   // LOCAL TEST (Ocarina): this filter matches the world materials here   // 0: Bananza
     if (!on || !vs || !fs) return 0;
     const uint8_t *ctl, *code = NULL;
     uint32_t len;
@@ -2695,7 +2695,7 @@ static int light_quad_fault_skip(const VkExec *ex, const GfxShader *vs, const Gf
     for (int i = 0; i < n; i++) lights |= r[i].cbuf_slot == 0 && r[i].handle * 4 == 0x530;
     GfxShaderIo io[32];
     if (!lights || !(gfx_shader_inputs(vs, io) >> 9 & 1)) return 0;
-    warn_once(W_FAULT_SKIP, "light-quad draws with ten instance streams are skipped on NVIDIA (#9; TOTK_FIX_VS_FAULT=0 draws them)");
+    warn_once(W_FAULT_SKIP, "light-quad draws with ten instance streams are skipped on NVIDIA (#9; GHF_FIX_VS_FAULT=0 draws them)");
     return 1;
 }
 
@@ -2748,7 +2748,7 @@ static int memo_match(VkExec *ex, uint32_t gen, MemoKey *k) {
 
 static int shader_memo_on(void) {
     if (SM.on < 0) {
-        const char *e = cfg_value("TOTK_SHADER_MEMO");
+        const char *e = cfg_value("GHF_SHADER_MEMO");
         SM.on = !strcmp(e, "check") ? 2 : strcmp(e, "0") != 0;
     }
     return SM.on;
@@ -2757,18 +2757,18 @@ static int shader_memo_on(void) {
 static struct { int on, valid; VkPipeState s; const VkPipeInfo *info; } PM = {-1};
 
 static int pipe_memo_on(void) {
-    if (PM.on < 0) PM.on = cfg_bool("TOTK_PIPE_MEMO");
+    if (PM.on < 0) PM.on = cfg_bool("GHF_PIPE_MEMO");
     return PM.on;
 }
 
 static int experimental_geometry_on(void) {
     static int on = -1;
-    if (on < 0) on = cfg_bool("TOTK_EXPERIMENTAL_GEOMETRY");
+    if (on < 0) on = cfg_bool("GHF_EXPERIMENTAL_GEOMETRY");
     return on;
 }
 
 // 1: an opted-in ordinary GS is required; 0: preserve the existing VS/FS path; -1: this opted-in draw is unsupported.
-// Inspect raw NVN2 markers before any NVN1 control offsets. TOTK_EXPERIMENTAL_GEOMETRY admits no native shader; only
+// Inspect raw NVN2 markers before any NVN1 control offsets. GHF_EXPERIMENTAL_GEOMETRY admits no native shader; only
 // DKB_NATIVE_GS does, for the passthrough subset checked first.
 static int geometry_draw(VkExec *ex, uint32_t prim) {
     geometry_input = 0;
@@ -3034,7 +3034,7 @@ static int prepare_draw(VkExec *ex, int prim, int32_t count, int restart) {
     int pending;
     // A draw of at most 6 vertices over half the render area or more (a full-screen triangle or quad, a tile) waits for
     // its pipeline: skipping it can leave a black tile. The waits share 50 ms per presented frame
-    // (TOTK_PIPE_SKIP=fullscreen skips them instead). A one-shot draw waits without that budget. Everything else is
+    // (GHF_PIPE_SKIP=fullscreen skips them instead). A one-shot draw waits without that budget. Everything else is
     // skipped while its pipeline is built.
     static uint64_t wait_frame;
     static uint64_t wait_left_ns;
@@ -3048,7 +3048,7 @@ static int prepare_draw(VkExec *ex, int prim, int32_t count, int restart) {
         wait_ms = (uint32_t)(wait_left_ns / 1000000);
         if (wait_ms) t0 = kern_now_ns();
     }
-    // The previous draw's pipeline while its state repeats (PM, TOTK_PIPE_MEMO=0 turns it off): the cache key is made
+    // The previous draw's pipeline while its state repeats (PM, GHF_PIPE_MEMO=0 turns it off): the cache key is made
     // from the state alone, and a pipeline once found only changes from its fast link to its optimised build, read
     // from the info the cache entry keeps.
     VkPipeline p;
@@ -3143,7 +3143,7 @@ static int prepare_draw(VkExec *ex, int prim, int32_t count, int restart) {
     return 1;
 }
 
-// TOTK_TRACE=perf: the draw or dispatch just recorded, with the NVN 2 names of its stages, for the slow-part line
+// GHF_TRACE=perf: the draw or dispatch just recorded, with the NVN 2 names of its stages, for the slow-part line
 // (vk_sync.c vk_sync_note). kind: 0 draw, 1 indirect draw, 2 dispatch, 3 indirect dispatch.
 static void note_work(const VkExec *ex, int kind, uint64_t work) {
     if (!vk_sync_noting() || !ex->prog) return;
@@ -3166,10 +3166,10 @@ static void bind_index(VkExec *ex, const void *data, uint64_t bytes, VkIndexType
 // The Bananza reset vertex program loses stores through pointers loaded from a list. Match both locally confirmed
 // stages and the observed one-instance point-draw form. Other programs and parameter forms keep the shader path.
 static int indirect_reset_draw(VkExec *ex, const p_draw *d) {
-    // Both settings are fixed for the run (TOTK_FIX_INDIRECT_RESET needs a restart), so read them once: this
+    // Both settings are fixed for the run (GHF_FIX_INDIRECT_RESET needs a restart), so read them once: this
     // runs ahead of every draw.
     static int on = -1;
-    if (on < 0) on = !rt_game_version && cfg_bool("TOTK_FIX_INDIRECT_RESET") && !getenv("DKB_SKIP_DRAWS");
+    if (on < 0) on = !rt_game_version && cfg_bool("GHF_FIX_INDIRECT_RESET") && !getenv("DKB_SKIP_DRAWS");
     if (!on || !c0_on() || ex->render_disabled ||
         !ex->prog || ex->prog->nstage != 2 || d->prim != NVN_DRAW_PRIMITIVE_POINTS ||
         d->count <= 0 || d->first < 0 || d->base_instance || d->instances != 1) return 0;
@@ -3224,7 +3224,7 @@ static void op_draw(VkExec *ex, const p_draw *d) {
 // Primitive restart of an indexed draw. NVN restarts strips wherever an index equals the SetPrimitiveRestart value;
 // Vulkan restarts only at the all-ones value of the bound index type, and only strips and fans without
 // primitiveTopologyListRestart. Byte indices are widened to 16 bits, so their restart value becomes 0xffff
-// (op_draw_idx). Without restart the 0xffff entries of TOTK's terrain and cliff strips fetch vertex 65535 + base and
+// (op_draw_idx). Without restart the 0xffff entries of TotK's terrain and cliff strips fetch vertex 65535 + base and
 // the triangles around them drop out.
 static int restart_for(const VkExec *ex, int prim, int itype) {
     if (!ex->prim_restart.enable) return 0;
@@ -3598,7 +3598,7 @@ static void op_draw_mesh_ind(VkExec *ex, const p_draw_mesh_ind *d) {
 // LOCAL TEST (Ocarina): the game's upscaler lowers to 1.4 million SPIR-V words with about a thousand gathers, and running it
 // lost the device on an RTX 5090 (an invalid instruction pointer, the same address in every run). Such a giant is replaced
 // (this NVN 2 stage only) by a blit from its largest sampled texture to the image it writes. 1 when it was. ponytail: bilinear, not the game's
-// filter; lower the shader's size instead when that is understood. TOTK_BIG_CS=0 runs it.
+// filter; lower the shader's size instead when that is understood. GHF_BIG_CS=0 runs it.
 static int big_compute_blit(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info) {
     uint64_t words = 0;
     gfx_shader_spirv(cs, &words);
@@ -3607,7 +3607,7 @@ static int big_compute_blit(VkExec *ex, const GfxShader *cs, const VkPipeInfo *i
     if (!find_stage(ex->prog, NVN_STAGE_CS, &bctl, &bcode, &blen) || nvn2_origin(bcode) != 0xfd029a317a9a4b94ull) return 0;
     static int on = -1;
     if (on < 0) {
-        const char *e = getenv("TOTK_BIG_CS");
+        const char *e = getenv("GHF_BIG_CS");
         on = !(e && *e == '0');
     }
     if (!on) return 0;

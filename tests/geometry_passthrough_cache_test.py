@@ -86,7 +86,7 @@ class PassthroughCache(unittest.TestCase):
         a, b = raw.read_bytes(), packed.read_bytes()
         self.assertEqual(a[:0x800], b[:0x800])
         self.assertEqual(a[0x840:], b[0x840:])
-        self.assertEqual(b[0x800:0x808], b'TKGSMETA')
+        self.assertEqual(b[0x800:0x808], b'GHFGMETA')
         self.assertEqual(struct.unpack_from('<4I', b, 0x808), (1, 64, 1, 1))
         self.assertEqual(b[0x838:0x840], bytes(8))
         variants = [('version', 0x808, 2), ('size', 0x80c, 96), ('native', 0x810, 2),
@@ -122,7 +122,7 @@ class PassthroughCache(unittest.TestCase):
             self.assertNotIn('c0', job)
             self.assertEqual(job['c1'], '123456789abcdef0')
             data = self.input_path(directory, manifest).read_bytes()
-            self.assertEqual(struct.unpack_from('<6I', data)[0:3], (0x49534b54, 2, 3))
+            self.assertEqual(struct.unpack_from('<6I', data)[0:3], (0x49464847, 2, 3))
             self.assertEqual(struct.unpack_from('<I', data, 20)[0], 148)
             self.assertEqual(data[172:172 + 0x880], control.read_bytes())
             loaded = self.run_fixture('load-input', manifest['iid'], cache=directory)

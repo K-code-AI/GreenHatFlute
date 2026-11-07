@@ -3,12 +3,12 @@
 # (2db612b), each original word checked against the 1.2.1 main. The patch page holds two floats the runtime writes at
 # every present (frame_rate.c): +0 the 30 Hz ratio (seconds * 30), +4 the frame step in seconds.
 
-set fps60    TOTK_FPS60          1
-set realtime TOTK_REALTIME       1
-set cloth    TOTK_CLOTH_REALTIME 1
-set bounce   TOTK_HIGHFPS_FIX    1
-set output   TOTK_PATCH_OUTPUT   0
-set scene    TOTK_PATCH_SCENE    0
+set fps60    GHF_FPS60          1
+set realtime GHF_REALTIME       1
+set cloth    GHF_CLOTH_REALTIME 1
+set bounce   GHF_HIGHFPS_FIX    1
+set output   GHF_PATCH_OUTPUT   0
+set scene    GHF_PATCH_SCENE    0
 
 # 60 fps: the adaptive present-interval controller (main+0x8f26c8, 1.0.0 0x8f6bec) gets the minimum interval 1.
 site fps60 main 8f273c 6b08015f 7100055f   # clamp: cmp w10, #1 (was cmp w10, w8 = minimum)
@@ -75,14 +75,14 @@ site scene main cc3f74 5e21d921 bd0cc660    # scvtf s1, s9 -> str s0, [x19, #0xc
 # sites as patches-v143.txt, with the same original words: two camera sites (update and setup) load the camera's copy of
 # DefaultAspect 1.777778, two viewport routines divide width by height. The replacement loads the ratio from the page
 # instead (Hor+). x10 is kept on the stack, so no register liveness is assumed.
-set aspect   TOTK_ASPECT_PATCH   0
+set aspect   GHF_ASPECT_PATCH   0
 site aspect main cb4b10 bd414260 f81f0fea @page:x10 bd403940 f84107ea   # ldr s0, [x19, #0x140] (camera update)
 site aspect main 12521cc bd414260 f81f0fea @page:x10 bd403940 f84107ea  # ldr s0, [x19, #0x140] (camera setup)
 site aspect main 19b36f0 1e211800 f81f0fea @page:x10 bd403940 f84107ea  # fdiv s0, s0, s1 (viewport)
 site aspect main 1ecdf68 1e211800 f81f0fea @page:x10 bd403940 f84107ea  # fdiv s0, s0, s1 (viewport)
 
 # Spin waits, from tools/spin_waits.py --exefs build/extracted/v121/exefs --patches recomp/patches-v121.txt: loops that only
-# another thread can end; their back-edges pass rt_spin_gate (runtime/kernel.c), TOTK_SPIN=0 keeps the core.
+# another thread can end; their back-edges pass rt_spin_gate (runtime/kernel.c), GHF_SPIN=0 keeps the core.
 spin main ac600 ac620 ac630   # 13 instructions; loads
 spin main ac680 ac6a8 ac6b8   # 15 instructions; loads
 spin main ac6f0 ac718 ac728   # 15 instructions; loads

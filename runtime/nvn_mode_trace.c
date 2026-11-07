@@ -1,4 +1,4 @@
-// TOTK_NVN2_MODE_TRACE: passive scalar metadata only; no mode semantics or command decoding.
+// GHF_NVN2_MODE_TRACE: passive scalar metadata only; no mode semantics or command decoding.
 #include <stdlib.h>
 
 #include "cfg.h"
@@ -24,10 +24,10 @@ static uint64_t origin_ns, start_ns, duration_ns, excluded_before, excluded_afte
 
 static void trace_init(void *unused) {
     (void)unused;
-    int on = cfg_bool("TOTK_NVN2_MODE_TRACE");
+    int on = cfg_bool("GHF_NVN2_MODE_TRACE");
     if (on) {
-        int start = cfg_int("TOTK_NVN2_MODE_TRACE_START_MS");
-        int duration = cfg_int("TOTK_NVN2_MODE_TRACE_DURATION_MS");
+        int start = cfg_int("GHF_NVN2_MODE_TRACE_START_MS");
+        int duration = cfg_int("GHF_NVN2_MODE_TRACE_DURATION_MS");
         if (start < 0 || start > 600000 || duration < 0 || duration > 600000) {
             rt_log("nvn2-mode: window settings outside 0..600000; capture disabled");
             __atomic_store_n(&enabled, 0, __ATOMIC_RELEASE);

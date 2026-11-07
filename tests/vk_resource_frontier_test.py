@@ -39,13 +39,13 @@ def main():
     parser.add_argument('--out', type=Path, help='generated CPU fixture and results directory')
     args = parser.parse_args()
     source = args.source_root.resolve()
-    package = Path(os.environ['TOTK_TOOLCHAIN']) if os.environ.get('TOTK_TOOLCHAIN') else None
+    package = Path(os.environ['GHF_TOOLCHAIN']) if os.environ.get('GHF_TOOLCHAIN') else None
     cc = args.cc or shutil.which('clang')
     if not cc and package:
         cc = str(package / 'llvm/bin/clang.exe')
     inc = args.vulkan_include or (package / 'runtime/deps/include' if package else ROOT / 'runtime/deps/include')
     if not cc or not (inc / 'vulkan/vulkan.h').is_file() or not (inc / 'vma/vk_mem_alloc.h').is_file():
-        parser.error('provide --cc and --vulkan-include, or set TOTK_TOOLCHAIN to the dependency package')
+        parser.error('provide --cc and --vulkan-include, or set GHF_TOOLCHAIN to the dependency package')
     work = (args.out or ROOT / 'build/test/vk-resource-frontier').resolve()
     work.mkdir(parents=True, exist_ok=True)
     texts = {name: (source / 'runtime' / name).read_text(encoding='utf-8')

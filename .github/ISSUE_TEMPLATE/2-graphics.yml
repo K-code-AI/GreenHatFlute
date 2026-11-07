@@ -40,6 +40,6 @@ body:
     id: log
     attributes:
       label: Log
-      description: Attach build/oot111/logs/totk.log, or last-run-errors.log from the folder of play/run.sh. Lines with "validation", "shader" or "nvn2" are the interesting ones.
+      description: Attach build/oot111/logs/greenhatflute.log, or last-run-errors.log from the folder of play/run.sh. Lines with "validation", "shader" or "nvn2" are the interesting ones.
     validations:
       required: true

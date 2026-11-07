@@ -31,7 +31,7 @@
 #define ALIAS_SIZE (64 * GiB)
 #define ALIAS_ALIGN (4 * GiB)
 #define ALIAS_PAGES (ALIAS_SIZE / PAGE)
-// Application pool: Switch 2 games are said to get about 9 GiB of the 12 (not measured on hardware; TOTK_APP_POOL
+// Application pool: Switch 2 games are said to get about 9 GiB of the 12 (not measured on hardware; GHF_APP_POOL
 // overrides). TotK's retail Switch 1 pool was 0xCD500000.
 #define DEFAULT_POOL (9 * GiB)
 #define SYSTEM_RESOURCE_BUDGET (32ull << 20)
@@ -204,12 +204,12 @@ static void protect(uint64_t a, uint64_t n, int prot, const char *what) {
 // The process is re-run when a region is taken: Windows places DLLs, heaps and thread stacks at random addresses,
 // and a fresh process gets a fresh layout.
 static void reexec_or_fail(const char *what) {
-    const char *e = cfg_get("TOTK_REEXEC");
+    const char *e = cfg_get("GHF_REEXEC");
     int n = e ? atoi(e) : 0;
     if (n >= REEXEC_LIMIT) rt_fatal("memory: %s is not free after %d attempts", what, n);
     char buf[16];
     snprintf(buf, sizeof buf, "%d", n + 1);
-    plat_setenv("TOTK_REEXEC", buf);
+    plat_setenv("GHF_REEXEC", buf);
     plat_reexec();
 }
 
@@ -236,10 +236,10 @@ void mem_init(void) {
     plat_mem_fault_hook(thaw_fault);   // before the crash handler
     alias_pages = calloc(ALIAS_PAGES, 1);
     if (!alias_pages) rt_fatal("memory: cannot allocate the alias page map");
-    // totk.ini is read here, once the address space is claimed and before the first setting: the pool size below
-    // depends on TOTK_APP_POOL and on the resolution settings (resolution.c decides them once, on this first call).
+    // greenhatflute.ini is read here, once the address space is claimed and before the first setting: the pool size below
+    // depends on GHF_APP_POOL and on the resolution settings (resolution.c decides them once, on this first call).
     cfg_init();
-    const char *pool = cfg_get("TOTK_APP_POOL");
+    const char *pool = cfg_get("GHF_APP_POOL");
     L = (RtGuestLayout){
         .aslr = {low, RT_ADDRESS_LIMIT - low},
         .stack = {low + STACK_OFF, STACK_SIZE},
@@ -249,7 +249,7 @@ void mem_init(void) {
         .hostfn = {RT_HOSTFN_BASE, RT_HOSTFN_SIZE},
         .pool = pool ? strtoull(pool, NULL, 0) : DEFAULT_POOL + res_heap_extra_bytes(),   // resolution.c
     };
-    if (!L.pool) rt_fatal("memory: TOTK_APP_POOL is 0");
+    if (!L.pool) rt_fatal("memory: GHF_APP_POOL is 0");
 }
 
 const RtGuestLayout *mem_layout(void) { return &L; }
