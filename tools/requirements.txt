@@ -1,7 +1,6 @@
-# Python 3.12.15 (uv) venv at .venv: LASRecomp-style lifter/generator tools + MacNativeGames build deps + oead/evfl/quicktex.
-# Recreate: uv venv --python 3.12 .venv && uv pip install --python .venv/Scripts/python.exe -r tools/requirements.txt
+# Python 3.12 (uv) venv at .venv: the lifter and generator tools, the vendored extraction scripts, oead/evfl/quicktex.
+# Recreate: uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r tools/requirements.txt
 altgraph==0.17.5
-ansicon==1.89.0
 appdirs==1.4.4
 blessed==1.51.0
 brotli==1.2.0
@@ -27,7 +26,6 @@ pycryptodome==4.1.0
 pyelftools==0.33
 pyinstaller==6.22.3
 pyinstaller-hooks-contrib==2026.8
-pywin32-ctypes==0.2.3
 pyyaml==6.0.3
 quicktex==0.2.1
 setuptools==84.2.0

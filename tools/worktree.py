@@ -7,6 +7,9 @@
 A worktree holds tracked files only. build/, generated/, refs/, toolchain/, .venv/, .venv-py314/, game/, and the local
 agent setup .claude/ and notes/ of the main checkout appear in it as symlinks, config.local.toml and CLAUDE.local.md as
 hard links. Nothing is copied.
+A .gitignore line that ends in / matches a directory, and git sees a symlink to a directory as a plain entry, so the
+ignored directories would show up untracked in every task worktree: `new` names them in the repository's local
+.git/info/exclude (never committed, shared by all worktrees) the first time it links one.
 `remove` deletes the links first (os.unlink never follows a symlink), checks that none is left, and only
 then lets git delete the worktree. Stdlib only.
 """
@@ -88,6 +91,29 @@ def wt_path(main, tag):
     return main / '.worktrees' / tag
 
 
+EXCLUDE_NOTE = ('# tools/worktree.py: directories linked into task worktrees. A .gitignore line ending in / names a'
+                ' directory, and git reads a symlink to one as a plain entry, so the links are named here as well.')
+
+
+def ignore_links(main):
+    """Name the linked directories in .git/info/exclude, so git status in a task worktree stays clean.
+
+    That file is local to the clone and applies to every worktree of it; the lines are left in place when a worktree is
+    removed, since the next task worktree needs the same ones."""
+    common = Path(git(main, 'rev-parse', '--path-format=absolute', '--git-common-dir').stdout.strip())
+    f = common / 'info' / 'exclude'
+    have = f.read_text() if f.is_file() else ''
+    known = have.split()
+    want = [f'/{n}' for n in LINK_DIRS if f'/{n}' not in known]
+    if not want:
+        return
+    f.parent.mkdir(parents=True, exist_ok=True)
+    with f.open('a') as out:
+        if EXCLUDE_NOTE not in have:
+            out.write('\n' + EXCLUDE_NOTE + '\n')
+        out.write('\n'.join(want) + '\n')
+
+
 def cmd_new(a):
     if not TAG_RE.match(a.tag):
         sys.exit(f'bad tag {a.tag!r}')
@@ -96,6 +122,7 @@ def cmd_new(a):
     if wt.exists():
         sys.exit(f'{wt} exists')
     git(main, 'worktree', 'add', str(wt), '-b', f'task/{a.tag}', a.base)
+    ignore_links(main)
     made = link_data(main, wt)
     print(wt)
     print('linked: ' + ', '.join(made), file=sys.stderr)

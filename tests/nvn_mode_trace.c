@@ -52,7 +52,7 @@ static Event *event_new(void) {
 static void event_set(Event *e) {
     pthread_mutex_lock(&e->m); e->set = 1; pthread_cond_broadcast(&e->c); pthread_mutex_unlock(&e->m);
 }
-// 1 when the event is set, 0 when ms ran out: WaitForSingleObject(h, ms) == WAIT_OBJECT_0.
+// 1 when the event is set, 0 when ms ran out: pthread_cond_timedwait against CLOCK_REALTIME, re-checked in a loop.
 static int event_wait_ms(Event *e, int ms) {
     struct timespec at;
     clock_gettime(CLOCK_REALTIME, &at);
@@ -93,7 +93,7 @@ void rt_log(const char *format,...) {
     if(!strncmp(text,"nvn2-mode event ",16)) {
         if(event_count>=NVN_MODE_TRACE_LIMIT)abort();Captured *e=&captured[event_count++];
         // The producer prints these with %llu after casting to unsigned long long, so read them into that: uint64_t is
-        // unsigned long here and unsigned long long on Windows, and the format string must stay what it prints.
+        // unsigned long here, and the format string must stay exactly what the producer prints.
         unsigned long long seq,cb,handle,submit,elapsed;
         if(sscanf(text,"nvn2-mode event seq=%llu type=%31s thread=%u cb=%llx handle=%llx value=%u submit=%llu elapsed_ns=%llu",
                   &seq,name,&e->thread,&cb,&handle,&e->value,&submit,&elapsed)!=8)abort();

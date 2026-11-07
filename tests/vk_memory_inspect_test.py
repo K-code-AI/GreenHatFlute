@@ -183,14 +183,14 @@ def main():
               'providers': 'Original single-thread lock/provider counters and metadata-only pools; actual vk.h, PoolRec, VPage, pidx header, rec_class and vk_mem_inspect. No Vulkan library.',
               'runs': []}
     for opt in ('O0', 'O2'):
-        exe = out / ('inspect-' + opt + ('.exe' if os.name == 'nt' else ''))
+        exe = out / ('inspect-' + opt)
         command = [args.cc, '-' + opt, '-std=gnu17', '-Wall', '-Wextra', '-Werror', '-fno-strict-aliasing',
                    '-I', str(ROOT / 'runtime'), '-I', str(include), '-I', str(include / 'vma'), str(fixture), '-o', str(exe)]
         built = subprocess.run(command, capture_output=True, text=True, timeout=60)
         (out / (opt + '-compile.log')).write_text(built.stdout + built.stderr + f'exit={built.returncode}\n')
         assert built.returncode == 0, built.stdout + built.stderr
         compiler = Path(shutil.which(args.cc) or args.cc)
-        objdump = compiler.with_name('llvm-objdump.exe' if os.name == 'nt' else 'llvm-objdump')
+        objdump = compiler.with_name('llvm-objdump')
         import_check = 'unavailable; no graphics library linked'
         if objdump.is_file():
             imports = subprocess.check_output([str(objdump), '-p', str(exe)], text=True)

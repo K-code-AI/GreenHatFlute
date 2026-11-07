@@ -47,7 +47,7 @@ def main():
                        .replace('/* PRODUCTION_TYPES */', types))
     results = []
     for opt in ('O0', 'O2'):
-        exe = out / (f'prefix-{opt}' + ('.exe' if os.name == 'nt' else ''))
+        exe = out / (f'prefix-{opt}')
         command = [args.cc, '-std=gnu11', '-' + opt, '-Wall', '-Wextra', '-Werror',
                    '-I', str(ROOT / 'runtime'), '-I', str(include), '-I', str(include / 'vma'),
                    str(fixture), '-o', str(exe)]

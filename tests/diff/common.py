@@ -24,8 +24,6 @@ IN_FMT = '<QQ32QQQ'
 IN_TAIL = '<QQ'
 OUT_SIZE = 32 * 8 + 4 * 8 + 32 * 16
 
-MSYS_BIN = Path(r'C:\msys64\ucrt64\bin')
-
 F32 = [0, 0x80000000, 0x7f800000, 0xff800000, 0x7fc00000, 0xffc00000, 0x7fa00001, 0xff812345, 0x7fd00abc,
        0x00000001, 0x80000001, 0x007fffff, 0x807fffff, 0x00400000, 0x00800000, 0x80800000, 0x00800001, 0x7f7fffff,
        0xff7fffff, 0x3f800000, 0xbf800000, 0x3f000000, 0xbf000000, 0x40000000, 0x40400000, 0x3fc00000, 0xbfc00000,
@@ -186,17 +184,12 @@ def compiler():
     cc = os.environ.get('CC')
     if cc:
         return cc
-    if os.name == 'nt' and (MSYS_BIN / 'clang.exe').exists():
-        return str(MSYS_BIN / 'clang.exe')
     return shutil.which('clang') or 'clang'
 
 
 def build_harness(work, bodies, jobs, cflags):
-    """Compile one C function per test body plus harness.c into work/harness[.exe]."""
+    """Compile one C function per test body plus harness.c into work/harness."""
     cc = compiler()
-    env = dict(os.environ)
-    if os.name == 'nt' and MSYS_BIN.exists():
-        env['PATH'] = str(MSYS_BIN) + os.pathsep + env.get('PATH', '')
     flags = ['-O1', '-fno-strict-aliasing', '-Wno-unused-label', '-I', str(ROOT / 'runtime')] + cflags.split()
     n = max(1, min(jobs, len(bodies) // 200 + 1))
     per = (len(bodies) + n - 1) // n
@@ -218,11 +211,11 @@ def build_harness(work, bodies, jobs, cflags):
     for s in srcs:
         o = work / (s.stem + '.o')
         objs.append(o)
-        procs.append(subprocess.Popen([cc] + flags + ['-c', str(s), '-o', str(o)], env=env))
+        procs.append(subprocess.Popen([cc] + flags + ['-c', str(s), '-o', str(o)]))
     if any(p.wait() for p in procs):
         raise SystemExit('compile failed')
-    exe = work / ('harness.exe' if os.name == 'nt' else 'harness')
-    subprocess.check_call([cc, '-fuse-ld=lld', '-o', str(exe)] + [str(o) for o in objs], env=env)
+    exe = work / 'harness'
+    subprocess.check_call([cc, '-fuse-ld=lld', '-o', str(exe)] + [str(o) for o in objs])
     return exe
 
 

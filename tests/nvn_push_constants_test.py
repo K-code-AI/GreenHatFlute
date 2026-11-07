@@ -19,7 +19,7 @@ def main():
         parser.error('pass --cc with the project\'s Clang executable')
     out = ROOT / 'build' / 'test' / 'nvn-push-constants'
     out.mkdir(parents=True, exist_ok=True)
-    exe = out / ('nvn_push_constants.exe' if os.name == 'nt' else 'nvn_push_constants')
+    exe = out / 'nvn_push_constants'
     subprocess.run([args.cc, '-O2', '-Wall', '-fno-strict-aliasing', '-ffunction-sections', '-fdata-sections',
                     '-I', str(ROOT / 'runtime'), str(ROOT / 'tests' / 'nvn_push_constants.c'),
                     str(ROOT / 'runtime' / 'nvn_api_cmd.c'), str(ROOT / 'runtime' / 'nvn_api_nvn2.c'),

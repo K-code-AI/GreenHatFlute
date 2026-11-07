@@ -84,13 +84,12 @@ class GeometryCache(unittest.TestCase):
         source = '#define FIXTURE_GEOMETRY ' + str(int('GFX_GEOMETRY_VERSION' in header)) + '\n' + source
         generated = args.out / 'fixture.c'
         generated.write_text(source)
-        cls.exe = args.out / ('fixture.exe' if os.name == 'nt' else 'fixture')
+        cls.exe = args.out / 'fixture'
         runtime = ROOT / 'runtime'
-        platform = 'win32.c' if os.name == 'nt' else 'linux.c'
-        libraries = ['-lbcrypt', '-lpdh', '-lpsapi', '-lrstrtmgr', '-lshell32', '-lwinmm'] if os.name == 'nt' else ['-ldl', '-pthread']
+        libraries = ['-ldl', '-pthread']
         command = [args.cc, '-std=gnu11', '-' + args.opt, '-ffunction-sections', '-fdata-sections',
                    '-I', str(runtime), str(generated), str(runtime / 'sha256.c'),
-                   str(runtime / 'platform' / platform), str(runtime / 'platform/common.c'),
+                   str(runtime / 'platform/linux.c'), str(runtime / 'platform/common.c'),
                    '-Wl,--gc-sections', *libraries, '-o', str(cls.exe)]
         compiled = subprocess.run(command, capture_output=True, text=True, timeout=90)
         (args.out / 'compile.log').write_text(compiled.stdout + compiled.stderr)

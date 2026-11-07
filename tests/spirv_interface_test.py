@@ -481,7 +481,7 @@ def main():
         validation.append(dict(path=str(path),sha256=hashlib.sha256(data).hexdigest(),
                                spirv_val='PASS' if args.spirv_val else 'not requested'))
     cfile=build/'spirv-interface.c'
-    exe=build/('spirv-interface.exe' if os.name=='nt' else 'spirv-interface')
+    exe=build/'spirv-interface'
     cfile.write_text(source(args.source_root.resolve()))
     subprocess.run([str(cc),'-std=c11','-O'+args.opt,'-Wall','-Wextra','-Werror',str(cfile),'-o',str(exe)],check=True)
     cache = tempfile.mkdtemp(prefix='use-cache-',dir=build)

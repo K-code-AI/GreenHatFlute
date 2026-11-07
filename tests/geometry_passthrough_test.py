@@ -252,7 +252,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--xlate', type=Path, required=True)
     parser.add_argument('--baseline', type=Path, required=True)
-    parser.add_argument('--dotnet', type=Path, default=Path('F:/Codex/dkb-pc-recomp/toolchain/dotnet/dotnet.exe'))
+    parser.add_argument('--dotnet', type=Path, default=Path('dotnet'))
     parser.add_argument('--spirv-val', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
     args, rest = parser.parse_known_args()

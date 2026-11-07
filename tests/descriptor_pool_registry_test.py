@@ -292,7 +292,7 @@ def main():
     report = {'sources': {name: hashlib.sha256((ROOT / 'runtime' / name).read_bytes()).hexdigest() for name in files},
               'fixture_sha256': hashlib.sha256(text.encode()).hexdigest(), 'runs': []}
     for opt in ('O0', 'O2'):
-        exe = out / ('registry-' + opt + ('.exe' if os.name == 'nt' else ''))
+        exe = out / ('registry-' + opt)
         command = [args.cc, '-' + opt, '-Wall', '-Werror=format', '-fno-strict-aliasing', '-I', str(ROOT / 'runtime'),
                    '-I', str(include), '-I', str(include / 'vma'), str(fixture), '-o', str(exe)]
         built = subprocess.run(command, capture_output=True, text=True)
@@ -302,7 +302,7 @@ def main():
             return built.returncode
         # No Vulkan library is linked. When LLVM's companion tool is available, additionally inspect PE imports.
         compiler = Path(shutil.which(args.cc) or args.cc)
-        objdump = compiler.with_name('llvm-objdump.exe' if os.name == 'nt' else 'llvm-objdump')
+        objdump = compiler.with_name('llvm-objdump')
         if objdump.is_file():
             imports = subprocess.check_output([str(objdump), '-p', str(exe)], text=True)
             (out / (opt + '-imports.log')).write_text(imports)

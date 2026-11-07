@@ -38,7 +38,7 @@ def main():
         src = Path(tmp) / 'test.c'
         src.write_text(fixture)
         for opt in ('-O0', '-O2'):
-            exe = Path(tmp) / ('stencil' + opt[2:] + '.exe')
+            exe = Path(tmp) / ('stencil' + opt[2:])
             subprocess.run([args.cc, '-std=gnu11', opt, '-I', str(ROOT / 'runtime'),
                             '-I', str(args.deps / 'include'), '-I', str(args.deps / 'include/vma'),
                             str(src), '-o', str(exe)], check=True)

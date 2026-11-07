@@ -8,8 +8,9 @@
 //     what makes "longjmp to a setjmp taken on another fiber" a fatal rather than memory corruption.
 //   - __builtin_setjmp/__builtin_longjmp survive a fiber's stack, whose bytes live in our own mmap rather than a
 //     thread's, and the stack copy really restores what was scribbled over.
-// None of it was ever exercised on Linux: the mechanism used to be compiled only under _WIN32, and on Linux a guest
-// longjmp stopped the process with "a guest error path that lifted code cannot take".
+// Both are easy to break silently, and the failure is memory corruption rather than a message: a wrong stack base lets
+// "longjmp to a setjmp taken on another fiber" write over a live stack. This fixture runs the mechanism over a real
+// fiber switch, on stacks the platform layer mmap'd itself, and fails when either half stops holding.
 //
 // host_setjmp/host_longjmp below follow ov_setjmp/jmp_back/ov_longjmp step for step, including the alloca that moves
 // longjmp's own frame clear of the region being restored: without it the copy lands on the live frame and faults.

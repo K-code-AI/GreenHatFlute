@@ -155,7 +155,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     src = out / 'indirect.c'
     src.write_text(source())
-    exe = out / ('indirect.exe' if os.name == 'nt' else 'indirect')
+    exe = out / 'indirect'
     subprocess.run([args.cc, '-O2', '-Wall', '-Wextra', '-I', str(ROOT / 'runtime'), str(src), '-o', str(exe)], check=True)
     return subprocess.run([str(exe)]).returncode
 

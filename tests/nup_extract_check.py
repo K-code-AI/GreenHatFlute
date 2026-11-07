@@ -214,12 +214,7 @@ class ExtractNupTest(unittest.TestCase):
         out_dir.mkdir(parents=True)
         outside = self.write(b'outside sentinel', 'outside.txt')
         link = out_dir / 'main.part'
-        try:
-            link.symlink_to(outside)
-        except OSError as e:
-            if sys.platform == 'win32' and getattr(e, 'winerror', None) == 1314:
-                self.skipTest('Windows symlink privilege unavailable; run this original case on POSIX')
-            raise
+        link.symlink_to(outside)
         with contextlib.closing(nup.Nup(path)) as parsed:
             nup.extract_tree(parsed, None, parsed.packages[0], 'exefs', out_dir, True, True)
         self.assertEqual(outside.read_bytes(), b'outside sentinel')

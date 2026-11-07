@@ -78,11 +78,11 @@ def main():
     results = []
     for version in (0, 143):
         for opt in ('-O0', '-O2'):
-            exe = out / f'ticks-{version}-{opt[1:]}.exe'
+            exe = out / f'ticks-{version}-{opt[1:]}'
             cmd = [args.cc, '-std=gnu11', opt, '-Wall', '-Wextra', '-Werror', '-Wno-unused-function',
                    '-DTEST_GAME_VERSION=' + str(version), '-I', str(source / 'runtime'),
                    '-I', str(args.vulkan_include), '-I', str(args.vulkan_include / 'vma'),
-                   str(generated), *([] if os.name == 'nt' else ['-pthread']), '-o', str(exe)]
+                   str(generated), '-pthread', '-o', str(exe)]
             subprocess.run(cmd, check=True, timeout=30)
             p = subprocess.run([str(exe)], capture_output=True, text=True, timeout=20)
             row = {'version': version, 'optimization': opt, 'exit': p.returncode, 'output': p.stdout + p.stderr,

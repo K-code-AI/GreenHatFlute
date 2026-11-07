@@ -5,8 +5,7 @@ byte-identical), then runs `dotnet publish`. The default applies patches 0001-00
 min/max/clamp operations. Patch 0015 makes runtime storage-candidate resolution available only to explicit version-1
 NVN 2 compute requests; missing/version-0 requests retain the legacy pass. --defined-float-minmax also applies 0014's integer selection and numeric constant folding;
 this adds shader ALU work and has no established game visual or frame-time benefit. Needs the .NET 10 SDK and clang/lld
-(docs/building.md). NativeAOT builds for the OS it runs on only, so this is a linux-x64 translator: the project is Linux-only
-and nothing here builds a Windows binary.
+(docs/building.md). NativeAOT builds for the OS it runs on only, so this is a linux-x64 translator.
 
 Next to the binary it writes greenhatflute_xlate.id: the translator identity, a sha256 over everything the build reads (this script,
 Program.cs, the csproj, the selected patches, the vendor tree). runtime/gfx_shader.c puts it into every shader cache key, so a

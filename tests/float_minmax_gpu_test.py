@@ -224,7 +224,7 @@ def main():
     subprocess.run([str(args.spirv_val.resolve()), '--target-env', 'vulkan1.2', str(compute)], check=True)
     (out / 'adapter.json').write_text(json.dumps(metadata, indent=2) + '\n')
     cc = shutil.which(args.cc) or args.cc
-    runner = out / ('float-minmax-gpu.exe' if os.name == 'nt' else 'float-minmax-gpu')
+    runner = out / 'float-minmax-gpu'
     subprocess.run([str(cc), '-std=c11', '-O1', '-Wall', '-Wextra', '-Werror',
                     '-I', str(args.vulkan_include.resolve()), str(ROOT / 'tests/float_minmax_gpu.c'),
                     str(args.vulkan_library.resolve()), '-o', str(runner)], check=True)

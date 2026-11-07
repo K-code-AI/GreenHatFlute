@@ -215,12 +215,11 @@ class BodyInputs(unittest.TestCase):
         source = source.replace('@HASH_CALL@', 'build_code_hash(stage, control, code, size, c1, c1_size, input, hash)')
         path = args.out / 'runtime-fixture.c'
         path.write_text('#define FIXTURE_GEOMETRY 1\n' + source, encoding='utf-8')
-        cls.runtime = args.out / ('runtime-fixture.exe' if os.name == 'nt' else 'runtime-fixture')
+        cls.runtime = args.out / 'runtime-fixture'
         runtime = ROOT / 'runtime'
-        platform = 'win32.c' if os.name == 'nt' else 'linux.c'
-        libraries = ['-lbcrypt', '-lpdh', '-lpsapi', '-lrstrtmgr', '-lshell32', '-lwinmm'] if os.name == 'nt' else ['-ldl', '-pthread']
+        libraries = ['-ldl', '-pthread']
         command = [str(args.cc), '-std=gnu11', '-O2', '-ffunction-sections', '-fdata-sections', '-I', str(runtime),
-                   str(path), str(runtime / 'sha256.c'), str(runtime / 'platform' / platform),
+                   str(path), str(runtime / 'sha256.c'), str(runtime / 'platform/linux.c'),
                    str(runtime / 'platform/common.c'), '-Wl,--gc-sections', *libraries, '-o', str(cls.runtime)]
         run = subprocess.run(command, capture_output=True, text=True, timeout=90)
         (args.out / 'runtime-compile.log').write_text(run.stdout + run.stderr, encoding='utf-8')

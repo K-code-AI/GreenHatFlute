@@ -3,7 +3,7 @@
 The actual prog_t/header, initializer, setter, release, finalizer, discriminator
 and metadata packer execute. The allocator tracks and quarantines owned slabs;
 the backend and lowerer are bounded spies, never a GPU or native lowerer. A
-guard-page compact control detects accidental legacy-tail reads on Windows.
+guard-page compact control detects accidental reads past the end of a control block.
 """
 import argparse
 import hashlib
@@ -276,7 +276,7 @@ def main():
         c = args.out / (kind + ".c")
         c.write_text(source(kind))
         for opt in ("-O0", "-O2"):
-            exe = args.out / (kind + opt + (".exe" if os.name == "nt" else ""))
+            exe = args.out / (kind + opt)
             command = [args.cc, opt, "-Wall", "-Wextra", "-Werror", "-I", str(ROOT / "runtime"), str(c), "-o", str(exe)]
             run = subprocess.run(command, capture_output=True, text=True)
             (args.out / (kind + opt + "-compile.log")).write_text(run.stdout + run.stderr)

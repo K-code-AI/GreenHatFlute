@@ -74,7 +74,7 @@ class ShaderFailureCapture(unittest.TestCase):
         source = source.replace('@FUNCTIONS@', '\n'.join(names + functions))
         generated = cls.work / 'fixture.c'
         generated.write_text(source)
-        cls.exe = cls.work / ('fixture.exe' if os.name == 'nt' else 'fixture')
+        cls.exe = cls.work / 'fixture'
         subprocess.run([CC, '-std=gnu11', '-O2', '-Wall', '-Wextra', '-Werror', '-I', str(ROOT / 'runtime'),
                         str(generated), '-o', str(cls.exe)],
                        check=True, timeout=30)
@@ -139,8 +139,6 @@ class ShaderFailureCapture(unittest.TestCase):
     def check_capture_in_cache(self, alias):
         cache, _, _ = self.capture(False)
         directory = cache if alias == 'exact' else cache / '..' / cache.name
-        if alias == 'case':
-            directory = cache.with_name(cache.name.upper())
         env = dict(os.environ, DKB_SHADER_FAILURE_DUMP=str(directory))
         run = subprocess.run([str(self.exe), str(cache), '0', '4'], env=env,
                              capture_output=True, text=True, timeout=10)
@@ -157,9 +155,7 @@ class ShaderFailureCapture(unittest.TestCase):
         self.check_capture_in_cache('exact')
 
     def test_dump_may_alias_the_cache_directory(self):
-        for alias in (('parent', 'case') if os.name == 'nt' else ('parent',)):
-            with self.subTest(alias=alias):
-                self.check_capture_in_cache(alias)
+        self.check_capture_in_cache('parent')
 
     def test_first_complete_packet_is_preserved(self):
         cache, packet, _ = self.capture(True)

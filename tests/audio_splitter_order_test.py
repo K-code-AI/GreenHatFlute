@@ -66,7 +66,7 @@ def main():
     path = args.mixer_source or ROOT / 'runtime/audio_mixer.c'
     fixture = out / 'fixture.c'
     fixture.write_text(generate(path.read_text()))
-    exe = out / 'fixture.exe'
+    exe = out / 'fixture'
     command = [args.cc, '-std=gnu11', '-O' + args.opt, '-Wall', '-Wextra', '-Werror',
                '-I', ROOT / 'runtime', fixture, '-o', exe]
     compiled = subprocess.run([str(x) for x in command], capture_output=True, text=True, timeout=60)

@@ -68,7 +68,7 @@ from build_shaders import stale as stale_shaders
 from check_content import GENERATED_MARKER
 
 ROOT = Path(__file__).resolve().parent.parent
-# In a git worktree (tools/worktree.py) build/ and generated/ are junctions into the main checkout, and resolve() follows
+# In a git worktree (tools/worktree.py) build/ and generated/ are symlinks into the main checkout, and resolve() follows
 # them. MAIN_ROOT is where they land, so resolved paths still print and compare relative to a root.
 MAIN_ROOT = (ROOT / 'build').resolve().parent
 EXE = 'GreenHatFlute'
@@ -83,7 +83,8 @@ def on_path(name):
 CLANG = on_path('clang')
 NINJA = on_path('ninja')
 
-# Flags for generated code as LAS Recomp builds it (Makefile GENFLAGS, Windows), plus -march for the FP/SIMD lowering.
+# Flags for generated code: -O1 with the aliasing and return-type allowances the lifted code needs, plus -march for
+# the FP/SIMD lowering.
 GEN_FLAGS = ['-O1', '-fno-strict-aliasing', '-Wno-return-type', '-Wno-unused-label', '-fvisibility=hidden',
              '-march=x86-64-v3']
 RT_FLAGS = ['-O2', '-g', '-Wall', '-fno-strict-aliasing', '-march=x86-64-v3']
@@ -140,7 +141,7 @@ MEM_BUDGET = 50 * GiB  # total for all compile jobs
 
 
 def below_root(p):
-    """Resolved p relative to ROOT, else to MAIN_ROOT (the same relative path through the worktree's junctions), else
+    """Resolved p relative to ROOT, else to MAIN_ROOT (the same relative path through the worktree's symlinks), else
     absolute."""
     p = Path(p).resolve()
     for root in (ROOT, MAIN_ROOT):
@@ -159,8 +160,8 @@ def flag_path(p):
 
 
 def cmd_arg(s):
-    """s for a Ninja command line: Ninja-escaped, and quoted when it holds a space (a user or folder name), as clang and
-    lld split their Windows command line at unquoted spaces."""
+    """s for a Ninja command line: Ninja-escaped, and quoted when it holds a space (a user or folder name), since the
+    compiler and linker split their arguments there."""
     s = s.replace('$', '$$')
     return f'"{s}"' if ' ' in s else s
 

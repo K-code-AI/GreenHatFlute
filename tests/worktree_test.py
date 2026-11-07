@@ -2,9 +2,9 @@
 
 Proves that marker files in the linked directories and in the linked file survive:
   1. tools/worktree.py remove,
-  2. git worktree remove --force with the junctions still in place,
-  3. git worktree prune after the worktree directory is deleted with its junctions in place.
-Also checks that git status in a worktree shows no untracked or typechanged entry for the links.
+  2. git worktree remove --force with the links still in place,
+  3. git worktree prune after the worktree directory is deleted with its links in place.
+Also checks that git status in a worktree shows no untracked entry for the links.
 Run with the repo's Python: tests/worktree_test.py
 """
 import os
@@ -18,7 +18,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
 import worktree  # noqa: E402
 
-IGNORED = '\n'.join('/' + d + '/' for d in worktree.LINK_DIRS) + '\n/' + worktree.LINK_FILES[0] + '\n/.worktrees/\n'
+# The shape of this repository's .gitignore: the directories with a trailing / (which is why worktree.py has to name
+# the links again in .git/info/exclude), the linked files by name.
+IGNORED = '\n'.join('/' + d + '/' for d in worktree.LINK_DIRS) + '\n' + \
+          '\n'.join('/' + f for f in worktree.LINK_FILES) + '\n/.worktrees/\n'
 
 
 def git(cwd, *a):
@@ -76,7 +79,7 @@ def main():
         assert wt.resolve() == (main_dir / '.worktrees' / 'a').resolve(), wt
         for d in worktree.LINK_DIRS:
             if (main_dir / d).is_dir():
-                assert os.path.isjunction(wt / d), d
+                assert worktree.is_link(wt / d), d
         assert (wt / 'build' / 'deep' / 'marker.txt').read_text() == 'keep'
         assert os.path.samefile(wt / 'config.local.toml', main_dir / 'config.local.toml')
         status = git(wt, 'status', '--porcelain', '--ignored=no')
@@ -112,14 +115,14 @@ def main():
         git(main_dir, 'worktree', 'remove', '--force', str(wt))
         check(main_dir, 'raw git worktree remove --force')
 
-        # raw: delete the worktree directory with the junctions in place, then prune
+        # raw: delete the worktree directory with the links in place, then prune
         wt = Path(tool(main_dir, 'new', 'e').strip())
         shutil.rmtree(wt)
         git(main_dir, 'worktree', 'prune')
         check(main_dir, 'rmtree of a linked worktree, then git worktree prune')
         print('PASS')
     finally:
-        # never follow a junction while cleaning up
+        # never follow a link while cleaning up
         for w in (base / 'main' / '.worktrees').glob('*'):
             for d in worktree.LINK_DIRS:
                 worktree.drop_link(w / d)

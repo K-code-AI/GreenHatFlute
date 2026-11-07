@@ -232,12 +232,12 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     author = args.out / 'author.c'
     author.write_text(probe.cpu_source())
-    author_exe = args.out / 'author.exe'
+    author_exe = args.out / 'author'
     run([args.cc, '-std=c11', '-O2', author, '-o', author_exe], args.out / 'author-compile.log')
     run([author_exe.resolve(), args.out.resolve()], args.out / 'author.log')
     portable_author = args.out / 'portable-author.c'
     portable_author.write_text(portable_probe.cpu_source())
-    portable_exe = args.out / 'portable-author.exe'
+    portable_exe = args.out / 'portable-author'
     run([args.cc, '-std=c11', '-O2', '-I', ROOT / 'runtime', portable_author, '-o', portable_exe],
         args.out / 'portable-author-compile.log')
     run([portable_exe.resolve(), args.out.resolve(), '1'], args.out / 'portable-author.log')
@@ -329,10 +329,10 @@ def main():
     generated = args.out / 'pipeline.c'
     generated.write_text(pipeline_source() + '\n' + shader_adapter() + '\n' + resources(args.out, names) + '\n' +
                          (ROOT / 'tests/geometry_pipeline.c').read_text())
-    exe = args.out / 'pipeline.exe'
+    exe = args.out / 'pipeline'
     run([args.cc, '-std=gnu11', f'-O{args.opt}', '-ffunction-sections', '-fdata-sections',
          '-I', ROOT / 'runtime', '-I', args.deps / 'include', '-I', args.deps / 'include/vma',
-         generated, '-Wl,--gc-sections,--exclude-all-symbols', '-o', exe], args.out / 'compile.log')
+         generated, '-Wl,--gc-sections,--discard-all', '-o', exe], args.out / 'compile.log')
     output = run([exe.resolve(), args.out.resolve()], args.out / 'test.log')
     legacy = (args.out / 'legacy-key.bin').read_bytes()
     # Frozen from d9fe9f7's actual VkPipeState/KeyRec/rec_fill on the 64-bit ABI,

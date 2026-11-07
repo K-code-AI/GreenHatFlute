@@ -1,7 +1,7 @@
 # Adapted from nxnative dm/tools/tests/test_spin_waits.py @ 6d34984 (MIT, Copyright (c) 2026 seedds).
 """tools/spin_waits.py on hand-assembled AArch64 loops, without game files.
 
-Run: .venv/Scripts/python tests/spin_waits_test.py
+Run: .venv/bin/python tests/spin_waits_test.py
 """
 import struct
 import sys

@@ -46,7 +46,7 @@ The buttons change at once, but the game reads its UI archive and fonts once at 
 - the action prompt (`DoCommand_00`) draws the letter images `Nt_KeyTexA/B/X/Y_00`, whose image data is swapped, in a diamond that names the other face buttons. The diamond's letters are text the game takes from `LayoutMsg/DoCommand_00.msbt` of each language's `Mals` archive (and the layout's own text panes behind it); both are swapped. The diamond's shape shows the button's position and stays.
 - every other prompt is text in the button font (`scft/External.bfotf` in each `Font/Font*.Nin_NX_NVN.bfarc.zs`, glyphs U+E040 to U+E043); the A and B, X and Y glyphs are swapped.
 
-Without the folder (an install made by an older setup, or one where the setup could not prepare it and showed a warning) the menu says the files are missing, the log has `RomFS overlay: pad_layout = xbox_prompts, but ...`, and the Switch prompts stay; running the setup again on the install folder writes it. In a source build, `.venv-py314\Scripts\python tools\make_romfs_patches.py --version <ver> --xbox-prompts` writes `build\<ver>\romfs-patches-xbox`.
+Without the folder (an install made by an older setup, or one where the setup could not prepare it and showed a warning) the menu says the files are missing, the log has `RomFS overlay: pad_layout = xbox_prompts, but ...`, and the Switch prompts stay; running the setup again on the install folder writes it. In a source build, `.venv-py314/bin/python tools/make_romfs_patches.py --version <ver> --xbox-prompts` writes `build/<ver>/romfs-patches-xbox`.
 
 ## Window keys
 
