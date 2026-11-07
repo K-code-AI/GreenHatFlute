@@ -1299,7 +1299,8 @@ static void probe_paths(void) {
     static const struct { const char *path, *want; } cases[] = {
         {"rom:/a/b.bin", "a/b.bin"}, {"rom://a/b.bin", "a/b.bin"}, {"rom:///a/b.bin", "a/b.bin"},
         {"rom:/a", "a"},             {"rom:/../main", NULL},       {"rom://../a", NULL},
-        {"rom:/a/../b", NULL},       {"rom:/a/./b", NULL},         {"rom:/a//b", NULL},
+        {"rom:/a/../b", NULL},       {"rom:/a/./b", NULL},         {"rom:/a//b", "a/b"},
+        {"rom:/a//b//c", "a/b/c"},  {"rom:/a//../b", NULL},       {"rom:/a/b//", "a/b"},
         {"rom:/a\\b", NULL},         {"rom:/", NULL},              {"rom://", NULL},
         {"rom:a", NULL},             {"ro:/a", NULL},              {"romx:/a", NULL},
         {"rom:/.", NULL},            {"rom:/..", NULL},            {"ROM:/a", NULL},
@@ -1388,6 +1389,21 @@ static uint64_t probe_romfs(void) {
         CALL(S_CLOSE_FILE, h);
     }
     CHECK(same, "rom:/, rom:// and rom:/// do not open the same file");
+    // A doubled separator inside the path, which is how the game asks for its speech ("content://Voice/Resource//
+    // Stream/x.bwav"): built from a sampled file by doubling one of its own separators, it must name the same file.
+    char doubled[4200];
+    const char *at = strchr(sample, '/');
+    snprintf(doubled, sizeof doubled, "rom:/%.*s//%s", (int)(at - sample), sample, at + 1);
+    type = -1, h = 0, got = 0;
+    int joined = RES(S_ENTRY_TYPE, U(&type), U(doubled)) == 0 && type == FS_ENTRY_FILE;
+    joined = joined && RES(S_OPEN_FILE, U(&h), U(doubled), FS_OPEN_READ) == 0;
+    if (joined) {
+        joined = joined && RES(S_READ_FILE, U(&got), h, 0, U(a), 256) == 0 && got == 256;
+        joined = joined && independent_read(image, b, 256, off) == 256 && !memcmp(a, b, 256);
+        CALL(S_CLOSE_FILE, h);
+    }
+    CHECK(joined, "%s is not the same file as rom:/%s", doubled, sample);
+    printf("romfs: %s opens as rom:/%s with a doubled separator: %s\n", sample, doubled + 5, joined ? "ok" : "FAIL");
     snprintf(path, sizeof path, "rom:/%.*s", (int)(strrchr(sample, '/') - sample), sample);
     CHECK(RES(S_ENTRY_TYPE, U(&type), U(path)) == 0 && type == FS_ENTRY_DIRECTORY, "a sampled file's folder");
     snprintf(path, sizeof path, "rom://../%s", sample);
