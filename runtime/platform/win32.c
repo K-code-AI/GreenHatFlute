@@ -199,6 +199,18 @@ void plat_fiber_free(PlatFiber *f) {
     free(f);
 }
 
+// The TEB's StackBase (NT_TIB on x86-64: ExceptionList 0x00, StackBase 0x08), which Windows keeps current for the
+// fiber the thread runs: it follows SwitchToFiber, so it names the stack the caller is on.
+void *plat_stack_base(void) {
+#if defined(_M_X64) || defined(__x86_64__)
+    void *base;
+    __asm__ volatile("movq %%gs:8, %0" : "=r"(base));
+    return base;
+#else
+    return NULL;
+#endif
+}
+
 int plat_thread_spawn(PlatThreadFn fn, void *arg, const char *name, size_t stack) {
     PlatThread *t = plat_thread_new_ex(fn, arg, name, stack);
     if (t) plat_thread_detach(t);

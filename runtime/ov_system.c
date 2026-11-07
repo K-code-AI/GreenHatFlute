@@ -916,9 +916,11 @@ HOST_OVERRIDE("_ZN2nn3aoc17CountAddOnContentEv", ov_aoc_none);
 // Lifted functions keep their state on the host stack, so setjmp also keeps a copy of the host stack above it: longjmp puts
 // the bytes back and returns from setjmp a second time, through the same frames, into the lifted caller. Guest memory is
 // not copied, as with a real setjmp. Only the copy's frames must be unchanged since: frames above the caller are suspended.
-// ponytail: x86-64 Windows; a fixed number of buffers, oldest replaced; host locks held by host functions between setjmp
+// The stack the caller runs on is named by plat_stack_base (Windows' TEB StackBase, our fiber's stack top on Linux), so a
+// longjmp that would land on another fiber's stack stops with a fatal instead of corrupting memory.
+// ponytail: x86-64; a fixed number of buffers, oldest replaced; host locks held by host functions between setjmp
 // and longjmp are not released, none of the callers has any.
-#if defined(_WIN32) && defined(__x86_64__)
+#if defined(__x86_64__)
 enum { JMP_RECORDS = 32, JMP_STACK = 64 * 1024 };
 typedef struct {
     uint64_t key;   // the guest jmp_buf
@@ -934,11 +936,6 @@ static JmpRecord jmp_records[JMP_RECORDS];
 static unsigned jmp_next;
 static PlatMutex jmp_lock = PLAT_MUTEX_INIT;
 
-static char *teb_stack_base(void) {
-    char *base;
-    __asm__ volatile("movq %%gs:8, %0" : "=r"(base));
-    return base;
-}
 static JmpRecord *jmp_find(uint64_t key, int make) {
     JmpRecord *r = NULL;
     plat_mutex_lock(&jmp_lock);
@@ -961,7 +958,7 @@ __attribute__((noinline)) static void ov_setjmp(Cpu *c) {
     if (__builtin_setjmp(r->env)) return;   // from longjmp, which set c->x[0]
     char *sp;
     __asm__ volatile("movq %%rsp, %0" : "=r"(sp));
-    r->base = teb_stack_base();
+    r->base = (char *)plat_stack_base();
     r->sp = sp;
     r->n = (size_t)(r->base - sp) < JMP_STACK ? (size_t)(r->base - sp) : JMP_STACK;
     memcpy(r->copy, sp, r->n);
@@ -985,7 +982,7 @@ __attribute__((noinline)) static void ov_longjmp(Cpu *c) {
     }
     JmpRecord *r = jmp_find(c->x[0], 0);
     if (!r || !r->copy) rt_fatal("longjmp to %#llx: no setjmp for it", (unsigned long long)c->x[0]);
-    if (r->base != teb_stack_base()) rt_fatal("longjmp to %#llx from another host stack", (unsigned long long)c->x[0]);
+    if (r->base != (char *)plat_stack_base()) rt_fatal("longjmp to %#llx from another host stack", (unsigned long long)c->x[0]);
     // The copy goes back above this frame: step past it when longjmp is called from close to setjmp.
     char *sp;
     __asm__ volatile("movq %%rsp, %0" : "=r"(sp));

@@ -61,6 +61,11 @@ void plat_fiber_unself(void);             // the calling thread stops being a fi
 PlatFiber *plat_fiber_new(size_t stack, void (*fn)(void *arg), void *arg);
 void plat_fiber_switch(PlatFiber *to);    // from the fiber the calling thread runs
 void plat_fiber_free(PlatFiber *f);       // a fiber nobody runs
+// The top of the stack the calling thread is running on: a fiber's own stack when it runs one, else the thread's.
+// Stacks grow down, so this is the highest address of the region, the largest address a frame may sit at. It changes
+// on a fiber switch, which makes it an identity for "am I still on the stack I was": Windows keeps it in the TEB
+// (StackBase), Linux in the fiber the thread runs. NULL when it cannot be found.
+void *plat_stack_base(void);
 // Scheduling priority, Windows' seven levels: of the calling thread, or of t. On Linux a thread lowered without the
 // right to raise its priority again (CAP_SYS_NICE, or an RLIMIT_NICE of 20) could never return to normal, and the
 // runtime lowers threads that later take shared locks at normal priority; without that right every change is skipped

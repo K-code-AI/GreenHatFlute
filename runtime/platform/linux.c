@@ -366,6 +366,26 @@ void plat_fiber_free(PlatFiber *f) {
     free(f);
 }
 
+// Our fibers keep their stack, so the top is stack+size: it changes on a switch, which is what a caller needs to
+// notice that it is no longer on the stack it setjmp'd on. On a thread's own context (fiber_own, or no fiber at all)
+// there is no mapped stack to read, so ask libc for the thread's; it does not move, so one lookup per thread serves
+// every later call.
+void *plat_stack_base(void) {
+    PlatFiber *f = fiber_cur;
+    if (f && f->stack) return (char *)f->stack + f->size;
+    static __thread void *own;
+    if (!own) {
+        pthread_attr_t at;
+        if (pthread_getattr_np(pthread_self(), &at) == 0) {
+            void *lo;
+            size_t sz;
+            if (pthread_attr_getstack(&at, &lo, &sz) == 0) own = (char *)lo + sz;
+            pthread_attr_destroy(&at);
+        }
+    }
+    return own;
+}
+
 int plat_thread_spawn(PlatThreadFn fn, void *arg, const char *name, size_t stack) {
     PlatThread *t = plat_thread_new_ex(fn, arg, name, stack);
     if (t) plat_thread_detach(t);
