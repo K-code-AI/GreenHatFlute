@@ -1,11 +1,14 @@
 // CPU fixture for vk_resource_frontier_test.py. Production functions/types are inserted at the markers below.
 // Every driver entry is redirected to an explicitly synthetic adapter. No window, loader, Vulkan device or GPU runs.
-#include <windows.h>
+#define _GNU_SOURCE   // pthread_timedjoin_np: the submission thread is joined with a bound, as it was on one thread API
+#include <errno.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "vk.h"
 #include "tex.h"
 #include "nvn_hmap.h"
@@ -36,16 +39,25 @@ static int scenario, referenced, image_dead, view_dead, old_image_dead, old_view
 static int partials, finals, waits, sub_depth, in_recording, driver_pending;
 static uint64_t gpu = 1, next_cb = 0xC000;
 static VkCtx context;
-static CRITICAL_SECTION command_mutex;
-static SRWLOCK latch = SRWLOCK_INIT;
-static CONDITION_VARIABLE latch_cv = CONDITION_VARIABLE_INIT;
+static pthread_mutex_t command_mutex;   // plat_rmutex_*: a thread may take it again, so it is recursive
+static pthread_mutex_t latch = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t latch_cv = PTHREAD_COND_INITIALIZER;
 static int phase;
 static void check(int yes, const char *message) {
-    if (!yes) { fprintf(stderr, "FAIL: %s\n", message); ExitProcess(20); }
+    if (!yes) { fprintf(stderr, "FAIL: %s\n", message); exit(20); }
+}
+// SleepConditionVariableSRW's stand-in: waits up to ms on latch_cv with latch held; 0 when the time ran out.
+static int latch_wait_ms(int ms) {
+    struct timespec at;
+    clock_gettime(CLOCK_REALTIME, &at);
+    at.tv_sec += ms / 1000;
+    at.tv_nsec += (long)(ms % 1000) * 1000000L;
+    if (at.tv_nsec >= 1000000000L) at.tv_sec++, at.tv_nsec -= 1000000000L;
+    return pthread_cond_timedwait(&latch_cv, &latch, &at) != ETIMEDOUT;
 }
 _Noreturn void rt_fatal(const char *format, ...) {
     va_list args; va_start(args, format); vfprintf(stderr, format, args); va_end(args);
-    fputc('\n', stderr); ExitProcess(21);
+    fputc('\n', stderr); exit(21);
 }
 void rt_log(const char *format, ...) { (void)format; }
 void perf_count(int kind) { (void)kind; }
@@ -107,16 +119,32 @@ static uint32_t pool_gen;
 static void *gen_chunk[GEN_CHUNKS];
 static void destroy_rec(VkCtx *c, PoolRec *r) { (void)c; (void)r; check(0, "fixture has no pool records"); }
 
+// The runtime's locks are one pthread mutex each, taken from the empty storage PLAT_MUTEX_INIT spells: the first use
+// gives it one, under a mutex of its own so two threads cannot both do it.
+static pthread_mutex_t pm_new = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t *pm_of(PlatMutex *m) {
+    if (!__atomic_load_n(&m->p, __ATOMIC_ACQUIRE)) {
+        pthread_mutex_lock(&pm_new);
+        if (!m->p) {
+            pthread_mutex_t *fresh = calloc(1, sizeof *fresh);
+            check(fresh != NULL, "a fixture lock has storage");
+            pthread_mutex_init(fresh, NULL);
+            __atomic_store_n(&m->p, fresh, __ATOMIC_RELEASE);
+        }
+        pthread_mutex_unlock(&pm_new);
+    }
+    return (pthread_mutex_t *)m->p;
+}
 void plat_mutex_lock(PlatMutex *m) {
-    AcquireSRWLockExclusive((PSRWLOCK)&m->p);
+    pthread_mutex_lock(pm_of(m));
     if (m == &sub_lock) sub_depth++;
 }
 void plat_mutex_unlock(PlatMutex *m) {
     if (m == &sub_lock) sub_depth--;
-    ReleaseSRWLockExclusive((PSRWLOCK)&m->p);
+    pthread_mutex_unlock(pm_of(m));
 }
-void plat_rmutex_lock(PlatRMutex *m) { (void)m; EnterCriticalSection(&command_mutex); }
-void plat_rmutex_unlock(PlatRMutex *m) { (void)m; LeaveCriticalSection(&command_mutex); }
+void plat_rmutex_lock(PlatRMutex *m) { (void)m; pthread_mutex_lock(&command_mutex); }
+void plat_rmutex_unlock(PlatRMutex *m) { (void)m; pthread_mutex_unlock(&command_mutex); }
 void plat_once(PlatOnce *once, void (*fn)(void *), void *arg) {
     if (once->state != 2) { check(once->state == 0, "once initialized before threads"); fn(arg); once->state = 2; }
 }
@@ -224,7 +252,7 @@ int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint64_t 
 @SYNC_FUNCTIONS@
 
 static void await_phase(int wanted) {
-    while (phase < wanted) if (!SleepConditionVariableSRW(&latch_cv, &latch, 5000, 0)) ExitProcess(22);
+    while (phase < wanted) if (!latch_wait_ms(5000)) exit(22);
 }
 int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint64_t fence, uint64_t submitted_ticks) {
     check(submitted_ticks == 123, "actual submit forwards immutable entry tick to recorder");
@@ -235,16 +263,16 @@ int vk_exec_record(VkCommandBuffer cb, const uint64_t *handles, int n, uint64_t 
         referenced = scenario != SKIPPED;
         Tex *b = entry_of(&texture_b); check(b && (uintptr_t)b->pub.image == 0xB001, "actual alias eviction");
     }
-    AcquireSRWLockExclusive(&latch); phase = 1; WakeAllConditionVariable(&latch_cv); await_phase(2); ReleaseSRWLockExclusive(&latch);
+    pthread_mutex_lock(&latch); phase = 1; pthread_cond_broadcast(&latch_cv); await_phase(2); pthread_mutex_unlock(&latch);
     if (scenario == SPLIT) {
         (void)vk_sync_split(); vk_mem_collect();
         check(!image_dead && !view_dead && gpu == 1 && issued == 1, "partial submit cannot retire current resources");
     }
     return scenario == EMPTY || scenario == SKIPPED ? 0 : 1;
 }
-static DWORD WINAPI submit_thread(void *arg) {
+static void *submit_thread(void *arg) {
     (void)arg; uint64_t handle = 1;
-    check(vk_sync_submit(&handle, scenario == EMPTY ? 0 : 1, 123) == 2, "actual submit returns current fence"); return 0;
+    check(vk_sync_submit(&handle, scenario == EMPTY ? 0 : 1, 123) == 2, "actual submit returns current fence"); return NULL;
 }
 static void seed_texture(void) {
     tex_t a = {0}; a.mem = (void *)(uintptr_t)0x100000; a.d.format = 1; a.d.width = a.d.height = 64; a.d.depth = a.d.levels = 1;
@@ -260,7 +288,12 @@ static void seed_texture(void) {
 int main(int argc, char **argv) {
     check(argc == 2, "scenario argument"); const char *names[] = {"alias", "split", "empty", "skipped", "shutdown"};
     for (; scenario < 5 && strcmp(argv[1], names[scenario]); scenario++) {}
-    check(scenario < 5, "known scenario"); InitializeCriticalSection(&command_mutex);
+    check(scenario < 5, "known scenario");
+    pthread_mutexattr_t reentrant;   // a CRITICAL_SECTION could be re-entered by its owner, so this one can too
+    pthread_mutexattr_init(&reentrant);
+    pthread_mutexattr_settype(&reentrant, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&command_mutex, &reentrant);
+    pthread_mutexattr_destroy(&reentrant);
     context.device = (VkDevice)(uintptr_t)0xE001; context.timeline = (VkSemaphore)(uintptr_t)0xE002; context.gfx_queue = (VkQueue)(uintptr_t)0xE003;
     plat_once(&cmd_once, cmd_init, NULL); inflight = calloc(1, sizeof *inflight); cap_inflight = 1;
     @FRONTIER@(1); vk_defer_image((VkImage)(uintptr_t)0xD001, NULL); vk_defer_view((VkImageView)(uintptr_t)0xD002);
@@ -271,13 +304,17 @@ int main(int argc, char **argv) {
         check(!stg_pool_tried && !nm && !nstouch && !s_live_n && !nphys, "empty shutdown bookkeeping cleared");
     } else {
         if (scenario != EMPTY) seed_texture();
-        HANDLE thread = CreateThread(NULL, 0, submit_thread, NULL, 0, NULL); check(thread != NULL, "CPU submit thread");
-        AcquireSRWLockExclusive(&latch); await_phase(1); ReleaseSRWLockExclusive(&latch);
+        pthread_t thread;
+        check(pthread_create(&thread, NULL, submit_thread, NULL) == 0, "CPU submit thread");
+        pthread_mutex_lock(&latch); await_phase(1); pthread_mutex_unlock(&latch);
         vk_mem_collect();
         check(old_image_dead == 1 && old_view_dead == 1, "older completed resources collect during current recording");
         check(!image_dead && !view_dead, "current unsubmitted image/view must survive collection");
-        AcquireSRWLockExclusive(&latch); phase = 2; WakeAllConditionVariable(&latch_cv); ReleaseSRWLockExclusive(&latch);
-        check(WaitForSingleObject(thread, 5000) == WAIT_OBJECT_0, "bounded submission completion"); CloseHandle(thread);
+        pthread_mutex_lock(&latch); phase = 2; pthread_cond_broadcast(&latch_cv); pthread_mutex_unlock(&latch);
+        struct timespec join_at;
+        clock_gettime(CLOCK_REALTIME, &join_at);
+        join_at.tv_sec += 5;
+        check(pthread_timedjoin_np(thread, NULL, &join_at) == 0, "bounded submission completion");
         check(finals == 1 && partials == (scenario == SPLIT) && issued == 2 && done == 1, "real submission bookkeeping and split count");
         vk_mem_collect(); check(!image_dead && !view_dead, "submitted resources wait for their actual timeline completion");
         gpu = 2; driver_pending = 0; vk_mem_collect(); vk_mem_collect();

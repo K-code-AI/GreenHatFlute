@@ -1,4 +1,4 @@
-"""Windows CPU test of actual mode trace, NVN wrappers and recorder/prepare hooks.
+"""CPU test of actual mode trace, NVN wrappers and recorder/prepare hooks.
 
 Platform locking/once/thread-ID and cfg/logger are explicit fixture providers.
 Renderer and guest callbacks abort. No modules, driver or Vulkan loader is used.
@@ -34,10 +34,10 @@ def main():
         function((ROOT / 'runtime/perf.c').read_text(), 'void prof_write(void)')))
     rows = []
     for opt in ('0', '2'):
-        exe = out / f'trace-o{opt}.exe'
+        exe = out / f'trace-o{opt}'
         command = [args.cc, '-std=gnu11', '-O'+opt, '-Wall', '-Wextra', '-Werror',
                    '-Wno-missing-field-initializers',  # inherited copy_prefix initializer in the linked recorder
-                   '-ffunction-sections', '-fdata-sections', '-I', ROOT / 'runtime',
+                   '-ffunction-sections', '-fdata-sections', '-pthread', '-I', ROOT / 'runtime',
                    fixture, *[ROOT / name for name in sources[1:]], '-Wl,--gc-sections', '-o', exe]
         compiled = subprocess.run([str(x) for x in command], capture_output=True, text=True, timeout=60)
         (out / f'compile-o{opt}.log').write_text(compiled.stdout + compiled.stderr)
@@ -53,7 +53,7 @@ def main():
     hashes = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in sources}
     hashes['runtime/perf.c'] = hashlib.sha256((ROOT / 'runtime/perf.c').read_bytes()).hexdigest()
     (out / 'handoff.json').write_text(json.dumps({'results': rows, 'source_sha256': hashes,
-        'providers': 'Win32 SRW locks/threads/events; atomic once adapter; fake restart cfg; scalar logger parser; guest/backend abort',
+        'providers': 'pthreads rwlocks/threads/events; atomic once adapter; fake restart cfg; scalar logger parser; guest/backend abort',
         'race_proof': 'writer holds real helper lock inside thread-ID provider; flush attempts that lock before writer is released'}, indent=2)+'\n')
     return int(any(row['exit'] for row in rows))
 
