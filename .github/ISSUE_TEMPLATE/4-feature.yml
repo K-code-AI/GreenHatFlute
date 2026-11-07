@@ -7,7 +7,7 @@ body:
     attributes:
       label: Existing issues
       options:
-        - label: I read the [roadmap](https://github.com/sostenesfreitas/ocarina-recomp/blob/main/CONTRIBUTING.md) and [searched open and closed issues](https://github.com/sostenesfreitas/ocarina-recomp/issues?q=is%3Aissue) for this request.
+        - label: I read the [roadmap](https://github.com/K-code-AI/GreenHatFlute/blob/main/CONTRIBUTING.md) and [searched open and closed issues](https://github.com/K-code-AI/GreenHatFlute/issues?q=is%3Aissue) for this request.
           required: true
   - type: textarea
     id: request
