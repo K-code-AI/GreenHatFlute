@@ -503,24 +503,6 @@
          }
  
          private static OperationResult GenerateFSIBegin(CodeGenContext context, AstOperation operation)
---- a/src/Ryujinx.Graphics.Shader/Translation/EmitterContext.cs
-+++ b/src/Ryujinx.Graphics.Shader/Translation/EmitterContext.cs
-@@ -510,7 +510,14 @@
-                             continue;
-                         }
- 
--                        Operand src = Register(regIndexBase + component, RegisterType.Gpr);
-+                        Operand src = Register(regIndexBase + component, RegisterType.Gpr);
-+
-+                        // LOCAL TEST (Ocarina): a NaN in a colour output spreads through the blur and bloom chains until the whole frame
-+                        // is white. Contained here until its source is known. Integer targets carry plain bits.
-+                        if (TranslatorContext.Definitions.GetFragmentOutputColorType(rtIndex).HasFlag(AggregateType.FP32))
-+                        {
-+                            src = this.ConditionalSelect(this.IsNan(src), ConstF(0f), src);
-+                        }
- 
-                         // Perform B <-> R swap if needed, for BGRA formats (not supported on OpenGL).
-                         if (!supportsBgra && (component == 0 || component == 2))
 --- a/src/Ryujinx.Graphics.Shader/Instructions/InstEmitFloatComparison.cs
 +++ b/src/Ryujinx.Graphics.Shader/Instructions/InstEmitFloatComparison.cs
 @@ -398,4 +398,12 @@
@@ -549,3 +531,61 @@
  
              Operand p0Res = GetFPComparison(context, cmpOp, srcA, srcB, fpType);
              Operand p1Res = context.BitwiseNot(p0Res);
+--- a/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs
++++ b/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs
+@@ -1146,6 +1146,33 @@
+             return GenerateLoadOrStore(context, operation, isStore: true);
+         }
+ 
++        // The store of a fragment colour output: the IoVariable is its first source, a constant.
++        private static bool IsFragmentOutputColor(AstOperation operation)
++        {
++            return operation.StorageKind == StorageKind.Output &&
++                operation.GetSource(0) is AstOperand { Type: OperandType.Constant } ioVariable &&
++                (IoVariable)ioVariable.Value == IoVariable.FragmentOutputColor;
++        }
++
++        // What the written value is before the target takes it: FP32 when the operation that produced it, or the
++        // variable holding it, says so. A bare constant has no type of its own - it reaches an FP32 target as a float.
++        private static bool ValueIsFP32(IAstNode source)
++        {
++            switch (source)
++            {
++                case AstTextureOperation texture:
++                    return texture.Format.GetComponentType() == AggregateType.FP32;
++                case AstOperation operation:
++                    return InstructionInfo.GetDestVarType(operation.Inst) == AggregateType.FP32;
++                case AstOperand { Type: OperandType.Constant }:
++                    return true;
++                case AstOperand { Type: OperandType.LocalVariable or OperandType.Argument } operand:
++                    return operand.VarType == AggregateType.FP32;
++                default:
++                    return false;
++            }
++        }
++
+         private static OperationResult GenerateSubtract(CodeGenContext context, AstOperation operation)
+         {
+             return GenerateBinary(context, operation, context.Delegates.FSub, context.Delegates.ISub);
+@@ -1704,7 +1731,20 @@
+ 
+             if (isStore)
+             {
+-                context.Store(pointer, context.Get(varType, operation.GetSource(operation.SourcesCount - 1)));
++                IAstNode source = operation.GetSource(operation.SourcesCount - 1);
++                SpvInstruction value = context.Get(varType, source);
++
++                // A NaN colour leaves the shader and spreads through the blur and bloom passes until the whole frame is
++                // white; contained here until its source is known. Only a value that is a float is contained: an integer
++                // reaching an FP32 target carries plain bits (patch 0018's F2I bytes are negative), and read as a float
++                // every one of them looks like a NaN and would become 0.
++                if (varType == AggregateType.FP32 && IsFragmentOutputColor(operation) && ValueIsFP32(source))
++                {
++                    value = context.Select(context.TypeFP32(), context.IsNan(context.TypeBool(), value),
++                        context.Constant(context.TypeFP32(), 0f), value);
++                }
++
++                context.Store(pointer, value);
+                 return OperationResult.Invalid;
+             }
+             else
