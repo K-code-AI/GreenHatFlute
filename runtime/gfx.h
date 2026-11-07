@@ -79,7 +79,7 @@ void gfx_shader_record_at(const char *keys_path);
 void gfx_shader_record_flush(int force);                   // appends pending records; without force at most every 2 s
 // Translates every recorded (program, answers) on `threads` threads with up to `procs` translators (GHF_TEST_PREPARE_SHADERS).
 void gfx_shader_prepare_recorded(int threads, int procs);
-// GreenHatFlute.exe --prepare-shaders: translates <dir>/seed-answers.bin + seed-programs.bin (tools/prepare_shaders.py) and
+// GreenHatFlute --prepare-shaders: translates <dir>/seed-answers.bin + seed-programs.bin (tools/prepare_shaders.py) and
 // writes <dir>/shader-prepared.bin (stage, priority, input id per variant). 0 on success.
 int gfx_shader_prepare_seed(const char *dir, int threads, int procs);
 typedef struct { uint8_t iid[32]; uint8_t stage, prio; } GfxWarmEnt;   // prio 0: met in play; 1..3: prepared

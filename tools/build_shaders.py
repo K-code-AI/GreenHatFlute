@@ -1,7 +1,7 @@
 """Compile the runtime's own GLSL and SPIR-V assembly shaders into C headers of SPIR-V words.
 
 Each runtime/shaders/<name>.comp becomes runtime/<name>_spv.h, which declares `static const uint32_t <name>_spv[]`
-and records the SHA-256 of the source it came from. The headers are committed, so building GreenHatFlute.exe needs no shader
+and records the SHA-256 of the source it came from. The headers are committed, so building GreenHatFlute needs no shader
 compiler; tools/build_game.py refuses to build when a header no longer matches its source. Run this after editing a
 shader. Needs glslc and spirv-val on PATH (packages shaderc and spirv-tools).
 

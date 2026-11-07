@@ -1,4 +1,4 @@
-// GreenHatFlute.exe --probe-nvn: the NVN front end and the null back end, called the way the
+// GreenHatFlute --probe-nvn: the NVN front end and the null back end, called the way the
 // game calls them: through the real nvnp_* procs with a synthetic Cpu (AAPCS64 arguments in x0..x7 and v0..v7), on the
 // guest main thread, on the null back end whatever GHF_GPU says. Checks, in order:
 //   - pool, buffer, texture, sampler, sync and event objects against MacNativeGames' semantics (hle_nvn.c), the

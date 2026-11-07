@@ -18,7 +18,7 @@ Every runtime/*.c is compiled. build/<version>/modules.c carries the layout, the
 expected SHA-256 of each ExeFS file (tools/data/expected-<display version>.json) and the default game paths
 (--exefs, --romfs, --profile), which GreenHatFlute uses unless its own command line names others. tools/romfs_index.py
 writes build/<version>/romfs-index.bin and romfs_config.h from the RomFS directory's index.json (runtime/romfs.c reads
-the index next to GreenHatFlute.exe).
+the index next to GreenHatFlute).
 
 Private builds reuse the main build's objects. When --out differs from build/<version>, the main build's generated
 objects are up to date (checked with a dry run of its build.ninja) and every header they include from runtime/ is
@@ -205,7 +205,7 @@ def write_if_changed(path, text):
 
 
 def copy_romfs_patches(version, out):
-    """GreenHatFlute.exe loads romfs-patches beside romfs-index.bin (runtime/romfs.c overlay_init). tools/make_romfs_patches.py
+    """GreenHatFlute loads romfs-patches beside romfs-index.bin (runtime/romfs.c overlay_init). tools/make_romfs_patches.py
     writes them into build/<version> only, so a build in another directory ran without the 60 fps overlay (the quick
     menus' captured background turned black). Copies them when their manifest differs; romfs-patches-xbox (the same with
     the A/B and X/Y prompts swapped, pad_layout = xbox_prompts) the same way when it was made."""
@@ -368,7 +368,7 @@ def ninja_file(gen, out, mods, pool_depth, skip=(), prebuilt=False, runtime_lib=
     rule = 'link'
     if runtime_lib:
         # Whole archive: the runtime's weak defaults (nvn_procs.c, nvn_api_core.c, vk_sync.c) would otherwise satisfy
-        # references before the linker pulls the members with the strong definitions, which would stay out of GreenHatFlute.exe.
+        # references before the linker pulls the members with the strong definitions, which would stay out of GreenHatFlute.
         rule = 'link_lib'
         lines += ['', 'rule link_lib',
                   f'  command = $cc $ldflags @$out.rsp -Wl,--whole-archive {cmd_path(runtime_lib)} -Wl,--no-whole-archive $libs -o $out',
@@ -606,10 +606,10 @@ def main():
                     help='comma-separated runtime/*.c names to leave out (the link needs another definition of what they '
                          'define)')
     ap.add_argument('--exefs', type=Path,
-                    help="GreenHatFlute.exe's default ExeFS directory (default build/extracted/<version>/exefs)")
-    ap.add_argument('--romfs', type=Path, help="GreenHatFlute.exe's default RomFS directory with romfs.bin and index.json "
+                    help="GreenHatFlute's default ExeFS directory (default build/extracted/<version>/exefs)")
+    ap.add_argument('--romfs', type=Path, help="GreenHatFlute's default RomFS directory with romfs.bin and index.json "
                                                '(default build/extracted/<version>/romfs)')
-    ap.add_argument('--profile', type=Path, help="GreenHatFlute.exe's default profile directory (default build/profile for v121, "
+    ap.add_argument('--profile', type=Path, help="GreenHatFlute's default profile directory (default build/profile for v121, "
                                                  "build/profile-<version> otherwise, so trying another version leaves "
                                                  "the main profile alone; saves load on 1.2.1 and 1.4.3 alike)")
     ap.add_argument('--toolchain', type=Path, help='an LLVM directory (bin/clang, bin/llvm-ar, bin/ld.lld) to build with '
@@ -621,7 +621,7 @@ def main():
     ap.add_argument('--deps', type=Path, help='include/ and lib/ of Vulkan, SDL3, Opus, libvpx and VMA to build against '
                                               'instead of the system\'s; Opus, libvpx and zstd are linked statically')
     ap.add_argument('--make-runtime-lib', action='store_true',
-                    help=f'build only <out>/{LIB_NAME} from runtime/ (no generated C, no GreenHatFlute.exe)')
+                    help=f'build only <out>/{LIB_NAME} from runtime/ (no generated C, no GreenHatFlute)')
     ap.add_argument('--runtime-lib', type=Path, help=f'link against this {LIB_NAME} instead of compiling runtime/ '
                                                     f'({", ".join(sorted(INSTALL_SIDE))} and modules.c still compile)')
     ap.add_argument('--expected', type=Path,
@@ -752,7 +752,7 @@ def main():
     code, dt, peak_one = run_measured(base + [flag_path(exe)], env)
     print(f'link: {dt:.1f} s, peak {mib(peak_one)}')
     if code:
-        print(f'build_game: link failed, {flag_path(exe)} is the old one (a running GreenHatFlute.exe from this dir locks it)',
+        print(f'build_game: link failed, {flag_path(exe)} is the old one (a running GreenHatFlute from this dir locks it)',
               file=sys.stderr)
         sys.exit(code)
     if args.make_runtime_lib:

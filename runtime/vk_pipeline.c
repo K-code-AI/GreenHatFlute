@@ -33,7 +33,7 @@
 // binding strides only); and, where VK_EXT_extended_dynamic_state3 offers them, depth clamp, polygon mode, blend enables,
 // equations, write masks and alpha to coverage. The key holds the rest: shaders, target formats, sample count, topology
 // class, depth clip mode, logic op and what is not dynamic on the GPU. The VkPipelineCache persists to
-// pipeline-cache.bin next to GreenHatFlute.exe (GHF_PIPELINE_CACHE overrides the path).
+// pipeline-cache.bin next to GreenHatFlute (GHF_PIPELINE_CACHE overrides the path).
 //
 // Provenance: the NVN -> Vulkan enum mappings (blend factors and equations, compare functions, stencil ops), the vertex
 // format table with its 3-component fallback and the pipeline cache file handling follow LAS Recomp
@@ -147,7 +147,7 @@ static uint64_t fnv(uint64_t h, const void *p, size_t n) {
 // than the lookup. Only the in-memory table uses it; the key file keeps fnv.
 static uint64_t key_hash(const void *k, size_t n) { return nvn_hm_hash(k, (uint32_t)n); }
 
-// The cache file lives next to GreenHatFlute.exe, so every build dir (the main build and each private fork) has its own:
+// The cache file lives next to GreenHatFlute, so every build dir (the main build and each private fork) has its own:
 // forks that shared build\v121's cache broke each other's runs (2026-10-22).
 static void cache_path_init(void) {
     const char *cfg_path = cfg_get("GHF_PIPELINE_CACHE");
@@ -3360,7 +3360,7 @@ static Layout *compute_layout(const GfxShader *cs, Bindings *B, const char **why
 
 // ---- stage library prebuild
 // Two places build what a draw would otherwise build while the game waits:
-// - GreenHatFlute.exe --prepare-shaders (lb_warm_prepared), after the translation, on every core: for each prepared variant
+// - GreenHatFlute --prepare-shaders (lb_warm_prepared), after the translation, on every core: for each prepared variant
 //   (shader-prepared.bin) the pre-rasterization library of a vertex shader, the fragment-shader library of a fragment
 //   shader and the pipeline of a compute shader, each built from a private shader copy and destroyed at once. What
 //   stays is the driver's own disk cache: on AMD a library built again in a later process takes 0.1 ms instead of
@@ -3781,8 +3781,8 @@ static void lb_warm_prepared(const char *dir) {
     free(LB.e), LB.e = NULL, LB.n = 0, LB.next = 0, LB.done = 0;
 }
 
-// GreenHatFlute.exe --prepare-shaders (tools/prepare_shaders.py): the device sets the translator's host answers (they are in every
-// cache key), the seed next to GreenHatFlute.exe is translated on every core, then every prepared variant's stage library or
+// GreenHatFlute --prepare-shaders (tools/prepare_shaders.py): the device sets the translator's host answers (they are in every
+// cache key), the seed next to GreenHatFlute is translated on every core, then every prepared variant's stage library or
 // compute pipeline is built once into the driver's disk cache (lb_warm_prepared). No game runs.
 int vk_pipeline_prepare_shaders(void) {
     if (!ensure_init()) {
@@ -3802,7 +3802,7 @@ int vk_pipeline_prepare_shaders(void) {
     return rc;
 }
 
-// GreenHatFlute.exe --warm-shaders: every variant of shader-prepared.bin built into the driver's disk cache again from the shader
+// GreenHatFlute --warm-shaders: every variant of shader-prepared.bin built into the driver's disk cache again from the shader
 // cache, without translating the seed. The AMD cache is keyed to the exe path (a relink keeps it: 29,587 variants in
 // 1.8 s) and holds a limited amount: preparing another build dir evicted this one's libraries, and a library a draw
 // needed then took 40-220 ms in play instead of 0.2 ms. Seconds when the libraries are still there.

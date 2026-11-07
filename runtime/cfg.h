@@ -1,4 +1,4 @@
-// Settings: the GHF_* environment variables, with greenhatflute.ini next to GreenHatFlute.exe behind them.
+// Settings: the GHF_* environment variables, with greenhatflute.ini next to GreenHatFlute behind them.
 #pragma once
 
 // getenv for a setting: the environment variable when set, else the greenhatflute.ini key (the name without "GHF_", any
@@ -25,7 +25,7 @@ int cfg_from_env(const char *name);
 int cfg_is_set(const char *name);
 // The device profile in use, "deck" or "desktop" (GHF_DEVICE_PROFILE, else what the machine is).
 const char *cfg_device_profile(void);
-// Writes the keys cfg_set changed since the last save into greenhatflute.ini next to GreenHatFlute.exe (cfg_save_to: the file at path).
+// Writes the keys cfg_set changed since the last save into greenhatflute.ini next to GreenHatFlute (cfg_save_to: the file at path).
 // Only those lines change: the last line of a changed key gets the new value, a missing key goes under its section
 // (after the commented example line of the key when the section has one; the section is added at the end of the file
 // when missing), comments and every other line stay byte for byte. 1 on success or with nothing to write.

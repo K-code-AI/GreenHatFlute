@@ -17,7 +17,7 @@
 
 // ---- logging and results
 void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));   // "[host] <msg>\n" to the log, one write
-// The log is stderr plus, in a game run whose stderr is not a file, logs\greenhatflute.log next to GreenHatFlute.exe (main.c log_open).
+// The log is stderr plus, in a game run whose stderr is not a file, logs\greenhatflute.log next to GreenHatFlute (main.c log_open).
 // rt_logf and rt_log_raw write to both without the prefix and the newline: crash reports, fatal errors, guest output.
 void rt_logf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void rt_vlogf(const char *fmt, va_list ap);
@@ -299,7 +299,7 @@ typedef struct { const char *exefs, *romfs, *profile; int boot; double seconds; 
 const RtConfig *rt_config(void);
 void rt_boot_event(const char *what, Cpu *c, const char *detail);   // checkpoint log; "nvn" ends --boot
 void rt_boot(void);                                        // boot.c
-// Modes of GreenHatFlute.exe. main.c has run mem_init and parsed the paths; each mode calls ldr_load itself if it needs the
+// Modes of GreenHatFlute. main.c has run mem_init and parsed the paths; each mode calls ldr_load itself if it needs the
 // modules, registers its host functions, then seals (hostfn_seal, or implicitly at the first rt_call). Return the
 // process exit code.
 int probe_cfg(void);                                       // cfg_probe.c

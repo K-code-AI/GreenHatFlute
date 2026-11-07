@@ -2,7 +2,7 @@
 
 The translator writes four files per shader into the cache (runtime/gfx_shader.c): <key>.spv, <key>.res.json,
 <name>.use and in/<input id>.in, about 117,000 files after an install, which are slow to copy, back up, scan and sync.
-GreenHatFlute.exe reads the pack first and the loose files after it, and keeps writing new translations as loose files, so
+GreenHatFlute reads the pack first and the loose files after it, and keeps writing new translations as loose files, so
 this tool can run again at any time the game is closed: it merges the existing pack with the loose files (a loose file
 wins over a packed one of the same name) and writes the pack anew. The installer runs it after preparing the shaders.
 
@@ -12,7 +12,7 @@ bytes sorted by (kind, name): name (the 32 bytes the file name's 64 hex digits s
 
     python tools\\pack_shader_cache.py <install folder>\\shader-cache [--keep]
 
---keep leaves the loose files in place. Close the game first: a running GreenHatFlute.exe has read the old pack's index.
+--keep leaves the loose files in place. Close the game first: a running GreenHatFlute has read the old pack's index.
 """
 import argparse
 import os
@@ -131,7 +131,7 @@ def pack(cache, keep=False):
 
 def main():
     ap = argparse.ArgumentParser(description='Fold a shader cache into shader-cache.pack.')
-    ap.add_argument('cache', type=Path, help='the shader-cache folder next to GreenHatFlute.exe')
+    ap.add_argument('cache', type=Path, help='the shader-cache folder next to GreenHatFlute')
     ap.add_argument('--keep', action='store_true', help='keep the loose files')
     a = ap.parse_args()
     if not a.cache.is_dir():
