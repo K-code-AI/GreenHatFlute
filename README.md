@@ -23,25 +23,54 @@ Experimental. Só foi testado em **um PC** (Ryzen 9 9950X3D, RTX 5090), na regi�
 | Hyrule Field e o resto do jogo | ❓ Ainda não testados |
 | Placas AMD e Intel | ❓ Nunca testadas |
 
-## Como instalar
+## Como compilar
 
-Você não precisa digitar nenhum comando.
+O jogo não vem pronto: ele é compilado no seu PC, a partir da sua cópia. Escolha um destes três jeitos.
 
-1. Baixe o **[Instalar-Ocarina.bat](https://github.com/sostenesfreitas/ocarina-recomp/releases/latest/download/Instalar-Ocarina.bat)**.
-2. Dê dois cliques nele. Se o Windows avisar que protegeu o PC, clique em **Mais informações** e depois em **Executar assim mesmo**.
-3. Na janela, escolha o arquivo `.nup` do seu jogo (ou uma pasta com `exefs` e `romfs`) e clique em **Instalar**.
-4. Quando o Windows pedir permissão para instalar as ferramentas, clique em **Sim**.
-5. No fim, clique em **Jogar**, ou use o atalho **Ocarina Recomp** na Área de Trabalho.
+**1. Com o instalador, o mais fácil:**
 
-A instalação leva de 30 minutos a 2 horas, e você pode usar o PC enquanto isso. Se fechar a janela ou faltar luz, abra o instalador de novo: ele continua de onde parou. Para atualizar o jogo, é só rodar o instalador outra vez.
+1. Baixe o **[Instalar-Ocarina.exe](https://github.com/sostenesfreitas/ocarina-recomp/releases/latest/download/Instalar-Ocarina.exe)** e dê dois cliques.
+2. O executável não tem assinatura digital, então o Windows pode avisar. Clique em **Mais informações** e depois em **Executar assim mesmo**.
+3. Na janela, escolha o `.nup` do seu jogo (ou uma pasta com `exefs` e `romfs`) e clique em **Instalar**.
+4. Se o Windows pedir permissão para instalar as ferramentas, clique em **Sim**.
 
-Prefere fazer tudo à mão? Siga o [passo a passo para compilar à mão](docs/compilar-manual.md).
+Prefere conferir antes? O executável só abre o [script do instalador](instalador/Instalar-Ocarina.ps1), e o [código dele](instalador/launcher.c) tem poucas linhas. A release traz o SHA-256 do arquivo. Antivírus às vezes reclamam de programas sem assinatura.
+
+**2. Com os scripts, que você pode ler antes de rodar** (instale antes as ferramentas do passo 1 do [guia](docs/compilar-manual.md)):
+
+```powershell
+git clone https://github.com/sostenesfreitas/ocarina-recomp C:\OcarinaRecomp
+cd C:\OcarinaRecomp
+powershell -ExecutionPolicy Bypass -File .\verificar.ps1 -Jogo "C:\caminho\seu-jogo.nup"
+powershell -ExecutionPolicy Bypass -File .\compilar.ps1 -Simular -Jogo "C:\caminho\seu-jogo.nup"
+powershell -ExecutionPolicy Bypass -File .\compilar.ps1 -Jogo "C:\caminho\seu-jogo.nup"
+```
+
+1. O `verificar.ps1` só olha e diz o que falta. Ele não altera nada.
+2. O `compilar.ps1 -Simular` mostra todos os comandos sem executar nenhum.
+3. O `compilar.ps1` executa esses comandos, mostra cada um e pergunta antes de cada etapa. Se parar, rode de novo: ele continua de onde parou.
+
+`-ExecutionPolicy Bypass` vale só para esse comando e não muda a configuração do Windows.
+
+**3. Totalmente à mão:** siga o **[passo a passo para compilar](docs/compilar-manual.md)**.
+
+### O que isto faz no seu PC
+
+- Os scripts não pedem administrador. Instalar as ferramentas pode pedir: o instalador faz isso por você, e nos outros jeitos é você quem roda.
+- Escreve só dentro da pasta do projeto, e nunca altera o seu arquivo do jogo.
+- Baixa os pacotes Python (`tools\requirements-build.txt`) e .NET do tradutor de shaders e, se o executável do jogo estiver comprimido, o [zbic](https://github.com/kinnay/zbic).
+- Para desinstalar, apague a pasta do projeto. As ferramentas do passo 1 saem pelo painel de aplicativos do Windows.
+
+Leva de 30 minutos a 2 horas, e você pode usar o PC enquanto isso. Para atualizar, rode de novo o instalador ou veja o fim do guia.
+
+> [!NOTE]
+> Na primeira vez que abrir o jogo, **a vegetação pode levar alguns minutos para aparecer**, enquanto os shaders compilam em segundo plano. Melhora nas próximas vezes.
 
 ### Do que você precisa
 
 - Windows 10 ou 11 de 64 bits, com processador compatível com AVX2.
 - Placa de vídeo com Vulkan 1.3 e mesh shaders, com o driver atualizado. Recomendamos NVIDIA.
-- 16 GB de RAM ou mais.
+- Recomendamos 16 GB de RAM ou mais. Com menos, nunca testamos: a compilação ou o jogo podem falhar.
 - 60 GB livres, mais uns 15 GB no disco C: se as ferramentas ainda não estiverem instaladas.
 - Internet durante a instalação.
 - **Sua cópia do jogo na versão 1.1.1.** Outras versões não funcionam.
@@ -50,12 +79,11 @@ Prefere fazer tudo à mão? Siga o [passo a passo para compilar à mão](docs/co
 
 | Problema | O que fazer |
 |---|---|
-| O instalador parou com erro | Abra de novo: ele continua de onde parou e muitas vezes resolve sozinho |
 | "Este jogo não é a versão 1.1.1" | Confira se escolheu o jogo certo e atualizado |
 | O jogo abre e fecha | Atualize o driver da placa de vídeo e veja o arquivo `ultima-partida-erros.log` na pasta de instalação |
 | Travadinhas na primeira vez | É normal: os shaders estão sendo preparados. Melhora quando você passa de novo pelo mesmo lugar |
 
-Se continuar, [abra uma issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) com o registro `%TEMP%\ocarina-instalador.log` e o modelo da sua placa de vídeo. Nunca envie arquivos do jogo.
+Se continuar, [abra uma issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) com a mensagem de erro e o modelo da sua placa de vídeo. Nunca envie arquivos do jogo.
 
 ### Controles
 

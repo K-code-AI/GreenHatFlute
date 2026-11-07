@@ -167,6 +167,11 @@ function Atualizar() {
 }
 
 function Exec([string]$exe, [string[]]$argumentos, [switch]$PodeFalhar, [string]$Saida) {
+    # the full path: cmd.exe does not have to search PATH for it
+    if ($exe -notmatch '\\') {
+        $achado = Get-Command $exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($achado) { $exe = $achado.Source }
+    }
     $q = ($argumentos | ForEach-Object { if ($_ -match '[\s&()^]') { '"' + $_ + '"' } else { $_ } }) -join ' '
     $destino = if ($Saida) { "> `"$Saida`"" } else { ">> `"$LOG`"" }
     Registrar "> $exe $q"
@@ -189,9 +194,21 @@ function Exec([string]$exe, [string[]]$argumentos, [switch]$PodeFalhar, [string]
     return $cod
 }
 
+# cmd.exe stops finding programs when PATH is around 8 KB long, while PowerShell still finds them. This keeps each folder once,
+# drops the ones that do not exist, and stops at 7000 characters with what the install needs first.
+function LimparPath([string]$lista) {
+    $vistos = @{}; $saida = New-Object Collections.ArrayList; $tamanho = 0
+    foreach ($item in $lista -split ';') {
+        $d = $item.Trim().Trim('"')
+        if (-not $d -or $vistos.ContainsKey($d.ToLower()) -or -not [IO.Directory]::Exists($d)) { continue }
+        if ($tamanho + $d.Length + 1 -gt 7000) { break }
+        $vistos[$d.ToLower()] = $true; [void]$saida.Add($d); $tamanho += $d.Length + 1
+    }
+    return ($saida -join ';')
+}
 function AtualizarPath() {
     $m = [Environment]::GetEnvironmentVariable('Path', 'Machine'); $u = [Environment]::GetEnvironmentVariable('Path', 'User')
-    $env:PATH = "$MSYS\ucrt64\bin;$VS;$env:PATH;$m;$u"
+    $env:PATH = LimparPath "$MSYS\ucrt64\bin;$VS;$env:LOCALAPPDATA\Microsoft\WindowsApps;$m;$u;$env:PATH"
 }
 function Tem($c) { return [bool](Get-Command $c -ErrorAction SilentlyContinue) }
 function Winget($id, $override) {
@@ -237,7 +254,7 @@ function P-Compilador() {
         Exec $bash @('-lc', 'pacman -Syuu --noconfirm') -PodeFalhar | Out-Null
         Exec $bash @('-lc', 'pacman -Syuu --noconfirm') -PodeFalhar | Out-Null
     }
-    Exec $bash @('-lc', 'pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-{clang,lld,ninja,gcc,make,pkgconf,sdl3,opus,libvpx,zstd,vulkan-devel,vulkan-memory-allocator,vulkan-validation-layers,shaderc,spirv-tools} base-devel git unzip') | Out-Null
+    Exec $bash @('-lc', 'pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-{clang,lld,ninja,gcc,make,pkgconf,sdl3,opus,libvpx,dav1d,zstd,vulkan-devel,vulkan-memory-allocator,vulkan-validation-layers,shaderc,spirv-tools} base-devel git unzip') | Out-Null
     AtualizarPath
     $env:PYTHONUTF8 = '1'
 }
@@ -249,7 +266,7 @@ function P-Codigo() {
     }
     $venv = Join-Path $script:pasta '.venv\Scripts\python.exe'
     if (-not (Test-Path $venv)) { Exec 'py' @('-3.12', '-m', 'venv', (Join-Path $script:pasta '.venv')) | Out-Null }
-    Exec $venv @('-m', 'pip', 'install', '-q', '--disable-pip-version-check', '-r', (Join-Path $script:pasta 'tools\requirements.txt')) | Out-Null
+    Exec $venv @('-m', 'pip', 'install', '-q', '--disable-pip-version-check', '-r', (Join-Path $script:pasta 'tools\requirements-build.txt')) | Out-Null
     $script:py = $venv
 }
 function Build($sub) { return Join-Path $script:pasta "build\$sub" }
@@ -309,12 +326,12 @@ function P-Exe() {
 }
 function P-Finalizar() {
     $ini = Build 'oot111\totk.ini'
-    if (-not (Test-Path $ini)) { Copy-Item (Join-Path $script:pasta 'instalador\totk.ini') $ini }
+    if (-not (Test-Path $ini)) { Copy-Item (Join-Path $script:pasta 'jogar\totk.ini') $ini }
     if ($env:OCARINA_AUTO) { return }
     $ws = New-Object -ComObject WScript.Shell
     $atalho = $ws.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Ocarina Recomp.lnk'))
     $atalho.TargetPath = 'powershell.exe'
-    $atalho.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:pasta\instalador\jogar-ocarina.ps1`""
+    $atalho.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:pasta\jogar\jogar-ocarina.ps1`""
     $atalho.WorkingDirectory = $script:pasta
     $atalho.IconLocation = (Build 'oot111\ocarina.exe')
     $atalho.Save()
@@ -340,7 +357,7 @@ function Explicar($erro) {
     if ($erro -eq 'VERSAO') { return (L "Este jogo não é a versão 1.1.1, a única que funciona por enquanto.`n`nConfira o arquivo escolhido e tente de novo." "This game is not version 1.1.1, the only one that works for now.`n`nCheck the file you chose and try again.") }
     if ($trecho -match 'No space left|not enough space|espa.o insuficiente|Disk full') { return (L "O disco ficou cheio.`n`nLibere espaço e abra este instalador de novo: ele continua de onde parou." "The disk is full.`n`nFree some space and open this installer again: it picks up where it stopped.") }
     if ($trecho -match 'Could not resolve|Failed to connect|timed out|unable to access|Connection') { return (L "Parece ser um problema de internet.`n`nConfira a conexão e abra este instalador de novo: ele continua de onde parou." "This looks like an internet problem.`n`nCheck your connection and open this installer again: it picks up where it stopped.") }
-    return (L "$erro`n`nAbra o instalador de novo: muitas vezes ele resolve sozinho. Se repetir, abra um pedido de ajuda no GitHub do projeto com o registro da instalação." "$erro`n`nOpen the installer again: this often fixes it. If it happens again, open an issue on the project's GitHub with the install log.")
+    return (L "$erro`n`nAbra o instalador de novo: muitas vezes ele resolve sozinho. Se faltou uma ferramenta, instale à mão pelo passo 1 do guia: github.com/sostenesfreitas/ocarina-recomp/blob/main/docs/compilar-manual.md`n`nSe repetir, abra um pedido de ajuda no GitHub do projeto com o registro da instalação." "$erro`n`nOpen the installer again: this often fixes it. If a tool is missing, install it by hand with step 1 of the guide: github.com/sostenesfreitas/ocarina-recomp/blob/main/docs/build-by-hand.md`n`nIf it happens again, open an issue on the project's GitHub with the install log.")
 }
 
 function Instalar() {
@@ -363,7 +380,7 @@ function Instalar() {
         $barra.Value = 1000
         $lbPct.Text = (L 'Pronto! 100%' 'Done! 100%')
         $lbLinha.Text = ''
-        $lbDica.Text = (L "Conecte um controle e bom jogo!`nO primeiro carregamento demora e áreas novas podem travar um pouco: é normal. Não compartilhe o jogo montado, os saves nem o cache: eles saem do seu jogo." "Plug in a controller and have fun!`nThe first load takes a while and new areas may stutter a little: that is normal. Do not share the built game, the saves or the cache: they come from your game.")
+        $lbDica.Text = (L "Conecte um controle e bom jogo!`nNa primeira vez, a vegetação pode levar alguns minutos para aparecer e áreas novas podem travar um pouco: é normal. Não compartilhe o jogo montado, os saves nem o cache: eles saem do seu jogo." "Plug in a controller and have fun!`nThe first time, plants can take a few minutes to appear and new areas may stutter a little: that is normal. Do not share the built game, the saves or the cache: they come from your game.")
         $btJogar.Visible = $true; $btFechar.Visible = $true
         $script:rodando = $false
         if ($env:OCARINA_AUTO) { Registrar 'INSTALACAO CONCLUIDA'; $form.Close() }
@@ -432,7 +449,7 @@ $btTrocar.add_Click({
 })
 $btInstalar.add_Click({ Instalar })
 $btJogar.add_Click({
-    Start-Process powershell.exe -ArgumentList "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:pasta\instalador\jogar-ocarina.ps1`""
+    Start-Process powershell.exe -ArgumentList "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script:pasta\jogar\jogar-ocarina.ps1`""
     $form.Close()
 })
 $btFechar.add_Click({ $form.Close() })
@@ -451,7 +468,7 @@ $script:jogo = $null; $script:jogoNup = $false; $script:nupOpcoes = @('--overlay
 $script:pasta = if ($env:OCARINA_PASTA) { $env:OCARINA_PASTA } else { PastaPadrao }
 if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { $script:avisos += (L 'Este instalador só funciona em Windows de 64 bits.' 'This installer only works on 64-bit Windows.'); $script:bloqueio = $true }
 $ram = [Math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
-if ($ram -lt 15) { $script:avisos += (L "Precisa de 16 GB de RAM; este PC tem $ram GB." "16 GB of RAM is required; this PC has $ram GB."); $script:bloqueio = $true }
+if ($ram -lt 15) { $script:avisos += (L "Este PC tem $ram GB de RAM. Com menos de 16 GB, nunca testamos: a compilação ou o jogo podem falhar." "This PC has $ram GB of RAM. We never tested with less than 16 GB: the build or the game may fail.") }
 $gpus = (Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name }) -join ', '
 if ($gpus -notmatch 'NVIDIA') { $script:avisos += (L "Só testamos em placa NVIDIA. Sua placa ($gpus) pode não funcionar." "We only tested on NVIDIA cards. Your card ($gpus) may not work.") }
 Validar

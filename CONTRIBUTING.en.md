@@ -24,7 +24,7 @@ Never use `--no-verify`. Do not ask for or share the game in issues or pull requ
 
 ## Without programming: test
 
-Install using the [README](README.en.md), play, and open an [issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) with:
+Build using the [step-by-step guide](docs/build-by-hand.md), play, and open an [issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) with:
 
 - graphics card, driver version, processor and amount of RAM;
 - where in the game it happened and how to repeat it;
@@ -35,7 +35,7 @@ Install using the [README](README.en.md), play, and open an [issue](https://gith
 
 ## Set up your environment
 
-The easiest way is to run the installer once: it leaves the tools, `.venv` and `build/` ready in `C:\OcarinaRecomp`. Then make your fork and point `origin` at it:
+Follow the [step-by-step build guide](docs/build-by-hand.md): it leaves the tools, `.venv` and `build/` ready in `C:\OcarinaRecomp`. Then make your fork and point `origin` at it:
 
 ```bash
 git remote rename origin upstream
@@ -57,7 +57,7 @@ To rebuild, use a terminal with `C:\msys64\ucrt64\bin` on `PATH`:
 .venv/Scripts/python tools/oot/patch_generated.py generated/oot111
 ```
 
-To open the game with the same settings as the shortcut, use `instalador\jogar-ocarina.ps1`.
+To open the game, use `jogar\jogar-ocarina.ps1`.
 
 ## Where things are
 
@@ -71,7 +71,9 @@ To open the game with the same settings as the shortcut, use `instalador\jogar-o
 | `runtime/third_party/eglantine/.../ampere/` | Ampere to Maxwell shader lowering |
 | `tools/xlate/patches/` | Shader translator patches. The expected count is in `tools/build_xlate.py` |
 | `tools/oot/` | Parts specific to Ocarina |
-| `instalador/` | The installer and the launcher |
+| `instalador/` | The windowed installer and the executable's code (`build_exe.sh`) |
+| `jogar/` | The launcher and the initial settings |
+| `verificar.ps1`, `compilar.ps1` | The build scripts. When you change a command, change the installer and the guides in `docs/` too |
 
 The `TOTK_` and `DKB_` prefixes come from the source projects. They stay so the code remains easy to compare with those projects. Comments that mention other games record where a behavior was discovered.
 

@@ -23,25 +23,54 @@ Experimental. It has only been tested on **one PC** (Ryzen 9 9950X3D, RTX 5090),
 | Hyrule Field and the rest of the game | ❓ Not tested yet |
 | AMD and Intel cards | ❓ Never tested |
 
-## How to install
+## How to build
 
-You do not need to type any commands.
+The game does not come ready-made: it is built on your PC from your copy. Choose one of these three ways.
 
-1. Download **[Instalar-Ocarina.bat](https://github.com/sostenesfreitas/ocarina-recomp/releases/latest/download/Instalar-Ocarina.bat)**.
-2. Double-click it. If Windows says it protected your PC, click **More info** and then **Run anyway**.
-3. In the window, choose your game's `.nup` file (or a folder with `exefs` and `romfs`) and click **Install**.
-4. When Windows asks for permission to install the tools, click **Yes**.
-5. At the end, click **Play**, or use the **Ocarina Recomp** shortcut on your desktop.
+**1. With the installer, the easiest:**
 
-The installer shows English unless your Windows is in Portuguese. Installation takes 30 minutes to 2 hours, and you can use your PC in the meantime. If the window closes or the power goes out, open the installer again: it picks up where it stopped. To update the game, just run the installer again.
+1. Download **[Instalar-Ocarina.exe](https://github.com/sostenesfreitas/ocarina-recomp/releases/latest/download/Instalar-Ocarina.exe)** and double-click it.
+2. The executable has no digital signature, so Windows may warn you. Click **More info** and then **Run anyway**.
+3. In the window, choose your game's `.nup` (or a folder with `exefs` and `romfs`) and click **Install**.
+4. If Windows asks for permission to install the tools, click **Yes**.
 
-Prefer to do it all yourself? Follow the [step-by-step guide to build by hand](docs/build-by-hand.md).
+Want to check first? The executable only opens the [installer script](instalador/Instalar-Ocarina.ps1), and [its code](instalador/launcher.c) is a few lines long. The release lists the file's SHA-256. Antivirus programs sometimes complain about unsigned programs.
+
+**2. With the scripts, which you can read before running** (first install the tools from step 1 of the [guide](docs/build-by-hand.md)):
+
+```powershell
+git clone https://github.com/sostenesfreitas/ocarina-recomp C:\OcarinaRecomp
+cd C:\OcarinaRecomp
+powershell -ExecutionPolicy Bypass -File .\verificar.ps1 -Jogo "C:\path\your-game.nup"
+powershell -ExecutionPolicy Bypass -File .\compilar.ps1 -Simular -Jogo "C:\path\your-game.nup"
+powershell -ExecutionPolicy Bypass -File .\compilar.ps1 -Jogo "C:\path\your-game.nup"
+```
+
+1. `verificar.ps1` only looks and says what is missing. It changes nothing.
+2. `compilar.ps1 -Simular` shows every command and runs none of them.
+3. `compilar.ps1` runs those commands, shows each one and asks before each step. If it stops, run it again: it continues from where it stopped.
+
+`-ExecutionPolicy Bypass` applies only to that command and does not change your Windows settings.
+
+**3. Fully by hand:** follow the **[step-by-step build guide](docs/build-by-hand.md)**.
+
+### What this does on your PC
+
+- The scripts do not ask for administrator. Installing the tools may: the installer does that for you, and in the other ways you run it yourself.
+- It writes only inside the project folder, and never changes your game file.
+- It downloads the Python packages (`tools\requirements-build.txt`), the shader translator's .NET packages and, if the game's executable is compressed, [zbic](https://github.com/kinnay/zbic).
+- To uninstall, delete the project folder. The tools from step 1 are removed through Windows' apps panel.
+
+It takes 30 minutes to 2 hours, and you can use your PC in the meantime. To update, run the installer again or see the end of the guide.
+
+> [!NOTE]
+> The first time you open the game, **plants can take a few minutes to appear** while shaders compile in the background. It gets better after that.
 
 ### What you need
 
 - 64-bit Windows 10 or 11, with an AVX2-capable processor.
 - A graphics card with Vulkan 1.3 and mesh shaders, with an up-to-date driver. We recommend NVIDIA.
-- 16 GB of RAM or more.
+- We recommend 16 GB of RAM or more. We never tested with less: the build or the game may fail.
 - 60 GB free, plus about 15 GB on C: if the tools are not installed yet.
 - Internet access during installation.
 - **Your copy of the game at version 1.1.1.** Other versions do not work.
@@ -50,12 +79,11 @@ Prefer to do it all yourself? Follow the [step-by-step guide to build by hand](d
 
 | Problem | What to do |
 |---|---|
-| The installer stopped with an error | Open it again: it picks up where it stopped and this often fixes it |
 | "This game is not version 1.1.1" | Check that you chose the right, updated game |
 | The game opens and closes | Update your graphics driver and look at `ultima-partida-erros.log` in the install folder |
 | Stutter the first time | This is normal: shaders are being prepared. It gets better when you pass through the same place again |
 
-If the problem continues, [open an issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) with the log at `%TEMP%\ocarina-instalador.log` and your graphics card model. Never send game files.
+If the problem continues, [open an issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) with the error message and your graphics card model. Never send game files.
 
 ### Controls
 

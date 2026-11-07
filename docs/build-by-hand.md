@@ -1,10 +1,10 @@
-# Build by hand
+# How to build
 
 [Leia em português](compilar-manual.md) · [the same on Linux](build-by-hand-linux.md)
 
-These are the same steps the installer runs, for anyone who prefers to see and control each one. If you just want to play, use the [installer](../README.en.md#how-to-install).
+The game is built on your PC from your copy. These are all the steps. After step 2, `compilar.ps1` can run steps 3 to 8 for you: see the [README](../README.en.md#how-to-build).
 
-You need your own copy of the game at **version 1.1.1**, 16 GB of RAM and 60 GB free, plus about 15 GB on C: for the tools. Use a folder with no spaces or accents. All commands are for **PowerShell**.
+You need your own copy of the game at **version 1.1.1** and 60 GB free, plus about 15 GB on C: for the tools. We recommend 16 GB of RAM: we never tested with less, and the build or the game may fail. Use a folder with no spaces or accents. All commands are for **PowerShell**.
 
 ## 1. Install the tools
 
@@ -26,7 +26,7 @@ Close and reopen PowerShell. Then install the compiler. The first command may cl
 $env:MSYSTEM = "UCRT64"; $env:CHERE_INVOKING = "1"
 C:\msys64\usr\bin\bash.exe -lc "pacman -Syuu --noconfirm"
 C:\msys64\usr\bin\bash.exe -lc "pacman -Syuu --noconfirm"
-C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-{clang,lld,ninja,gcc,make,pkgconf,sdl3,opus,libvpx,zstd,vulkan-devel,vulkan-memory-allocator,vulkan-validation-layers,shaderc,spirv-tools} base-devel git unzip"
+C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-{clang,lld,ninja,gcc,make,pkgconf,sdl3,opus,libvpx,dav1d,zstd,vulkan-devel,vulkan-memory-allocator,vulkan-validation-layers,shaderc,spirv-tools} base-devel git unzip"
 ```
 
 ## 2. Get the code
@@ -35,7 +35,7 @@ C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x8
 git clone https://github.com/sostenesfreitas/ocarina-recomp C:\OcarinaRecomp
 cd C:\OcarinaRecomp
 py -3.12 -m venv .venv
-.venv\Scripts\python.exe -m pip install -r tools\requirements.txt
+.venv\Scripts\python.exe -m pip install -r tools\requirements-build.txt
 ```
 
 **In every new PowerShell** from here on, start with:
@@ -124,17 +124,17 @@ Remove-Item build\dump -Recurse -Force
 
 ## 8. Build the game
 
-This is the longest part. With little RAM, use a lower `--jobs`: the installer uses at most 1 for every 3 GB.
+This is the longest part. With little RAM, use a lower `--jobs`: at most 1 for every 3 GB.
 
 ```powershell
 .venv\Scripts\python.exe tools\build_game.py --version oot111 --gen generated\oot111 --out build\oot111 --expected tools\data\expected-oot111.json --exefs build\exefs --romfs build\romfs --jobs 8
-Copy-Item instalador\totk.ini build\oot111\totk.ini
+Copy-Item jogar\totk.ini build\oot111\totk.ini
 ```
 
 ## 9. Play
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File instalador\jogar-ocarina.ps1
+powershell -ExecutionPolicy Bypass -File jogar\jogar-ocarina.ps1
 ```
 
 The first launch takes a while, and new areas may stutter a little while shaders are prepared.

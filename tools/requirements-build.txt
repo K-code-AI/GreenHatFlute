@@ -1,0 +1,4 @@
+# What the game's build needs. numpy, lz4: recomp/gen.py. zstandard: tools/extract_nup.py on Python 3.12.
+numpy==2.5.4
+lz4==4.4.5
+zstandard==0.25.0

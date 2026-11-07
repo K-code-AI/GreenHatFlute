@@ -1,4 +1,4 @@
-﻿# Abre o Ocarina Recomp. O atalho da Area de Trabalho chama este arquivo.
+﻿# Abre o Ocarina Recomp.
 $env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"
 $env:TOTK_GPL = "0"   # bindless set 2 + an allocated vertex set in an independent layout loses the device
 $env:TOTK_ASYNC_PREEMPT = "0"
@@ -7,4 +7,5 @@ if (Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDI
 $raiz = Split-Path $PSScriptRoot -Parent
 $env:TOTK_PROFILE_DIR = Join-Path $raiz "perfil"
 Set-Location (Join-Path $raiz "build\oot111")
-Start-Process .\ocarina.exe -ArgumentList $args -RedirectStandardOutput (Join-Path $raiz "ultima-partida.log") -RedirectStandardError (Join-Path $raiz "ultima-partida-erros.log")
+$extras = if ($args.Count) { @{ ArgumentList = $args } } else { @{} }
+Start-Process .\ocarina.exe @extras -RedirectStandardOutput (Join-Path $raiz "ultima-partida.log") -RedirectStandardError (Join-Path $raiz "ultima-partida-erros.log")

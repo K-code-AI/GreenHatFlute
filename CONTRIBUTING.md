@@ -24,7 +24,7 @@ Nunca use `--no-verify`. E não peça nem compartilhe o jogo em issues ou pull r
 
 ## Sem programar: testar
 
-Instale pelo [README](README.md), jogue e abra uma [issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) contando:
+Compile pelo [passo a passo](docs/compilar-manual.md), jogue e abra uma [issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) contando:
 
 - placa de vídeo, versão do driver, processador e quantidade de RAM;
 - onde no jogo aconteceu e como repetir;
@@ -35,7 +35,7 @@ Instale pelo [README](README.md), jogue e abra uma [issue](https://github.com/so
 
 ## Preparar o ambiente
 
-O jeito mais fácil é rodar o instalador uma vez: ele deixa as ferramentas, o `.venv` e o `build/` prontos em `C:\OcarinaRecomp`. Depois, faça seu fork e aponte o `origin` para ele:
+Siga o [passo a passo para compilar](docs/compilar-manual.md): ele deixa as ferramentas, o `.venv` e o `build/` prontos em `C:\OcarinaRecomp`. Depois, faça seu fork e aponte o `origin` para ele:
 
 ```bash
 git remote rename origin upstream
@@ -57,7 +57,7 @@ Para recompilar, use um terminal com `C:\msys64\ucrt64\bin` no `PATH`:
 .venv/Scripts/python tools/oot/patch_generated.py generated/oot111
 ```
 
-Para abrir o jogo com as mesmas configurações do atalho, use `instalador\jogar-ocarina.ps1`.
+Para abrir o jogo, use `jogar\jogar-ocarina.ps1`.
 
 ## Onde fica cada coisa
 
@@ -71,7 +71,9 @@ Para abrir o jogo com as mesmas configurações do atalho, use `instalador\jogar
 | `runtime/third_party/eglantine/.../ampere/` | Rebaixamento de shaders Ampere para Maxwell |
 | `tools/xlate/patches/` | Patches do tradutor de shaders. A quantidade esperada está em `tools/build_xlate.py` |
 | `tools/oot/` | Partes específicas do Ocarina |
-| `instalador/` | O instalador e o lançador |
+| `instalador/` | O instalador com janela e o código do executável (`build_exe.sh`) |
+| `jogar/` | O lançador e a configuração inicial |
+| `verificar.ps1`, `compilar.ps1` | Os scripts de compilação. Ao mudar um comando, mude também o instalador e os guias em `docs/` |
 
 Os prefixos `TOTK_` e `DKB_` nos nomes vêm dos projetos de origem. Eles continuam assim para o código seguir fácil de comparar com esses projetos. Comentários que citam outros jogos registram onde o comportamento foi descoberto.
 
