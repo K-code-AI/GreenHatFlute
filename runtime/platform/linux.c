@@ -268,6 +268,9 @@ int plat_intr_resume(PlatIntr *t, uint64_t to) {
 // on every switch, and the game switches fibers often. fiber_swap saves the callee-saved registers, the MXCSR and the
 // x87 control word on the current stack, stores the stack pointer in *save and loads the other one. A new fiber's
 // stack is laid out as fiber_swap leaves one, returning into fiber_entry, which calls fn(arg) (r12 and r13).
+// fiber_swap's ret leaves rsp at 8 mod 16, which is where a called function expects to find it, but a call needs rsp
+// at 0 mod 16: without the subq in fiber_entry every fiber runs with the stack 8 off, and a callee that spills to an
+// aligned 16-byte slot (glibc's pthread_create does) faults with a general protection fault, si_addr 0.
 struct PlatFiber {
     void *sp;
     void *stack;   // mapped stack (NULL for a thread's own context)
@@ -309,6 +312,7 @@ __asm__(".text\n"
         ".type plat_fiber_entry, @function\n"
         ".p2align 4\n"
         "plat_fiber_entry:\n"
+        "    subq $8, %rsp\n"
         "    movq %r13, %rdi\n"
         "    callq *%r12\n"
         "    ud2\n"

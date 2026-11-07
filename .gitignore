@@ -15,12 +15,14 @@ __pycache__/
 /game/
 /build/
 /generated/
+/perfil/
 *.xci
 *.xcz
 *.nsp
 *.nsz
 *.nca
 *.ncz
+*.nup
 *.tik
 *.keys
 *.nso

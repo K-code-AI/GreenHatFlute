@@ -3,6 +3,7 @@
 // nvnp_<name> is the implementation of one proc: the weak definitions here stop with the proc's name, nvn_api_*.c
 // and nvn_ext.c define the strong ones. The name list is runtime/nvn_procs.inc (tools/gen_nvn_procs.py).
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -40,10 +41,28 @@ static int nprocs;
 
 static int by_name(const void *a, const void *b) { return strcmp(((const Proc *)a)->name, ((const Proc *)b)->name); }
 
-// LOCAL TEST (Ocarina): names newer than this table get one stub that does nothing and answers 0, with the caller logged
-// once each. ponytail: the stub cannot tell which name was called; a table per name needs them registered before the seal.
-static uint64_t missing_proc_addr;
+// LOCAL TEST (Ocarina): names newer than this table get a stub that does nothing and answers 0, with the caller logged
+// once each. hostfn_register stops at the seal, which the game's proc loader runs after, so the stubs are reserved as a
+// pool here: every unknown name takes the next free one, and the stub recovers that name from its own synthetic address
+// (hostfn_name(c->pc)), so the log says which proc the game called instead of just where.
+#define MISSING_SLOTS 64
+static const char missing_prefix[] = "nvn:missing";
+static char missing_slot_name[MISSING_SLOTS][16];
+static char missing_label[MISSING_SLOTS][96];
+static uint64_t missing_slot_addr[MISSING_SLOTS];
+static int nmissing;
+static int missing_slot_of(const char *name) {
+    for (int i = 0; i < nmissing; i++)
+        if (!strcmp(missing_label[i], name)) return i;
+    if (nmissing >= MISSING_SLOTS) return MISSING_SLOTS - 1;   // the last stub answers for the rest
+    strncpy(missing_label[nmissing], name, sizeof missing_label[0] - 1);
+    return nmissing++;
+}
+
 static void nvnp_missing_proc(Cpu *c) {
+    const char *self = hostfn_name(c->pc);
+    int slot = self ? atoi(self + (sizeof missing_prefix - 1)) : -1;
+    const char *name = slot >= 0 && slot < MISSING_SLOTS && missing_label[slot][0] ? missing_label[slot] : NULL;
     static uint64_t seen[64];
     static int n;
     uint64_t lr = c->x[30];
@@ -51,14 +70,18 @@ static void nvnp_missing_proc(Cpu *c) {
     for (int i = 0; i < n; i++) known |= seen[i] == lr;
     if (!known && n < 64) {
         seen[n++] = lr;
-        rt_log("nvn: LOCAL TEST: missing proc called from %#llx", (unsigned long long)lr);
+        rt_log("nvn: LOCAL TEST: missing proc %s called from %#llx", name ? name : "(unnamed)",
+               (unsigned long long)lr);
     }
     ret_x(c, 0);
 }
 
 void nvn_procs_register(void) {
     if (nprocs) return;
-    missing_proc_addr = hostfn_register("nvn:missing", nvnp_missing_proc);
+    for (int i = 0; i < MISSING_SLOTS; i++) {
+        snprintf(missing_slot_name[i], sizeof missing_slot_name[i], "%s%d", missing_prefix, i);
+        missing_slot_addr[i] = hostfn_register(missing_slot_name[i], nvnp_missing_proc);
+    }
 #define NVN_PROC(n) procs[nprocs++] = (Proc){#n, hostfn_register("nvn:" #n, nvnp_##n)};
 #include "nvn_procs.inc"
 #undef NVN_PROC
@@ -85,7 +108,7 @@ uint64_t nvn_proc_address(const char *name) {
     }
     plat_mutex_unlock(&lock);
     if (fresh) rt_log("nvn: no such proc \"%s\", returning a stub", name);
-    return missing_proc_addr;
+    return missing_slot_addr[missing_slot_of(name)];
 }
 
 // PFNNVNGENERICFUNC nvnDeviceGetProcAddress(const NVNdevice *device, const char *name)

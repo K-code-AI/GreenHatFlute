@@ -108,7 +108,8 @@ else:
     # $ORIGIN: a libSDL3.so.0 next to totk comes before the system's (the release's portable folder).
     LINK_FLAGS = ['-fuse-ld=lld', '-no-pie', '-Wl,-z,noexecstack', "'-Wl,-rpath,$$ORIGIN'",
                   '"-Wl,-Map=$builddir/totk.map"']
-    LINK_LIBS = ['-lvulkan', '-lSDL3', '-lopus', '-lvpx', '-lzstd', '-l:libstdc++.a', '-lm', '-lpthread', '-ldl']
+    LINK_LIBS = ['-lvulkan', '-lSDL3', '-lopus', '-lvpx', '-ldav1d', '-lzstd', '-l:libstdc++.a', '-lm', '-lpthread',
+                 '-ldl']   # libvpx (movies) and dav1d (AV1, ov_codec.c) as on Windows
     VMA_INCLUDE = Path('/usr/include')   # vk_mem_alloc.h; Arch (AUR) vulkan-memory-allocator, Debian libvulkan-memory-allocator-dev
 # Without a system vk_mem_alloc.h, the header the Windows release pins (tools/make_release.py, VMA 3.4.0) is fetched once
 # into toolchain/vma: one MIT header (THIRD_PARTY_NOTICES.md), checked against its hash.
@@ -783,6 +784,11 @@ def main():
         GEN_FLAGS[:0] = sysroot
         RT_FLAGS[:0] = sysroot
         LINK_FLAGS[:0] = sysroot
+    if not WIN and '-fuse-ld=lld' in LINK_FLAGS and not ((TOOLCHAIN_BIN / 'ld.lld').is_file() if TOOLCHAIN_BIN
+                                                         else shutil.which('ld.lld')):
+        # lld is what the Windows build uses and what docs/building.md lists; the system ld takes the same flags.
+        LINK_FLAGS.remove('-fuse-ld=lld')
+        print('build_game: ld.lld not found: linking with the default linker (install lld for a faster link)')
     for tool in (CLANG, NINJA):
         if not tool.is_file():
             sys.exit(f'{tool} not found: install ' + ('MSYS2 UCRT64 clang, lld and ninja' if WIN else 'clang, lld and ninja')

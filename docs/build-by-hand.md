@@ -1,6 +1,6 @@
 # Build by hand
 
-[Leia em português](compilar-manual.md)
+[Leia em português](compilar-manual.md) · [the same on Linux](build-by-hand-linux.md)
 
 These are the same steps the installer runs, for anyone who prefers to see and control each one. If you just want to play, use the [installer](../README.en.md#how-to-install).
 

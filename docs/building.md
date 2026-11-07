@@ -147,9 +147,12 @@ Requirements:
 - Packages on Arch:
 
   ```sh
-  pacman -S --needed clang lld ninja make sdl3 opus libvpx zstd vulkan-headers vulkan-icd-loader \
+  pacman -S --needed clang lld ninja make sdl3 opus libvpx dav1d zstd vulkan-headers vulkan-icd-loader \
       vulkan-validation-layers shaderc spirv-tools dotnet-sdk uv git
   ```
+
+  `docs/build-by-hand-linux.md` walks through the same steps on a machine where libvpx or dav1d is not packaged, and
+  where .NET comes from the official script instead of a package manager.
 
   Vulkan Memory Allocator is a single header (AUR `vulkan-memory-allocator`). Without it, `build_game.py` fetches the
   version the Windows release pins (3.4.0) into `toolchain/vma/` on first use and checks its hash.
