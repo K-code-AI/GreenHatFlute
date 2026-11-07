@@ -82,7 +82,19 @@ The `TOTK_` and `DKB_` prefixes come from the source projects. They stay so the 
 - **Translator patches:** create them with a diff over `build/xlate/ryujinx` and update the count in `tools/build_xlate.py`. Changing the translator recompiles every shader on the next run.
 - **Windows:** `long` is 32 bits. A `1L << 40` dropped every indirect mesh draw for days.
 - **Copied code:** keep its header and add a row to `THIRD_PARTY_NOTICES.md` with the source commit.
-- **Commits:** use your own git identity. Never push directly to `main`: open a pull request.
+- **Commits:** use your own git identity.
+
+## Branches
+
+`main` is the line that is known to build and to run. Nothing lands on it untested.
+
+- One branch per change, named for what it changes (`greenhatflute-names`, `amd-texture-formats`).
+- On the branch: build, `build/oot111/GreenHatFlute --selftest`, the tests that cover what you touched, and a run in
+  game. CI runs the content guard on every push, but it does not compile anything: the build and the play test are
+  yours to do.
+- Merge into `main` only once that is done, and say in the merge what you tested and what you did not.
+- A branch that is still experiments stays a branch. Push it, so the work is not lost and others can look, but do not
+  merge it because it is green in CI.
 
 ## How to investigate a graphics bug
 

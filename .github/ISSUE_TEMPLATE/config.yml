@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question or help with building
-    url: https://github.com/sostenesfreitas/ocarina-recomp/discussions
+    url: https://github.com/K-code-AI/GreenHatFlute/discussions
     about: Building, running and how the port works. Ask in Discussions.
   - name: Roadmap and open tasks
     url: https://github.com/K-code-AI/GreenHatFlute/blob/main/CONTRIBUTING.md
