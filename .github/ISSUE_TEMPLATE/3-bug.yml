@@ -13,7 +13,7 @@ body:
     attributes:
       label: Existing issues
       options:
-        - label: I read the pinned issues and [searched open and closed issues](https://github.com/sostenesfreitas/ocarina-recomp/issues?q=is%3Aissue) for this bug.
+        - label: I read the pinned issues and [searched open and closed issues](https://github.com/K-code-AI/GreenHatFlute/issues?q=is%3Aissue) for this bug.
           required: true
   - type: dropdown
     id: area
@@ -40,7 +40,8 @@ body:
   - type: input
     id: system
     attributes:
-      label: GPU, driver and Windows version
+      label: GPU, driver and Linux distribution
+      description: For example "NVIDIA RTX 4070, driver 570.172, Fedora 42" or "RX 7800 XT, Mesa 25.1, Arch".
     validations:
       required: true
   - type: textarea
@@ -54,4 +55,4 @@ body:
     id: log
     attributes:
       label: Log
-      description: Attach logs\totk.log from the folder of ocarina.exe, if the game started.
+      description: Attach build/oot111/logs/totk.log, or last-run-errors.log from the folder of play/run.sh, if the game started.

@@ -14,6 +14,6 @@
 
 - [ ] `python tools/check_content.py --staged` passes, and nothing from the game is in this pull request (no game
       files, generated C, shaders, shader caches, builds or screenshots of the game).
-- [ ] A change to the lifter (`recomp/`) or the CPU headers passes the differential tests ([docs/building.md](https://github.com/sostenesfreitas/ocarina-recomp/blob/main/docs/building.md), "Checks").
+- [ ] A change to the lifter (`recomp/`) or the CPU headers passes the differential tests ([docs/building.md](https://github.com/K-code-AI/GreenHatFlute/blob/main/docs/building.md), "Checks").
 - [ ] Copied code keeps its header and has a row in `THIRD_PARTY_NOTICES.md` with the upstream commit.
 - [ ] Generated C is not edited by hand.

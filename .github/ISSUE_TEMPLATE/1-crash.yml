@@ -5,8 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Ocarina Recomp is experimental, so crashes are expected. A good report still helps: it shows where the next problem is.
-        Check the pinned issues first, and see [README.md](https://github.com/sostenesfreitas/ocarina-recomp/blob/main/README.md) for how to run and where the log is.
+        GreenHatFlute is experimental, so crashes are expected. A good report still helps: it shows where the next problem is.
+        Check the pinned issues first, and see [README.md](https://github.com/K-code-AI/GreenHatFlute/blob/main/README.md) for how to run and where the log is.
 
         Do not attach or link game files, keys, firmware, builds, shader caches or screenshots of the game. Issues that do are closed.
   - type: checkboxes
@@ -14,7 +14,7 @@ body:
     attributes:
       label: Existing issues
       options:
-        - label: I read the pinned issues and [searched open and closed issues](https://github.com/sostenesfreitas/ocarina-recomp/issues?q=is%3Aissue) for this crash.
+        - label: I read the pinned issues and [searched open and closed issues](https://github.com/K-code-AI/GreenHatFlute/issues?q=is%3Aissue) for this crash.
           required: true
   - type: input
     id: version
@@ -26,8 +26,8 @@ body:
   - type: input
     id: system
     attributes:
-      label: GPU, driver and Windows version
-      description: For example "Radeon RX 7800 XT, Adrenalin 25.10.1, Windows 11 24H2".
+      label: GPU, driver and Linux distribution
+      description: For example "NVIDIA RTX 4070, driver 570.172, Fedora 42" or "RX 7800 XT, Mesa 25.1, Arch".
     validations:
       required: true
   - type: dropdown
@@ -64,6 +64,6 @@ body:
     id: log
     attributes:
       label: Log
-      description: Attach logs\totk.log from the folder of ocarina.exe. Copy it before you start the game again, because the next start renames it.
+      description: Attach build/oot111/logs/totk.log, or last-run-errors.log from the folder of play/run.sh. Copy it before you start the game again, because the next start renames it.
     validations:
       required: true
