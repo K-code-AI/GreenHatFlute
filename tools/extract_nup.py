@@ -203,8 +203,6 @@ class Zstd:
                 self.kind = 'zstandard'
             except ImportError:
                 self.exe = shutil.which('zstd')
-                if self.exe is None and os.path.exists(r'C:\msys64\usr\bin\zstd.exe'):
-                    self.exe = r'C:\msys64\usr\bin\zstd.exe'
                 if self.exe:
                     self.kind = 'zstd program'
 

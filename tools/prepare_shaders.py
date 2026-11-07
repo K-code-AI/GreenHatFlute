@@ -28,7 +28,6 @@ bundles it; it stays out of the repository), else from refs/ through git with th
 import argparse
 import hashlib
 import json
-import os
 import struct
 import subprocess
 import sys
@@ -191,7 +190,7 @@ def main():
           f'seed written in {time.monotonic() - t0:.1f} s', flush=True)
     if a.no_run:
         return 0
-    exe = out / ('GreenHatFlute.exe' if os.name == 'nt' else 'GreenHatFlute')
+    exe = out / 'GreenHatFlute'
     r = subprocess.run([str(exe), '--prepare-shaders'], cwd=str(out))
     print(f'GreenHatFlute.exe --prepare-shaders: rc={r.returncode}; total {time.monotonic() - t0:.1f} s')
     return r.returncode
