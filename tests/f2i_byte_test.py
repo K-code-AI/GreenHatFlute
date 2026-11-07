@@ -12,7 +12,7 @@ R0 F2I.S8, R1 F2I.U8, R2 F2I.S16 and R3 F2I.S32, all truncating. The test execut
 with a small evaluator of exactly the operations it uses, and compares the four integer results with the
 saturating conversions of the Ampere instructions. No game data or GPU is used.
 
-Usage: python tests/f2i_byte_test.py --translator build/xlate/greenhatflute_xlate.exe [--spirv-val PATH]
+Usage: python tests/f2i_byte_test.py --translator build/xlate/greenhatflute_xlate [--spirv-val PATH]
 """
 import argparse
 import json
@@ -144,6 +144,12 @@ def evaluate(code, c0):
             elif inst in (37, 40):   # FMin, FMax: undefined with a NaN operand
                 put(a[1], args, lambda x, y: None if math.isnan(f32(x)) or math.isnan(f32(y)) else
                     u32((min if inst == 37 else max)(f32(x), f32(y))))
+            elif inst in (79, 80):   # NMin, NMax: NaN propagates (0031-maxwell-nan-semantics emits these)
+                put(a[1], args, lambda x, y: u32(float('nan')) if math.isnan(f32(x)) or math.isnan(f32(y)) else
+                    u32((min if inst == 79 else max)(f32(x), f32(y))))
+            elif inst == 81:   # NClamp: NaN propagates
+                put(a[1], args, lambda x, lo, hi: u32(float('nan')) if any(math.isnan(f32(v)) for v in (x, lo, hi)) else
+                    u32(min(max(f32(x), f32(lo)), f32(hi))))
             elif inst == 43:   # FClamp: undefined with a NaN operand
                 put(a[1], args, lambda x, lo, hi: None if any(math.isnan(f32(v)) for v in (x, lo, hi)) else
                     u32(min(max(f32(x), f32(lo)), f32(hi))))

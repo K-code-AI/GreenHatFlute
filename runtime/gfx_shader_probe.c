@@ -1,4 +1,4 @@
-// --probe-shader: the shader service client (gfx_shader.c) against 32 census shaders. Needs build/xlate/greenhatflute_xlate.exe and
+// --probe-shader: the shader service client (gfx_shader.c) against 32 census shaders. Needs build/xlate/greenhatflute_xlate and
 // a census, build/<version>/shaders/ (tools/shader_census.py, probe_census_dir); uses a throwaway cache directory.
 //   1. Translate 32 shaders (mixed stages) through gfx_shader_get; each SPIR-V starts with the magic 0x07230203.
 //   2. Drop the memory cache and ask again: 32 hits from disk, 0 service requests. A third pass returns the same pointers.

@@ -1,21 +1,21 @@
-"""Build the shader translator: build/xlate/greenhatflute_xlate.exe (Ryujinx 1.3.2 + patches, NativeAOT, SPIR-V for Vulkan).
+"""Build the shader translator: build/xlate/greenhatflute_xlate (Ryujinx 1.3.2 + patches, NativeAOT, SPIR-V for Vulkan).
 
 Copies tools/vendor/ryujinx to build/xlate/ryujinx, applies the selected tools/xlate/patches there (tools/vendor stays
 byte-identical), then runs `dotnet publish`. The default applies patches 0001-0013 and 0015-0018, preserving the fast floating
 min/max/clamp operations. Patch 0015 makes runtime storage-candidate resolution available only to explicit version-1
 NVN 2 compute requests; missing/version-0 requests retain the legacy pass. --defined-float-minmax also applies 0014's integer selection and numeric constant folding;
-this adds shader ALU work and has no established game visual or frame-time benefit. Needs the .NET 10 SDK, the MSVC build
-tools and vswhere.exe (docs/building.md). Run with .venv. On Linux it builds build/xlate/greenhatflute_xlate for linux-x64, which
-NativeAOT links with the system's clang (no MSVC); NativeAOT builds for the OS it runs on only.
+this adds shader ALU work and has no established game visual or frame-time benefit. Needs the .NET 10 SDK and clang/lld
+(docs/building.md). NativeAOT builds for the OS it runs on only, so this is a linux-x64 translator: the project is Linux-only
+and nothing here builds a Windows binary.
 
-Next to the exe it writes greenhatflute_xlate.id: the translator identity, a sha256 over everything the build reads (this script,
+Next to the binary it writes greenhatflute_xlate.id: the translator identity, a sha256 over everything the build reads (this script,
 Program.cs, the csproj, the selected patches, the vendor tree). runtime/gfx_shader.c puts it into every shader cache key, so a
-translator change re-keys the cache without a hand-made KEY_VERSION bump. --id-only writes it for the exe already built
-(the caller vouches that the exe matches the sources and must use the same --defined-float-minmax setting).
+translator change re-keys the cache without a hand-made KEY_VERSION bump. --id-only writes it for the translator already built
+(the caller vouches that it matches the sources and must use the same --defined-float-minmax setting).
 
   python tools/build_xlate.py [--defined-float-minmax] [--id-only] [--out DIR]
 
---out builds into DIR instead of build/xlate (a task build dir: GreenHatFlute.exe takes the translator next to it).
+--out builds into DIR instead of build/xlate (a task build dir: GreenHatFlute takes the translator next to it).
 """
 
 import argparse
@@ -32,9 +32,7 @@ VENDOR = ROOT / "tools" / "vendor" / "ryujinx"
 MNG_VENDOR = ROOT / "refs" / "MacNativeGames" / "vendor" / "ryujinx"
 XLATE = ROOT / "tools" / "xlate"
 BUILD = ROOT / "build" / "xlate"
-WIN = os.name == "nt"
-EXE = "greenhatflute_xlate.exe" if WIN else "greenhatflute_xlate"
-VSWHERE_DIR = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Microsoft Visual Studio" / "Installer"
+EXE = "greenhatflute_xlate"
 DEFINED_FLOAT_MINMAX_PATCH = "0014-numeric-float-minmax-and-saturation.patch"
 
 
@@ -102,7 +100,12 @@ def selected_patches(*, defined_float_minmax: bool = False) -> list[Path]:
     optional = XLATE / "patches" / DEFINED_FLOAT_MINMAX_PATCH
     if optional not in patches:
         sys.exit(f"missing optional patch: {DEFINED_FLOAT_MINMAX_PATCH}")
-    return patches if defined_float_minmax else [p for p in patches if p != optional]
+    # The optional patch is applied last, not in its numeric slot. 0031-maxwell-nan-semantics rewrites the min/max/clamp
+    # bodies of CodeGen/Spirv/Instructions.cs, and 0014 inserts into those same three methods; 0031 is in every build,
+    # so 0014 is written against the tree that already has it. In numeric order 0014 would move those lines out from
+    # under 0031's hunks and the apply would fail.
+    always = [p for p in patches if p != optional]
+    return always + [optional] if defined_float_minmax else always
 
 
 def prepare_sources(*, defined_float_minmax: bool = False) -> Path:
@@ -164,11 +167,6 @@ def main() -> None:
     if not dotnet:
         sys.exit("missing: dotnet (.NET 10 SDK)")
     env = dict(os.environ)
-    if WIN:
-        if not (VSWHERE_DIR / "vswhere.exe").is_file() and not shutil.which("vswhere"):
-            sys.exit(f"missing: vswhere.exe (expected in {VSWHERE_DIR}); NativeAOT cannot link without it")
-        env["PATH"] = str(VSWHERE_DIR) + os.pathsep + env["PATH"]
-
     verify_vendor()
     src = prepare_sources(defined_float_minmax=a.defined_float_minmax)
     work = BUILD / "xlate"
@@ -179,7 +177,7 @@ def main() -> None:
     out = BUILD / "publish"
     shutil.rmtree(out, ignore_errors=True)
     cmd = [
-        dotnet, "publish", str(work / "greenhatflute_xlate.csproj"), "-c", "Release", "-r", "win-x64" if WIN else "linux-x64",
+        dotnet, "publish", str(work / "greenhatflute_xlate.csproj"), "-c", "Release", "-r", "linux-x64",
         "-p:PublishAot=true", "-p:InvariantGlobalization=true", f"-p:RyuSrc={src}", "-o", str(out),
     ]
     if a.llvm:

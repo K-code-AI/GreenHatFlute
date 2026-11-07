@@ -1,5 +1,5 @@
 // Shader service client: turns an NVN program (control section, code, c1 constants and the
-// translator's answers) into SPIR-V plus reflection through `greenhatflute_xlate.exe --serve` children, started lazily with
+// translator's answers) into SPIR-V plus reflection through `greenhatflute_xlate --serve` children, started lazily with
 // pipes and kept for the life of the process (a pool: GHF_XLATE_PROCS at run time, more for the boot prewarm).
 // Results are cached in memory and on disk (shader-cache/<key>.spv and <key>.res.json next to GreenHatFlute.exe), so a shader
 // is translated once per machine and translator.
@@ -300,7 +300,7 @@ static void xlate_identity(void) {
            xlate_id[3], xlate_id[4], xlate_id[5], xlate_id[6], xlate_id[7], how);
 }
 
-// The repository root is the nearest parent of GreenHatFlute.exe that holds build/xlate/greenhatflute_xlate.exe. The shader cache lives
+// The repository root is the nearest parent of GreenHatFlute.exe that holds build/xlate/greenhatflute_xlate. The shader cache lives
 // next to GreenHatFlute.exe, so every build dir has its own (as the pipeline cache, vk_pipeline.c cache_path_init).
 static void use_preload_start(void);
 

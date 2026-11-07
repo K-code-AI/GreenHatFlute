@@ -36,23 +36,42 @@ class TranslatorOptions(unittest.TestCase):
                 return builder.prepare_sources(defined_float_minmax=True)
             return builder.prepare_sources()
 
-    def test_default_keeps_fast_shader_operations(self):
+    def minmax_bodies(self, source):
+        """The three min/max/clamp method bodies, so a failure names the lines that moved instead of the whole file."""
+        text = (source / 'src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs').read_text()
+        bodies = {}
+        for name in ('GenerateClamp', 'GenerateMaximum', 'GenerateMinimum'):
+            start = text.index(f'private static OperationResult {name}(CodeGenContext context, AstOperation operation)')
+            bodies[name] = text[start:text.index('\n        }', start)]
+        return bodies
+
+    def test_default_keeps_the_patched_minmax_delegates(self):
         source = self.prepare()
         instructions = (source / 'src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs').read_text()
         folding = (source / 'src/Ryujinx.Graphics.Shader/Translation/Optimizations/ConstantFolding.cs').read_text()
+        bodies = self.minmax_bodies(source)
         self.assertFalse('EmitNumericMinMax' in instructions, 'default unexpectedly applies the integer min/max patch')
-        self.assertIn('return GenerateBinary(context, operation, context.Delegates.GlslFMin,', instructions)
-        self.assertIn('return GenerateBinary(context, operation, context.Delegates.GlslFMax,', instructions)
-        self.assertIn('return GenerateTernary(context, operation, context.Delegates.GlslFClamp,', instructions)
+        # 0031-maxwell-nan-semantics is in every build and rewrites these three returns to the NaN-propagating
+        # GLSL.std.450 NMin/NMax/NClamp (79/80/81); 0014's integer-key selection is the part that stays opt-in.
+        self.assertIn('context.GlslNClamp', bodies['GenerateClamp'])
+        self.assertIn('context.GlslNMax', bodies['GenerateMaximum'])
+        self.assertIn('context.GlslNMin', bodies['GenerateMinimum'])
         self.assertIn('EvaluateFPTernary(operation, (x, y, z) => Math.Clamp(x, y, z));', folding)
 
     def test_opt_in_applies_integer_selection_and_numeric_folding(self):
         source = self.prepare(opt_in=True)
         instructions = (source / 'src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs').read_text()
         folding = (source / 'src/Ryujinx.Graphics.Shader/Translation/Optimizations/ConstantFolding.cs').read_text()
+        bodies = self.minmax_bodies(source)
         self.assertIn('private static SpvInstruction EmitNumericMinMax(', instructions)
         self.assertIn('context.Bitcast(isFP64 ? context.TypeFP64() : context.TypeFP32(), selected)', instructions)
         self.assertIn('float.MinNumber(float.MaxNumber(x, y), z)', folding)
+        # 0014 inserts into the same three methods 0031 rewrites, and it is applied last: both must be present, or one
+        # of the two patches has silently stopped landing there.
+        self.assertIn('GenerateNumericMinMax(context, operation, maximum: true)', bodies['GenerateMaximum'])
+        self.assertIn('context.GlslNMax', bodies['GenerateMaximum'])
+        self.assertIn('GenerateNumericMinMax(context, operation, maximum: false)', bodies['GenerateMinimum'])
+        self.assertIn('context.GlslNMin', bodies['GenerateMinimum'])
 
     def test_modes_cannot_share_a_cache_identity(self):
         self.assertNotEqual(builder.identity(), builder.identity(defined_float_minmax=True))
