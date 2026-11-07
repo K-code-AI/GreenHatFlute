@@ -2055,6 +2055,12 @@ static uint32_t vs_union_missing(const VkPipeState *s, GfxShaderIo fin[32]) {
 }
 
 static VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l, uint32_t fs_off) {
+    // A task shader is a mesh pipeline's first half: it has no place as a vertex stage. Reaching the driver with one
+    // crashes the compiler (see prepare_draw, which reads the vertex slot only after waiting for a pending shader).
+    if (gfx_shader_is_task(s->vs) || (s->ts && !mesh_vs(s))) {
+        rt_log("vk_pipeline: a task shader needs its mesh stage");
+        return VK_NULL_HANDLE;
+    }
     if (s->gs && (l->set1 || !k->geometry_input || k->geometry_input > GFX_GEOMETRY_TRIANGLES_ADJACENCY)) return VK_NULL_HANDLE;
     VkShaderModule vm = VK_NULL_HANDLE, fm = VK_NULL_HANDLE, gm = VK_NULL_HANDLE;
     uint64_t vw, fw;
@@ -3320,6 +3326,7 @@ static uint64_t big_cs_words(void) {
     return w;
 }
 
+static _Thread_local VkPipelineCache cs_build_cache;   // set only on the big compute worker: its own cache, see big_cs_worker
 static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
     uint64_t words;
     const uint32_t *code = gfx_shader_spirv(cs, &words);
@@ -3344,7 +3351,10 @@ static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
         if (ci.stage.pNext && ls[0] && ls[0] % vk_caps.sg_size == 0) ci.stage.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT;
     }
     VkPipeline pipe = VK_NULL_HANDLE;
-    if (vkCreateComputePipelines(P.device, P.cache, 1, &ci, NULL, &pipe) != VK_SUCCESS) pipe = VK_NULL_HANDLE;
+    // The big compute worker builds in a cache of its own (big_cs_worker): a compile of minutes inside the shared
+    // cache holds every other pipeline on the replay thread behind it.
+    if (vkCreateComputePipelines(P.device, cs_build_cache ? cs_build_cache : P.cache, 1, &ci, NULL, &pipe) != VK_SUCCESS)
+        pipe = VK_NULL_HANDLE;
     vkDestroyShaderModule(P.device, m, NULL);
     return pipe;
 }
@@ -3421,9 +3431,34 @@ static void big_cs_worker(void *arg) {
         Layout *l = compute_layout(cs, &B, &why);
         plat_mutex_unlock(&P.lock);
         uint64_t t0 = plat_now_ns();
+        // A cache of its own: a compile of minutes inside the shared cache holds every other pipeline behind it, the
+        // replay thread included. The result is merged into the shared one when the build is done.
+        VkPipelineCacheCreateInfo cci = {.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO};
+        VkPipelineCache own = VK_NULL_HANDLE;
+        if (P.cache) vkCreatePipelineCache(P.device, &cci, NULL, &own);
+        cs_build_cache = own;
         VkPipeline pipe = why ? VK_NULL_HANDLE : compute_create(cs, l);
-        if (pipe) vkDestroyPipeline(P.device, pipe, NULL);
-        rt_log("vk_pipeline: big compute shader %d built in %.1f s%s", next, (double)(plat_now_ns() - t0) / 1e9, pipe ? "" : " (failed)");
+        cs_build_cache = VK_NULL_HANDLE;
+        // Kept, as lb_compute keeps what it builds: built again on the replay thread instead, the driver's cache
+        // misses and the game pays for the whole compile a second time.
+        int built = pipe != VK_NULL_HANDLE;
+        if (pipe) {
+            struct { const GfxShader *cs; uint32_t compute; } k = {cs, 1};
+            uint64_t h = key_hash(&k, sizeof k);
+            plat_mutex_lock(&P.lock);
+            if (!pipe_find(&k, sizeof k, h)) {
+                pipe_add(&k, sizeof k, h, pipe, l, &B, VK_PIPELINE_BIND_POINT_COMPUTE, 0);
+                P.stats.compute++;
+                pipe = VK_NULL_HANDLE;
+            }
+            plat_mutex_unlock(&P.lock);
+            if (pipe) vkDestroyPipeline(P.device, pipe, NULL);
+        }
+        if (own) {
+            vkMergePipelineCaches(P.device, P.cache, 1, &own);
+            vkDestroyPipelineCache(P.device, own, NULL);
+        }
+        rt_log("vk_pipeline: big compute shader %d built in %.1f s%s", next, (double)(plat_now_ns() - t0) / 1e9, built ? "" : " (failed)");
         __atomic_store_n(&big_cs[next].done, 1, __ATOMIC_RELEASE);
         next++;
     }
@@ -3516,6 +3551,13 @@ static uint32_t vs_union_peek(const GfxShader *vs, GfxShaderIo fin[32]) {
 }
 
 static void lb_compute(const GfxShader *cs) {
+    // A shader at big_cs_words() or more is left to big_cs_worker: one at a time, in a cache of its own, and only once
+    // a dispatch needs it. Here it was built on every prebuild thread at once in the shared cache -- the movie network
+    // reaches 7 million SPIR-V words -- and those compiles ran for minutes (one took 437 s on AMD against 1.5 s on
+    // NVIDIA) while the graphics pipelines waited behind them: the scene after the intro stayed black.
+    uint64_t words = 0;
+    gfx_shader_spirv(cs, &words);
+    if (words >= big_cs_words()) return;
     struct { const GfxShader *cs; uint32_t compute; } k = {cs, 1};
     uint64_t h = key_hash(&k, sizeof k);
     Bindings B = {0};
@@ -3671,7 +3713,7 @@ static void lb_state(const uint32_t pr_hist[16], const uint32_t fs_hist[4]) {
 // Boot: compute shaders of the warm list (recorded and prepared), then the first KEEP recorded graphics variants.
 static void lb_start(const uint32_t pr_hist[16], const uint32_t fs_hist[4]) {
     const char *e = cfg_value("GHF_LIB_PREBUILD"), *ke = cfg_get("GHF_LIB_PREBUILD_KEEP");
-    const char *te = cfg_get("GHF_LIB_PREBUILD_THREADS");   // no fixed default: a quarter of the CPUs when unset
+    const char *te = cfg_get("GHF_LIB_PREBUILD_THREADS");   // explicit overrides keep their meaning
     if (!A.on || !cfg_bool("GHF_LIB_PREBUILD")) return;
     GfxWarmEnt *all = NULL;
     size_t total = gfx_shader_warm_list(&all), n = 0, n_cs = 0;
@@ -3692,7 +3734,11 @@ static void lb_start(const uint32_t pr_hist[16], const uint32_t fs_hist[4]) {
     lb_state(pr_hist, fs_hist);
     LB.idle = 1;
     int cpus = (int)plat_cpu_usable();
-    int t = te && *te ? atoi(te) : cpus / 4;
+    // Speculative builds on NVIDIA slow the foreground replay even at idle worker priority, so the default pool is
+    // one thread there; other vendors keep a quarter of the CPUs. An explicit count is untouched.
+    const VkCtx *ctx = vk_ctx();
+    int default_threads = ctx && ctx->props.vendorID == 0x10de ? 1 : cpus / 4;
+    int t = te && *te ? atoi(te) : default_threads;
     t = t < 1 ? 1 : t > LB_MAX_THREADS ? LB_MAX_THREADS : t;
     if ((size_t)t > n) t = (int)n;
     LB.t0 = now_ms();
