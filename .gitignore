@@ -77,3 +77,6 @@ desktop.ini
 
 # Agent task worktrees (tools/worktree.py)
 /.worktrees/
+
+#Agent Instruction file
+/Instruction.md

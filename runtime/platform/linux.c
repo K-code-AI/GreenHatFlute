@@ -956,9 +956,69 @@ uint64_t plat_mem_written(uint64_t addr, uint64_t n, uint64_t *pages, uint64_t m
 
 // One handler for the synchronous faults. A SIGSEGV whose page-fault error code has the write bit set goes to the
 // write-fault hook first (memory.c thaws a frozen region); a fault in this executable's code then goes to the crash
-// hook (main.c); anything else gets the default action. Runs on the thread's signal stack.
+// hook (main.c); a fault anywhere else gets one line naming the module, the thread and its work (fault_report_other)
+// before the default action. Runs on the thread's signal stack.
 static int (*fault_hook)(uint64_t addr);
 static void (*crash_fn)(const PlatCrash *c);
+static _Thread_local const char *crash_note;
+
+void plat_crash_note(const char *note) { crash_note = note; }
+
+// The second number of /proc/self/statm (resident pages) and one line of /proc/meminfo, in MiB. Read with open/read:
+// this runs in a signal handler, where stdio may already be held by the thread that faulted.
+static uint64_t statm_resident_mib(void) {
+    char buf[256];
+    int fd = open("/proc/self/statm", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return 0;
+    ssize_t n = read(fd, buf, sizeof buf - 1);
+    close(fd);
+    if (n <= 0) return 0;
+    buf[n] = 0;
+    char *end;
+    strtoull(buf, &end, 10);            // the first field: total virtual size
+    unsigned long long pages = strtoull(end, &end, 10);
+    return pages * (unsigned long long)sysconf(_SC_PAGESIZE) >> 20;
+}
+
+static uint64_t meminfo_mib(const char *key) {
+    char buf[1024];
+    int fd = open("/proc/meminfo", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return 0;
+    ssize_t n = read(fd, buf, sizeof buf - 1);
+    close(fd);
+    if (n <= 0) return 0;
+    buf[n] = 0;
+    size_t k = strlen(key);
+    for (char *line = buf; line && *line; line = strchr(line, '\n') ? strchr(line, '\n') + 1 : NULL)
+        if (!strncmp(line, key, k) && line[k] == ':') return strtoull(line + k + 1, NULL, 10);   // the value is in KiB
+    return 0;
+}
+
+// A fault outside this executable: a driver, or the C runtime's heap. crash_fn is not called -- its report names
+// GreenHatFlute+<offset>, which would be a lie -- but the process must not end with no word in the log: this is the
+// only account such a crash ever gets. The module and its offset are the same across runs, the thread name says who
+// was in it, and the note is what that thread said it was working on (plat_crash_note). The memory numbers answer
+// "did it run out of memory?" without needing a second run: a driver that cannot allocate may fault on a null
+// pointer instead of returning an error.
+static void fault_report_other(int sig, uintptr_t rip, long err, const Dl_info *at) {
+    const char *file = at && at->dli_fname ? at->dli_fname : "?";
+    const char *slash = strrchr(file, '/');
+    char name[16] = "?";
+    if (pthread_getname_np(pthread_self(), name, sizeof name)) strcpy(name, "?");
+    fprintf(stderr, "[host] crash: %s at %s+%#llx, thread %s (%d)",
+            sig == SIGSEGV ? "SIGSEGV" : sig == SIGBUS ? "SIGBUS" : sig == SIGILL ? "SIGILL" : "SIGFPE",
+            slash ? slash + 1 : file,
+            (unsigned long long)(at && at->dli_fbase ? rip - (uintptr_t)at->dli_fbase : rip), name, (int)syscall(SYS_gettid));
+    if (err & 16) fprintf(stderr, ", executing %#llx", (unsigned long long)rip);
+    else if (err & 2) fprintf(stderr, ", writing");
+    else if (err & 1) fprintf(stderr, ", reading");
+    fprintf(stderr, ", working on: %s\n", crash_note ? crash_note : "(nothing noted)");
+    uint64_t rss = statm_resident_mib(), avail = meminfo_mib("MemAvailable"), total = meminfo_mib("MemTotal");
+    if (rss || avail || total)
+        fprintf(stderr, "[host] crash: memory: this process %llu MiB resident; system %llu of %llu MiB available\n",
+                (unsigned long long)rss, (unsigned long long)avail, (unsigned long long)total);
+    fflush(stderr);
+}
 
 static void fault_handler(int sig, siginfo_t *si, void *uc) {
     ucontext_t *u = uc;
@@ -966,13 +1026,20 @@ static void fault_handler(int sig, siginfo_t *si, void *uc) {
     if (sig == SIGSEGV && fault_hook && (err & 2) && fault_hook((uint64_t)(uintptr_t)si->si_addr)) return;
     uintptr_t rip = (uintptr_t)u->uc_mcontext.gregs[REG_RIP];
     Dl_info at, self;
-    if (crash_fn && dladdr((void *)rip, &at) && dladdr((void *)plat_crash_hook, &self) && at.dli_fbase == self.dli_fbase) {
+    int here = dladdr((void *)rip, &at) && dladdr((void *)plat_crash_hook, &self) && at.dli_fbase == self.dli_fbase;
+    if (crash_fn && here) {
         PlatCrash c = {sig == SIGSEGV ? "access violation" : sig == SIGBUS ? "bus error"
                        : sig == SIGILL ? "illegal instruction" : "arithmetic exception",
                        (uint32_t)sig, rip, rip - (uintptr_t)self.dli_fbase, -1, 0};
         if (sig == SIGSEGV || sig == SIGBUS)
             c.access = (err & 16) ? 8 : (err & 2) ? 1 : 0, c.addr = (uint64_t)(uintptr_t)si->si_addr;
         crash_fn(&c);
+    } else {
+        // Not this executable's code (or dladdr failed): a driver, the C runtime's heap, a module we do not name.
+        // Every path out of this handler ends the process -- the signal is reset and the faulting instruction runs
+        // again -- so a line here is the only record the run leaves.
+        Dl_info *who = dladdr((void *)rip, &at) ? &at : NULL;
+        fault_report_other(sig, rip, err, who);
     }
     signal(sig, SIG_DFL);   // returns into the faulting instruction, which faults again with the default action
 }

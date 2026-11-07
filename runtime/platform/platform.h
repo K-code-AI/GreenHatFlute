@@ -207,8 +207,10 @@ void plat_mem_fault_hook(int (*fn)(uint64_t addr));
 _Noreturn void plat_reexec(void);
 
 // A crash in this executable's own code (an access violation, an illegal instruction, a division by zero, a stack
-// overflow) goes to fn, which reports it and must end the process. Faults in other modules (drivers) are left to the
-// OS. The write-fault hook above runs first. On Windows abort() (a failed assert, std::terminate) and an invalid
+// overflow) goes to fn, which reports it and must end the process. A fault in another module (a driver, the C
+// runtime's heap) is not left to the OS silently: the platform layer writes one line naming the module, the offset,
+// the thread and what that thread said it was working on (plat_crash_note), then takes the default action. The
+// write-fault hook above runs first. On Windows abort() (a failed assert, std::terminate) and an invalid
 // parameter to a C runtime function go there too, with the host frames in this executable: the C runtime ends the
 // process for both with 0xc0000409 and no exception.
 typedef struct {
@@ -221,6 +223,9 @@ typedef struct {
     uintptr_t frames[16];      // (rip is frames[0]); 0 for a fault, whose rip is exact
 } PlatCrash;
 void plat_crash_hook(void (*fn)(const PlatCrash *c));
+// What this thread is working on, named in the line above when it faults outside this executable. NULL clears. The
+// string must outlive the call: a literal, or a buffer the faulting work itself owns.
+void plat_crash_note(const char *note);
 int plat_mem_read(uint64_t addr, void *out, size_t n);    // copies n bytes, 0 instead of faulting on unmapped memory
 int plat_mem_readable(uint64_t addr, uint64_t n);         // every page of [addr, addr + n) can be read; no fault
 void *plat_aligned_alloc(size_t size, size_t align);      // free with plat_aligned_free; NULL on failure

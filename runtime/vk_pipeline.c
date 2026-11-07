@@ -2054,6 +2054,28 @@ static uint32_t vs_union_missing(const VkPipeState *s, GfxShaderIo fin[32]) {
     return missing;
 }
 
+// What this thread is about to build, named in the log if the driver faults inside a pipeline create: the fault is
+// outside this executable, so nothing else in the run says who was in the driver or what for. The FNV-1a of a stage's
+// SPIR-V names the same shader across runs, which is what points at the stage to look at.
+static void pipe_note(const char *what, const VkPipeState *s) {
+    static _Thread_local char note[256];
+    const GfxShader *st[4] = {s->ts, s->vs, s->gs, s->fs};
+    int at = snprintf(note, sizeof note, "%s, mesh %d task %d:", what, mesh_vs(s), s->ts != NULL);
+    if (at < 0 || at >= (int)sizeof note) at = (int)sizeof note - 1;
+    for (int i = 0; i < 4 && at < (int)sizeof note - 1; i++) {
+        uint64_t w = 0, h = 1469598103934665603ull;
+        const uint32_t *c = st[i] ? gfx_shader_spirv(st[i], &w) : NULL;
+        for (uint64_t j = 0; c && j < w; j++) h = (h ^ c[j]) * 1099511628211ull;
+        if (!c) continue;
+        int n = snprintf(note + at, sizeof note - at, " %s %llu words %016llx", (const char *[]){"ts", "vs", "gs", "fs"}[i],
+                         (unsigned long long)w, (unsigned long long)h);
+        if (n < 0) break;
+        at += n;
+        if (at >= (int)sizeof note) at = (int)sizeof note - 1;
+    }
+    plat_crash_note(note);
+}
+
 static VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l, uint32_t fs_off) {
     // A task shader is a mesh pipeline's first half: it has no place as a vertex stage. Reaching the driver with one
     // crashes the compiler (see prepare_draw, which reads the vertex slot only after waiting for a pending shader).
@@ -2228,7 +2250,9 @@ static VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Lay
         pi.pVertexInputState = NULL, pi.pInputAssemblyState = NULL;
     }
     uint64_t p0 = perf_begin();
+    pipe_note("graphics pipeline", s);
     VkResult r = vkCreateGraphicsPipelines(P.device, P.cache, 1, &pi, NULL, &pipe);
+    plat_crash_note(NULL);
     perf_end(PERF_PIPE, p0);   // counts on the render thread only, so background builds stay out of it
     if (r != VK_SUCCESS) {
         rt_log("vk_pipeline: vkCreateGraphicsPipelines failed (%d)", (int)r);
@@ -2384,7 +2408,9 @@ static VkPipeline lib_create(int kind, const VkPipeState *s, const GKey *k, VkPi
         ri.depthAttachmentFormat = (VkFormat)k->depth, ri.stencilAttachmentFormat = (VkFormat)k->stencil;
         pi.pColorBlendState = &cb, pi.pMultisampleState = &ms;
     }
+    pipe_note("stage library", s);
     if (vkCreateGraphicsPipelines(P.device, P.cache, 1, &pi, NULL, &pipe) != VK_SUCCESS) pipe = VK_NULL_HANDLE;
+    plat_crash_note(NULL);
 out:
     if (m) vkDestroyShaderModule(P.device, m, NULL);
     free(patched);
@@ -3351,10 +3377,18 @@ static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
         if (ci.stage.pNext && ls[0] && ls[0] % vk_caps.sg_size == 0) ci.stage.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT;
     }
     VkPipeline pipe = VK_NULL_HANDLE;
+    {   // named in the log if the driver faults in this create (platform/linux.c fault_report_other)
+        static _Thread_local char note[96];
+        uint64_t h = 1469598103934665603ull;
+        for (uint64_t j = 0; code && j < words; j++) h = (h ^ code[j]) * 1099511628211ull;
+        snprintf(note, sizeof note, "compute pipeline, %llu words %016llx", (unsigned long long)words, (unsigned long long)h);
+        plat_crash_note(note);
+    }
     // The big compute worker builds in a cache of its own (big_cs_worker): a compile of minutes inside the shared
     // cache holds every other pipeline on the replay thread behind it.
     if (vkCreateComputePipelines(P.device, cs_build_cache ? cs_build_cache : P.cache, 1, &ci, NULL, &pipe) != VK_SUCCESS)
         pipe = VK_NULL_HANDLE;
+    plat_crash_note(NULL);
     vkDestroyShaderModule(P.device, m, NULL);
     return pipe;
 }
