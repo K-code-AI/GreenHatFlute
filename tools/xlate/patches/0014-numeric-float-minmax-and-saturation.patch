@@ -15,7 +15,7 @@
 +                return new OperationResult(type, EmitNumericMinMax(context, lower, high, isFP64, maximum: false));
 +            }
 +
-             return GenerateTernary(context, operation, context.Delegates.GlslFClamp, context.Delegates.GlslSClamp);
+             return GenerateTernary(context, operation, context.GlslNClamp, context.Delegates.GlslSClamp);
          }
 
 @@ -953,6 +964,11 @@
@@ -27,7 +27,7 @@
 +                return GenerateNumericMinMax(context, operation, maximum: true);
 +            }
 +
-             return GenerateBinary(context, operation, context.Delegates.GlslFMax, context.Delegates.GlslSMax);
+             return GenerateBinary(context, operation, context.GlslNMax, context.Delegates.GlslSMax);
          }
 
 @@ -969,7 +985,64 @@
@@ -39,7 +39,7 @@
 +                return GenerateNumericMinMax(context, operation, maximum: false);
 +            }
 +
-             return GenerateBinary(context, operation, context.Delegates.GlslFMin, context.Delegates.GlslSMin);
+             return GenerateBinary(context, operation, context.GlslNMin, context.Delegates.GlslSMin);
 +        }
 +
 +        private static OperationResult GenerateNumericMinMax(CodeGenContext context, AstOperation operation, bool maximum)

@@ -102,7 +102,12 @@ def selected_patches(*, defined_float_minmax: bool = False) -> list[Path]:
     optional = XLATE / "patches" / DEFINED_FLOAT_MINMAX_PATCH
     if optional not in patches:
         sys.exit(f"missing optional patch: {DEFINED_FLOAT_MINMAX_PATCH}")
-    return patches if defined_float_minmax else [p for p in patches if p != optional]
+    # The optional patch is applied last, not in its numeric slot. 0031-maxwell-nan-semantics rewrites the min/max/clamp
+    # bodies of CodeGen/Spirv/Instructions.cs, and 0014 inserts into those same three methods; 0031 is in every build,
+    # so 0014 is written against the tree that already has it. In numeric order 0014 would move those lines out from
+    # under 0031's hunks and the apply would fail.
+    always = [p for p in patches if p != optional]
+    return always + [optional] if defined_float_minmax else always
 
 
 def prepare_sources(*, defined_float_minmax: bool = False) -> Path:
