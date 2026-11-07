@@ -1,121 +1,134 @@
-# Ocarina Recomp
+# GreenHatFlute
 
-[Read in English](README.en.md)
+**The Legend of Zelda: Ocarina of Time running natively on Linux, with no emulator.**
 
-**Ocarina rodando nativo no Windows, sem emulador.**
+The game's code is translated to C and compiled into a Linux program. The Switch 2 graphics are converted to Vulkan.
+All of this happens **on your PC, from your own copy of the game**.
 
-O código do jogo é traduzido para C e compilado como um programa do Windows. Os gráficos do Switch 2 são convertidos para Vulkan. Tudo isso acontece **no seu PC, a partir do seu próprio arquivo do jogo**.
+This is a Linux-only fork of [sostenesfreitas/ocarina-recomp](https://github.com/sostenesfreitas/ocarina-recomp),
+which it diverges from deliberately: no Windows tooling, no installer, English throughout, Wayland and X11 both first
+class.
 
 > [!IMPORTANT]
-> Este repositório **não contém o jogo, keys nem executável**, e não explica como obtê-los. Você precisa da sua própria cópia. O que a instalação gera (o `ocarina.exe`, o código gerado, o cache de shaders e os saves) sai do seu jogo: **não compartilhe**.
+> This repository **does not contain the game, keys or an executable**, and it does not explain how to get them. You
+> need your own copy. Everything the build creates (`ocarina`, the generated code, the shader cache and the saves)
+> comes from your game: **do not share it**.
 
-## Estado do projeto
+## Project status
 
-Experimental. Só foi testado em **um PC** (Ryzen 9 9950X3D, RTX 5090), na região do início do jogo.
+Experimental. Tested on **one Linux PC** (Gentoo, kernel 6.18, clang 22, i5-12600KF, RTX 5070 12 GB), in the area at
+the start of the game.
 
-| O quê | Situação |
+| What | Status |
 |---|---|
-| Vilarejo Kokiri: árvores, plantas, casas, luz | ✅ Funciona |
-| Som, controle, saves e vídeos | ✅ Funciona |
-| Desempenho na RTX 5090 | ✅ Cerca de 59 fps parado, 51 a 55 fps caminhando |
-| Travadinhas ao entrar em áreas novas | ⚠️ Ainda acontecem, principalmente na primeira vez |
-| Tocar a ocarina | ❓ Correção aplicada, ainda sem teste em jogo |
-| Hyrule Field e o resto do jogo | ❓ Ainda não testados |
-| Placas AMD e Intel | ❓ Nunca testadas |
+| Kokiri village: trees, plants, houses, lighting | ✅ Works |
+| Window on Wayland and on X11 | ✅ Both reach `boot: passed`, 0 validation errors, 0 shader failures |
+| Sound, saves, AV1 movies decoding | ✅ Works |
+| Stutter when entering new areas | ⚠️ Still happens, mostly the first time: shaders compile on sight |
+| Playing the ocarina | ❓ Not tested in game |
+| Hyrule Field and the rest of the game | ❓ Not tested yet |
+| AMD and Intel cards | ❓ Never tested |
 
-## Como compilar
+## How to build
 
-O jogo não vem pronto: ele é compilado no seu PC, a partir da sua cópia. Escolha um destes três jeitos.
+The game does not come ready-made: it is built on your PC from your copy.
 
-**1. Com o instalador, o mais fácil:**
+**1. Install the tools and check what is missing:**
 
-1. Baixe o **[Instalar-Ocarina.exe](https://github.com/sostenesfreitas/ocarina-recomp/releases/latest/download/Instalar-Ocarina.exe)** e dê dois cliques.
-2. O executável não tem assinatura digital, então o Windows pode avisar. Clique em **Mais informações** e depois em **Executar assim mesmo**.
-3. Na janela, escolha o `.nup` do seu jogo (ou uma pasta com `exefs` e `romfs`) e clique em **Instalar**.
-4. Se o Windows pedir permissão para instalar as ferramentas, clique em **Sim**.
-
-Prefere conferir antes? O executável só abre o [script do instalador](instalador/Instalar-Ocarina.ps1), e o [código dele](instalador/launcher.c) tem poucas linhas. A release traz o SHA-256 do arquivo. Antivírus às vezes reclamam de programas sem assinatura.
-
-**2. Com os scripts, que você pode ler antes de rodar** (instale antes as ferramentas do passo 1 do [guia](docs/compilar-manual.md)):
-
-```powershell
-git clone https://github.com/sostenesfreitas/ocarina-recomp C:\OcarinaRecomp
-cd C:\OcarinaRecomp
-powershell -ExecutionPolicy Bypass -File .\verificar.ps1 -Jogo "C:\caminho\seu-jogo.nup"
-powershell -ExecutionPolicy Bypass -File .\compilar.ps1 -Simular -Jogo "C:\caminho\seu-jogo.nup"
-powershell -ExecutionPolicy Bypass -File .\compilar.ps1 -Jogo "C:\caminho\seu-jogo.nup"
+```sh
+git clone https://github.com/K-code-AI/GreenHatFlute
+cd GreenHatFlute
+./build.sh --check --game /path/your-game.nup     # looks, changes nothing
 ```
 
-1. O `verificar.ps1` só olha e diz o que falta. Ele não altera nada.
-2. O `compilar.ps1 -Simular` mostra todos os comandos sem executar nenhum.
-3. O `compilar.ps1` executa esses comandos, mostra cada um e pergunta antes de cada etapa. Se parar, rode de novo: ele continua de onde parou.
+**2. Build it:**
 
-`-ExecutionPolicy Bypass` vale só para esse comando e não muda a configuração do Windows.
+```sh
+./build.sh --game /path/your-game.nup             # about 15 minutes plus the RomFS
+```
 
-**3. Totalmente à mão:** siga o **[passo a passo para compilar](docs/compilar-manual.md)**.
+It needs your own copy of the game at **version 1.1.1**, 16 GB of RAM and about 60 GB free. You can use the PC
+meanwhile. If it stops, run it again: it continues from where it stopped.
 
-### O que isto faz no seu PC
+**3. Play:**
 
-- Os scripts não pedem administrador. Instalar as ferramentas pode pedir: o instalador faz isso por você, e nos outros jeitos é você quem roda.
-- Escreve só dentro da pasta do projeto, e nunca altera o seu arquivo do jogo.
-- Baixa os pacotes Python (`tools\requirements-build.txt`) e .NET do tradutor de shaders e, se o executável do jogo estiver comprimido, o [zbic](https://github.com/kinnay/zbic).
-- Para desinstalar, apague a pasta do projeto. As ferramentas do passo 1 saem pelo painel de aplicativos do Windows.
+```sh
+play/run.sh
+```
 
-Leva de 30 minutos a 2 horas, e você pode usar o PC enquanto isso. Para atualizar, rode de novo o instalador ou veja o fim do guia.
+**4. Optional — install it as a desktop app** (menu entry, icon, `greenhatflute` on PATH, all under XDG paths so no
+root is needed):
+
+```sh
+python tools/install_linux.py
+```
+
+Prefer to read every command first? Follow the **[step-by-step build guide](docs/build-by-hand.md)**.
 
 > [!NOTE]
-> Na primeira vez que abrir o jogo, **a vegetação pode levar alguns minutos para aparecer**, enquanto os shaders compilam em segundo plano. Melhora nas próximas vezes.
+> The first time you open the game, **plants can take a few minutes to appear** while shaders compile in the
+> background. It gets better after that.
 
-### Do que você precisa
+### Where your saves go
 
-- Windows 10 ou 11 de 64 bits, com processador compatível com AVX2.
-- Placa de vídeo com Vulkan 1.3 e mesh shaders, com o driver atualizado. Recomendamos NVIDIA.
-- Recomendamos 16 GB de RAM ou mais. Com menos, nunca testamos: a compilação ou o jogo podem falhar.
-- 60 GB livres, mais uns 15 GB no disco C: se as ferramentas ainda não estiverem instaladas.
-- Internet durante a instalação.
-- **Sua cópia do jogo na versão 1.1.1.** Outras versões não funcionam.
+`~/.local/share/greenhatflute` (or `$XDG_DATA_HOME/greenhatflute`) — not next to the executable, so the build folder
+can be moved or deleted without losing a game. `TOTK_PROFILE_DIR` or `--profile DIR` overrides that.
 
-### Se algo der errado
+### What you need
 
-| Problema | O que fazer |
+- 64-bit Linux, with an AVX2-capable processor.
+- A graphics card with Vulkan 1.3 and mesh shaders, with an up-to-date driver. We recommend NVIDIA.
+- 16 GB of RAM or more. We never tested with less: the build or the game may fail.
+- 60 GB free.
+- Internet access during the build.
+- **Your copy of the game at version 1.1.1.** Other versions do not work.
+
+### If something goes wrong
+
+| Problem | What to do |
 |---|---|
-| "Este jogo não é a versão 1.1.1" | Confira se escolheu o jogo certo e atualizado |
-| O jogo abre e fecha | Atualize o driver da placa de vídeo e veja o arquivo `ultima-partida-erros.log` na pasta de instalação |
-| Travadinhas na primeira vez | É normal: os shaders estão sendo preparados. Melhora quando você passa de novo pelo mesmo lugar |
+| "this game is not version 1.1.1" | Check that you chose the right, updated game |
+| `device-local allocation failed (-2)` | The card's free VRAM is smaller than the game's pools. The run survives on host memory but slowly; close what holds the card and check with `nvidia-smi` |
+| Stutter the first time | Normal: shaders are being prepared. It gets better when you pass through the same place again |
 
-Se continuar, [abra uma issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) com a mensagem de erro e o modelo da sua placa de vídeo. Nunca envie arquivos do jogo.
+If the problem continues, [open an issue](https://github.com/K-code-AI/GreenHatFlute/issues) with the error message
+and your graphics card model. Never send game files.
 
-### Controles
+### Controls
 
-Use um controle ou teclado e mouse. **F1** ou **Esc** abre o menu de opções, **F11** alterna a tela cheia e **F10** mostra o fps. A lista completa está em [docs/controls.md](docs/controls.md).
+Use a controller, or keyboard and mouse. **F1** or **Esc** opens the options menu, **F11** toggles fullscreen and
+**F10** shows the frame rate. The full list is in [docs/controls.md](docs/controls.md).
 
-## Como funciona
+## How it works
 
-1. `recomp/gen.py` traduz o código ARM64 do jogo para C.
-2. `tools/build_game.py` compila esse C junto com o `runtime/`, que faz o papel do sistema do console.
-3. `runtime/` converte as chamadas gráficas NVN 2 para Vulkan.
-4. Os shaders Ampere do Switch 2 são rebaixados para Maxwell (`lower_to_maxwell.h`) e traduzidos para SPIR-V por um Ryujinx com patches (`tools/xlate/patches`).
+1. `recomp/gen.py` translates the game's ARM64 code to C.
+2. `tools/build_game.py` compiles that C together with `runtime/`, which plays the part of the console's system.
+3. `runtime/` converts NVN 2 graphics calls to Vulkan.
+4. Switch 2 Ampere shaders are lowered to Maxwell (`lower_to_maxwell.h`) and translated to SPIR-V by a patched Ryujinx (`tools/xlate/patches`).
 
-## Quer ajudar?
+## Want to help?
 
-Leia o **[guia de contribuição](CONTRIBUTING.md)**. Testar em outras placas de vídeo e relatar o resultado já ajuda muito.
+Read the **[contributing guide](CONTRIBUTING.md)**. Testing on other graphics cards and reporting the result already
+helps a lot.
 
-## Créditos
+## Credits
 
-Projeto mantido por **Miojo** ([sostenesfreitas](https://github.com/sostenesfreitas)). Dizem que ele deixou um recado escondido no instalador e outro dentro do jogo. 🍜
+The upstream project is maintained by **Miojo** ([sostenesfreitas](https://github.com/sostenesfreitas)). This fork
+keeps its history.
 
-Este projeto existe graças ao trabalho de muita gente:
+This project exists thanks to the work of many people:
 
-- **[Lucas-blip-png/dkb-pc-recomp](https://github.com/Lucas-blip-png/dkb-pc-recomp)** e TotK Recomp: a base deste projeto, cujo histórico continua preservado aqui.
-- **[seedds/nxnative](https://github.com/seedds/nxnative)**: referência de como o jogo usa task e mesh, e correção do microfone.
-- **[zortos293/Lichii](https://github.com/zortos293/Lichii)** e Eglantine/Eden: o rebaixamento de shaders Ampere e a referência para comparar os draws.
-- **[Ryujinx](https://github.com/Ryujinx/Ryujinx)**: o tradutor de shaders.
-- **[kinnay/zbic](https://github.com/kinnay/zbic)**: descompressão do executável, baixada durante a instalação.
+- **[Lucas-blip-png/dkb-pc-recomp](https://github.com/Lucas-blip-png/dkb-pc-recomp)** and TotK Recomp: the base of this project, whose history is preserved here.
+- **[seedds/nxnative](https://github.com/seedds/nxnative)**: reference for how the game uses task and mesh shaders, and the microphone fix.
+- **[zortos293/Lichii](https://github.com/zortos293/Lichii)** and Eglantine/Eden: Ampere shader lowering and the reference for comparing draws.
+- **[Ryujinx](https://github.com/Ryujinx/Ryujinx)**: the shader translator.
+- **[kinnay/zbic](https://github.com/kinnay/zbic)**: executable decompression, downloaded during the build.
 
-A lista completa está em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The full list is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## Licença
+## License
 
-[GPL-3.0](LICENSE), como o projeto original. Partes de terceiros mantêm as próprias licenças, listadas em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[GPL-3.0](LICENSE), like the original project. Third-party parts keep their own licenses, listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Projeto de fãs, sem nenhuma relação com a Nintendo. The Legend of Zelda e Ocarina of Time são marcas da Nintendo.
+Fan project, not affiliated with Nintendo. The Legend of Zelda and Ocarina of Time are trademarks of Nintendo.

@@ -22,6 +22,8 @@ BLOCKED_SUFFIXES = {
     ".bfres", ".bntx", ".bnsh", ".sarc", ".szs", ".zs", ".pack", ".byml",
     ".bgyml", ".msbt", ".bars", ".bwav", ".bfwav", ".bfstm", ".bfttf",
     ".bfotf", ".sharcb", ".webm",
+    # A run's save tree: the profile folder the game writes next to the executable.
+    ".sav", ".uid",
 }
 
 # ExeFS modules carry no extension.

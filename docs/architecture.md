@@ -1,6 +1,6 @@
 # Architecture
 
-How the Switch build of *Tears of the Kingdom* becomes a native Windows x86-64 program. The upstream projects it builds on are listed under Credits in the [README](../README.md).
+How the Switch build of the game becomes a native Linux x86-64 program. The upstream projects it builds on are listed under Credits in the [README](../README.md).
 
 ## Starting points
 
@@ -25,7 +25,7 @@ MacNativeGames cannot run on x86-64 as is: its CPU path executes ARM64 code nati
 - Update merging: hactool at `1d64a83` with MacNativeGames' BKTR patches, built by `tools/build_hactool.py`.
 - Verification: MacNativeGames' `expected-v*.json` hashes of ExeFS, RomFS and fonts.
 - Primary version: 1.4.3, the last update; performance work targets it. It replaced all three modules of the earlier updates (new SDK 20.5.22, RELR relocations, audio renderer REV15) and builds with `--version v143`, `recomp/patches-v143.txt`. 1.2.1 is a second target on the same build path; 1.0.0, 1.1.2 and 1.2.1 share `sdk`, `subsdk0` and `rtld` byte for byte, so only `main` differs among them. Saves load on either.
-- Windows driver: `tools/extract.py` runs the vendored extractors (`tools/vendor/macnativegames/`) and identifies the update by the SHA-256 of its `main`. hactool has no Darwin `funopen` here, so the base Program NCA is copied out of the NSP before the BKTR merge (about 17 GB of temporary space).
+- Extraction: `tools/extract.py` runs the vendored extractors (`tools/vendor/macnativegames/`) and identifies the update by the SHA-256 of its `main`. hactool has no Darwin `funopen` here, so the base Program NCA is copied out of the NSP before the BKTR merge (about 17 GB of temporary space).
 
 ### 2. CPU: lift ARM64 to C
 
@@ -49,7 +49,7 @@ MacNativeGames cannot run on x86-64 as is: its CPU path executes ARM64 code nati
 
 - Portable C from MacNativeGames: threads and synchronisation, IPC, memory services, fs/RomFS, time, account, applet, audio renderer and effects. The Apple pieces (mach VM, CommonCrypto, AudioToolbox, GameController) are replaced with Win32 and SDL3.
 - SDK boundary at the `nn::*` function level, matching MacNativeGames. Only `audren:u` and `sm:` are real IPC services.
-- Window, keyboard and mouse: Win32 (`gfx_window.c`, `input_win.c`). Gamepad and audio output: SDL3. Voice: libopus (BSD). Movies: the SDK's `movie::Decoder` is replaced by a host VP9 decoder over libvpx (BSD, static; `runtime/ov_movie.c`), because FFmpeg from MSYS2 is a GPL build.
+- Window, keyboard and mouse: SDL3 (`gfx_window_sdl.c`, `input_sdl.c`), which takes the session's own back end, Wayland or X11. Gamepad and audio output: SDL3. Voice: libopus (BSD). Movies: the SDK's `movie::Decoder` is replaced by a host decoder over libvpx and dav1d (BSD, static; `runtime/ov_movie.c`, `runtime/ov_codec.c`), because FFmpeg is a GPL build.
 - zstd: most RomFS files of 1.4.3 are zstd frames. The patch set `zstd` sends the game's two decoder entry points to
   libzstd on the host (`ov_zstd.c`, `TOTK_ZSTD_NATIVE`); the lifted decoder took almost three times as long.
 - Settings and menu: every key with its default is in one table (`cfg.c`), read from `totk.ini` and `TOTK_*`
@@ -88,7 +88,7 @@ Every guest thread is a host thread. TotK assumes Horizon's scheduler: three app
   binds from CPU-written pools is copied, and the draws bind the copy (`vk_usnap.c`, after MacNativeGames'
   `TOTK_UBO_SNAPSHOT`); without it, late draws read another object's matrix.
 - Driver data. The NVN driver keeps a per-stage constant bank (c0) that shaders read for things like point size, dispatch size and base instance. The back end fills it the way the driver does.
-- Shaders: the Ryujinx translator 1.3.2 with MacNativeGames' patches and ours (`tools/xlate/patches/`), built with .NET 10 NativeAOT as `totk_xlate.exe` and run as a separate process. Its SPIR-V goes to Vulkan directly. `tools/prepare_shaders.py` and `totk.exe --prepare-shaders` translate and compile the variants of MacNativeGames' shared list ahead of play (29,587 for 1.4.3); the rest are translated on first use and cached on disk.
+- Shaders: the Ryujinx translator 1.3.2 with MacNativeGames' patches and ours (`tools/xlate/patches/`), built with .NET 10 NativeAOT as `totk_xlate` and run as a separate process. Its SPIR-V goes to Vulkan directly. `tools/prepare_shaders.py` and `ocarina --prepare-shaders` translate and compile the variants of MacNativeGames' shared list ahead of play (29,587 for 1.4.3); the rest are translated on first use and cached on disk.
 - Pipelines: `VK_EXT_graphics_pipeline_library` where the driver has it. Shader stages are compiled ahead into libraries; a draw that meets a new state links them at once (fast link), and an optimised pipeline replaces the linked one when a background thread finishes it. Pipeline keys seen in play are saved and built at boot. A draw whose pipeline is not ready is skipped when one of its pass's targets was rendered in the previous frame, and waits otherwise, so one-shot passes are never lost; a full-screen draw is skipped as well rather than waiting (`TOTK_PIPE_SKIP`); the stage libraries a waiting draw needs are built on idle workers in parallel (`TOTK_PIPE_WAIT`). Without the extension, a missing pipeline is built on a worker and the draw waits or is skipped by the same rule.
 - Resolution. Patch sets make the game read its output, swapchain and scene sizes from the patch page
   (MacNativeGames' sites); `resolution.c` sets them from `output_res` and `render_scale` and grows the texture heap
@@ -112,14 +112,14 @@ Maxwell behaviour the back end has to match, and the TotK bugs other ports fixed
 Why Vulkan rather than D3D12 or wgpu:
 
 - The translator emits SPIR-V, which Vulkan consumes as is. D3D12 would add a SPIR-V to DXIL step; wgpu would add SPIR-V to WGSL through Naga and drop features the game uses (bindless textures, some atomics).
-- LAS Recomp's Vulkan back end is a working reference on Windows.
+- LAS Recomp's Vulkan back end is a working reference.
 - The same back end runs on Linux.
 
 ### 5. Toolchain
 
-- Generated C: MSYS2 UCRT64 Clang + LLD. The generated code uses GNU extensions (`__int128`, `musttail`, vector types) that `cl.exe` cannot compile.
+- Generated C: Clang + LLD. The generated code uses GNU extensions (`__int128`, `musttail`, vector types) that MSVC cannot compile.
 - Host code: the same Clang, C11.
-- Builds: `tools/build_game.py` writes a Ninja file and runs MSYS2 Ninja. Every object is hashed before linking, because a faulty RAM module once flipped bits in stored objects.
+- Builds: `tools/build_game.py` writes a Ninja file and runs Ninja. Every object is hashed before linking, because a faulty RAM module once flipped bits in stored objects.
 - Analysis: Ghidra with the Switch loader, Capstone, `llvm-objdump`.
-- Players: the installer ([installer.md](installer.md)) builds the game code on the player's machine with a bundled llvm-mingw, so no recompiled code is ever distributed.
+- Players: everyone builds the game on their own machine (`build.sh`), so no recompiled code is ever distributed.
 

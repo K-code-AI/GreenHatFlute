@@ -194,9 +194,9 @@ static void handle(const SDL_Event *e) {
 static void window_main(void *arg) {
     (void)arg;
     g_window_tid = plat_thread_id();
-    // Wayland's app id: the desktop file and the taskbar match it (jogar/ocarina-recomp.desktop, installed by
+    // Wayland's app id: the desktop file and the taskbar match it (play/greenhatflute.desktop, installed by
     // tools/install_linux.py). It is the same name as the data directory under ~/.local/share.
-    SDL_SetHint(SDL_HINT_APP_ID, "ocarina-recomp");
+    SDL_SetHint(SDL_HINT_APP_ID, "greenhatflute");
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "0");
     g_video_ok = SDL_Init(SDL_INIT_VIDEO);
     if (!g_video_ok) rt_log("gfx: SDL video init failed (%s)", SDL_GetError());

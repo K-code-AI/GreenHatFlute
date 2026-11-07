@@ -1,9 +1,13 @@
-# Notas para agentes de IA
+# Notes for AI agents
 
-Leia o [CONTRIBUTING.md](CONTRIBUTING.md): tem o layout do repositório, as regras e o método de investigação.
+Read [CONTRIBUTING.md](CONTRIBUTING.md): it has the repository layout, the rules and the investigation method.
 
-- Nada derivado do jogo entra aqui: executável, código gerado, shaders, caches, saves ou dumps. `tools/check_content.py` confere.
-- Trabalhe só com a cópia do jogo da própria pessoa. Se ela não tiver, pare. Não explique como obter jogo ou keys.
-- Nunca edite `generated/` à mão: use `recomp/patches.py` ou `tools/oot/patch_generated.py`.
-- Não use `--no-verify` nem envie direto para `main`.
-- Testes abrem janela: use `TOTK_INPUT=none` para o teclado da pessoa não mexer no jogo.
+- Nothing derived from the game goes in here: executable, generated code, shaders, caches, saves or dumps. `tools/check_content.py` checks this.
+- Work only with your own copy of the game. If you do not have one, stop. Do not explain how to obtain a game or keys.
+- Never edit `generated/` by hand: use `recomp/patches.py` or `tools/oot/patch_generated.py`.
+- Do not use `--no-verify`, and do not push straight to `main`.
+- Tests open a window: use `TOTK_INPUT=none` so the person's keyboard does not disturb the game.
+- This fork is Linux-only and English-only. Do not add `.bat`, `.ps1`, `.exe`, installer windows or Portuguese text back;
+  write new user-facing strings in English and new paths in ASCII. The Windows runtime files (`runtime/platform/win32.c`,
+  `runtime/*_win.c`, `runtime/totk.rc`) are still in the tree as the platform layer's other half — leave them unless the
+  maintainer says otherwise.

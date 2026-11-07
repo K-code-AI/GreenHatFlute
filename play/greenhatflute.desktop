@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=GreenHatFlute
+GenericName=Game
+Comment=The Legend of Zelda: Ocarina of Time, recompiled to run natively on Linux
+Exec=@LAUNCHER@
+Icon=greenhatflute
+Terminal=false
+Categories=Game;
+Keywords=zelda;oot;nintendo;switch;recomp;linux;
+# Wayland groups a window under the desktop entry whose name matches the app id SDL sets (gfx_window_sdl.c);
+# StartupWMClass does the same on X11. Both say greenhatflute.
+StartupWMClass=greenhatflute

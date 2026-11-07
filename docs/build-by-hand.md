@@ -1,159 +1,175 @@
-# How to build
+# Build by hand
 
-[Leia em português](compilar-manual.md) · [the same on Linux](build-by-hand-linux.md)
+Every step, one command at a time, on a Linux host: the libraries, the linker and the shader translator. [`build.sh`](../build.sh)
+runs these same steps for you; keep the two in step when you change a command. Verified on Gentoo (kernel 6.18, clang 22,
+.NET 10.0.403), x86-64 AVX2, NVIDIA RTX 5070 with driver 615.78.08, Ocarina of Time 1.1.1 from a `.nup`.
 
-The game is built on your PC from your copy. These are all the steps. After step 2, `compilar.ps1` can run steps 3 to 8 for you: see the [README](../README.en.md#how-to-build).
-
-You need your own copy of the game at **version 1.1.1** and 60 GB free, plus about 15 GB on C: for the tools. We recommend 16 GB of RAM: we never tested with less, and the build or the game may fail. Use a folder with no spaces or accents. All commands are for **PowerShell**.
+You need your own copy of the game at **version 1.1.1**, 16 GB of RAM and about 60 GB free. The game wants a few GB of
+free VRAM: with other programs holding the card, `vk: physical pool ... device-local allocation failed` comes first and
+the run is slow. Check `nvidia-smi` / `radeontop` before blaming the build.
 
 ## 1. Install the tools
 
-Skip what you already have:
-
-```powershell
-winget install --id Git.Git -e
-winget install --id Python.Python.3.12 -e
-winget install --id MSYS2.MSYS2 -e
-winget install --id Microsoft.DotNet.SDK.10 -e
-winget install --id Microsoft.VisualStudio.BuildTools -e --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+```sh
+# Arch
+pacman -S --needed clang lld ninja make cmake meson nasm pkgconf sdl3 opus dav1d vulkan-headers \
+    vulkan-icd-loader vulkan-validation-layers shaderc spirv-tools git
 ```
 
-If you already have Visual Studio, open the **Visual Studio Installer**, click **Modify** and select **Desktop development with C++**.
+On other distributions install the same packages under their own names. Two are usually missing:
 
-Close and reopen PowerShell. Then install the compiler. The first command may close MSYS2 midway through the update: that is normal, which is why it appears twice.
+- **libvpx** (the movie decoder, `runtime/ov_movie.c`). Not packaged on every system; build it into a folder of your
+  own instead of the system's:
 
-```powershell
-$env:MSYSTEM = "UCRT64"; $env:CHERE_INVOKING = "1"
-C:\msys64\usr\bin\bash.exe -lc "pacman -Syuu --noconfirm"
-C:\msys64\usr\bin\bash.exe -lc "pacman -Syuu --noconfirm"
-C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-{clang,lld,ninja,gcc,make,pkgconf,sdl3,opus,libvpx,dav1d,zstd,vulkan-devel,vulkan-memory-allocator,vulkan-validation-layers,shaderc,spirv-tools} base-devel git unzip"
+  ```sh
+  tar xzf libvpx-1.15.1.tar.gz && cd libvpx-1.15.1
+  ./configure --prefix="$PWD/../ocarina-deps" --enable-static --disable-shared \
+      --disable-examples --disable-tools --disable-unit-tests --enable-multithread
+  make -j"$(nproc)" && make install
+  ```
+
+- **lld**. `build_game.py` links with `-fuse-ld=lld`; without it it now prints a line and uses the system `ld`, which
+  takes the same flags a little more slowly.
+
+`dav1d` (the AV1 path of `runtime/ov_codec.c`) is packaged almost everywhere; if yours is not, build it the same way
+with meson. Vulkan Memory Allocator needs nothing: `build_game.py` fetches the pinned `vk_mem_alloc.h` into
+`toolchain/vma/` on first use.
+
+Keep the folder you built libraries in for every later step, so clang sees both their headers and their archives:
+
+```sh
+export CPATH=$PWD/toolchain/deps-linux/include LIBRARY_PATH=$PWD/toolchain/deps-linux/lib
 ```
 
-## 2. Get the code
+(`CPATH` and `LIBRARY_PATH` are read by clang itself, so they reach every compile and the link without touching the
+build scripts. `--deps DIR` does the same for a release build, and also makes Opus and zstd static.)
 
-```powershell
-git clone https://github.com/sostenesfreitas/ocarina-recomp C:\OcarinaRecomp
-cd C:\OcarinaRecomp
-py -3.12 -m venv .venv
-.venv\Scripts\python.exe -m pip install -r tools\requirements-build.txt
+**.NET** (only the shader translator needs it). Use your package manager or the official script, which needs no root:
+
+```sh
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0 --install-dir "$HOME/.dotnet"
+export PATH=$HOME/.dotnet:$PATH
 ```
 
-**In every new PowerShell** from here on, start with:
+## 2. Get the code and the Python environment
 
-```powershell
-cd C:\OcarinaRecomp
-$env:PATH = "C:\msys64\ucrt64\bin;C:\Program Files (x86)\Microsoft Visual Studio\Installer;$env:PATH"
-$env:PYTHONUTF8 = "1"
+```sh
+git clone https://github.com/K-code-AI/GreenHatFlute GreenHatFlute
+cd GreenHatFlute
+python3 -m venv .venv
+.venv/bin/pip install -r tools/requirements-build.txt   # or just: numpy lz4 zstandard
 ```
+
+The extraction here uses `tools/extract_nup.py`, which needs only the standard library of Python 3.14 (`zstd` also
+works through the `zstd` program).
 
 ## 3. Extract the game's executable
 
-**If your game is a `.nup`**, list the packages inside it:
-
-```powershell
-.venv\Scripts\python.exe tools\extract_nup.py "C:\path\your-game.nup" --list
+```sh
+python3 tools/extract_nup.py oot.nup --list          # expect "1 package(s)" for a standalone update
+python3 tools/extract_nup.py oot.nup --out build/dump --only exefs --package 0
+mkdir -p build/exefs && cp build/dump/exefs/* build/exefs/
+sha256sum build/exefs/main
 ```
 
-If the first line says `1 package(s)`, use `--package 0` in this guide's `extract_nup.py` commands. If there is more than one package, use `--overlay-update`.
+The right result is `f90499eeb596d67c730fac9b7e247b3a46d51d6f334c767aef071c9a783cccef`. If it differs, `main` is
+ZBIC-compressed (its first segment starts with `ZBIC`); decompress it:
 
-```powershell
-.venv\Scripts\python.exe tools\extract_nup.py "C:\path\your-game.nup" --out build\dump --only exefs --package 0
-New-Item -ItemType Directory -Force build\exefs
-Copy-Item build\dump\exefs\* build\exefs -Force
+```sh
+git clone https://github.com/kinnay/zbic build/zbic
+git -C build/zbic checkout 11b08f2712264bbed731545085cbd9702096ceb7
+clang -O2 -w -Ibuild/zbic/src tools/oot/unzbic.c -o build/unzbic
+build/unzbic build/dump/exefs/main build/exefs/main
+sha256sum build/exefs/main
 ```
 
-**If your game is a folder**, copy its `exefs` to `build\exefs`. If the path has brackets, rename the folder first, because PowerShell treats them as wildcards:
+`unzbic.c` builds unmodified on Linux. If the hash still differs, the game is not 1.1.1.
 
-```powershell
-New-Item -ItemType Directory -Force build\exefs
-Copy-Item "C:\path\to\game\exefs\*" build\exefs -Force
+## 4. Build the shader translator
+
+```sh
+python tools/build_xlate.py
 ```
 
-## 4. Check the version and decompress if needed
+On Linux this publishes `build/xlate/totk_xlate` for `linux-x64`; NativeAOT links it with the system clang and needs no
+MSVC. The 34 selected patches apply cleanly.
 
-```powershell
-(Get-FileHash build\exefs\main).Hash
+## 5. Convert the game code
+
+```sh
+.venv/bin/python recomp/gen.py --exefs build/exefs --out generated/oot111 --modules main,sdk,subsdk0
+.venv/bin/python tools/oot/patch_generated.py generated/oot111
 ```
 
-The right result is:
+About a minute on 16 cores: 297 414 functions, 1.2 GB of C.
 
-```text
-F90499EEB596D67C730FAC9B7E247B3A46D51D6F334C767AEF071C9A783CCCEF
+## 6. Prepare the game files
+
+The RomFS is 26 GB extracted and 26 GB as an image, so `--consume` (which deletes each file as it enters the image) is
+worth using on the copy under `build/dump`:
+
+```sh
+python3 tools/extract_nup.py oot.nup --out build/dump --only romfs --package 0
+python3 tools/pack_romfs.py --dir build/dump/romfs --out build/romfs --consume
+rm -rf build/dump
 ```
 
-If it differs, `main` is probably compressed. Decompress it with [zbic](https://github.com/kinnay/zbic), replacing `<source>` with `build\dump\exefs` or your game's `exefs` folder:
+## 7. Build the game
 
-```powershell
-git clone https://github.com/kinnay/zbic build\zbic
-git -C build\zbic checkout 11b08f2712264bbed731545085cbd9702096ceb7
-clang -O2 -w -Ibuild\zbic\src tools\oot\unzbic.c -o build\unzbic.exe
-build\unzbic.exe <source>\main build\exefs\main
-(Get-FileHash build\exefs\main).Hash
+```sh
+.venv/bin/python tools/build_game.py --version oot111 --gen generated/oot111 --out build/oot111 \
+    --expected tools/data/expected-oot111.json --exefs build/exefs --romfs build/romfs --jobs "$(nproc)"
+cp play/totk.ini build/oot111/totk.ini
 ```
 
-If the hash still differs, this game is not version 1.1.1 and the rest will not work.
+The compile takes about 7 minutes on 16 cores and links a 305 MB ELF (`build/oot111/ocarina`).
 
-## 5. Build the shader translator
+## 8. Check and play
 
-```powershell
-.venv\Scripts\python.exe tools\build_xlate.py
+```sh
+build/oot111/ocarina --selftest          # layout, dispatch table, host functions: no game files needed
+play/run.sh                              # the settings this port is tuned with
 ```
 
-## 6. Convert the game code
+The window works on **Wayland and X11** alike: SDL3 picks the session's own back end and logs which one it took
+(`gfx: SDL 3.4.18, video driver wayland`). Nothing chooses a driver for you, so an existing `DISPLAY` wins; set
+`SDL_VIDEODRIVER=wayland` or `=x11` to decide.
 
-```powershell
-.venv\Scripts\python.exe recomp\gen.py --exefs build\exefs --out generated\oot111 --modules main,sdk,subsdk0
-.venv\Scripts\python.exe tools\oot\patch_generated.py generated\oot111
+The probes open a window, so from an SSH session they need the desktop session's display: on Wayland
+`XDG_RUNTIME_DIR=/run/user/$(id -u) WAYLAND_DISPLAY=wayland-1 SDL_VIDEODRIVER=wayland`, on X11 `DISPLAY=:0`.
+
+## 9. Install it as a desktop app (optional)
+
+```sh
+python tools/install_linux.py            # menu entry, icon and greenhatflute on PATH
 ```
 
-## 7. Prepare the game files
+It writes only under XDG paths (`~/.local/share`, `~/.local/bin`), so it needs no root and touches nothing in `/usr`.
+The icon comes from the PNG sizes already inside `runtime/totk.ico`; the menu entry is `play/greenhatflute.desktop`
+with the launcher's path filled in. `--dry-run` shows what would be written, `--uninstall` removes it.
 
-**With a `.nup`**, the extracted files and the image take about 26 GB each, but `--consume` deletes each extracted file as it goes into the image. Use it only on the copy extracted to `build\dump`:
+Saves, cache and the log live in **`~/.local/share/greenhatflute`** (or `$XDG_DATA_HOME/greenhatflute`), not next to
+the executable, so the build folder can be moved or deleted without losing a game. `TOTK_PROFILE_DIR` or `--profile DIR`
+still overrides that; a `profile` folder next to the executable means a portable copy and wins.
 
-```powershell
-.venv\Scripts\python.exe tools\extract_nup.py "C:\path\your-game.nup" --out build\dump --only romfs --package 0
-.venv\Scripts\python.exe tools\pack_romfs.py --dir build\dump\romfs --out build\romfs --consume
-Remove-Item build\dump -Recurse -Force
-```
+## What differs from the upstream Windows port
 
-**With a folder**, do not use `--consume`, because it would delete your files:
-
-```powershell
-.venv\Scripts\python.exe tools\pack_romfs.py --dir "C:\path\to\game\romfs" --out build\romfs
-```
-
-## 8. Build the game
-
-This is the longest part. With little RAM, use a lower `--jobs`: at most 1 for every 3 GB.
-
-```powershell
-.venv\Scripts\python.exe tools\build_game.py --version oot111 --gen generated\oot111 --out build\oot111 --expected tools\data\expected-oot111.json --exefs build\exefs --romfs build\romfs --jobs 8
-Copy-Item jogar\totk.ini build\oot111\totk.ini
-```
-
-## 9. Play
-
-```powershell
-powershell -ExecutionPolicy Bypass -File jogar\jogar-ocarina.ps1
-```
-
-The first launch takes a while, and new areas may stutter a little while shaders are prepared.
-
-## To update
-
-```powershell
-git pull
-```
-
-Then repeat steps 5, 6 and 8. Steps 3, 4 and 7 only need redoing if you delete `build\exefs` or `build\romfs`.
+| | Linux |
+|---|---|
+| Executable | `build/oot111/ocarina`, an ELF; `runtime/*_sdl.*` and `runtime/platform/linux.c` replace the `*_win.*` files, `platform/win32.c` and `totk.rc` |
+| Libraries | system Vulkan, SDL3, Opus, zstd and dav1d; libvpx from your own folder; `libstdc++` static, `$ORIGIN` in the rpath |
+| Linker | `-no-pie` (the function tables need no load-time relocation) and lld when present |
+| CPU-visible pools | shadow storage by default (`runtime/vk_memory.c`): a host-visible copy per pool instead of importing the guest pages; see [building.md](building.md), "Linux" |
+| Shader translator | `totk_xlate` for `linux-x64`, NativeAOT over the system clang |
 
 ## Common problems
 
 | Message | What to do |
 |---|---|
-| `clang` not found | Run the `$env:PATH` commands from step 2 in this PowerShell |
-| `vswhere` or `link.exe` error in step 5 | Visual Studio's C++ tools are missing: see step 1 |
-| `patch_generated: ... found 0 times` | The game is not version 1.1.1 |
-| Out of memory in step 8 | Use a lower `--jobs` |
+| `vpx/vp8dx.h: file not found` | `CPATH` is not set to the folder you built libvpx in (step 1) |
+| `undefined reference to dav1d_*` | install dav1d, or point `LIBRARY_PATH` at one you built |
+| `invalid linker name in argument '-fuse-ld=lld'` | an old clang without lld: install lld, or update `build_game.py` (it now falls back to the system `ld`) |
+| `device-local allocation failed (-2)` | the card's free VRAM is smaller than the game's pools: close what holds it and check with `nvidia-smi`. The run survives on host memory (the log says `keeps the game's storage`) but slowly |
+| `gpu 0 skipped: no graphics+compute+present queue family` | no display for the probe: see step 8 |
 
-Do not share `ocarina.exe`, `generated\` or `build\`: they come from your game. To contribute, read the [contributing guide](../CONTRIBUTING.en.md).
+Do not share `ocarina`, `generated/` or `build/`: they come from your game.

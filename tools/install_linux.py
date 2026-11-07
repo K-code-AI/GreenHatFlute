@@ -3,12 +3,12 @@
 
 Nothing in the build changes; this only writes the three files a desktop session reads:
 
-  ~/.local/share/applications/ocarina-recomp.desktop   from jogar/ocarina-recomp.desktop, with the launcher's path
-  ~/.local/share/icons/hicolor/<N>x<N>/apps/ocarina-recomp.png   the sizes carried in runtime/totk.ico
-  ~/.local/bin/ocarina-recomp                          a link to jogar/jogar-ocarina.sh
+  ~/.local/share/applications/greenhatflute.desktop   from play/greenhatflute.desktop, with the launcher's path
+  ~/.local/share/icons/hicolor/<N>x<N>/apps/greenhatflute.png   the sizes carried in runtime/totk.ico
+  ~/.local/bin/greenhatflute                          a link to play/run.sh
 
 XDG paths are used, so no root is needed and nothing is written under /usr. The app id the game sets on Wayland
-(gfx_window_sdl.c) is "ocarina-recomp", which is what the .desktop file is named after: the session then groups the
+(gfx_window_sdl.c) is "greenhatflute", which is what the .desktop file is named after: the session then groups the
 window under this entry instead of showing an unnamed window.
 
 Run: python tools/install_linux.py [--uninstall] [--dry-run] [--home DIR] [--bin DIR]
@@ -24,10 +24,10 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-APP = 'ocarina-recomp'
+APP = 'greenhatflute'
 ICO = ROOT / 'runtime' / 'totk.ico'
-DESKTOP = ROOT / 'jogar' / f'{APP}.desktop'
-LAUNCHER = ROOT / 'jogar' / 'jogar-ocarina.sh'
+DESKTOP = ROOT / 'play' / f'{APP}.desktop'
+LAUNCHER = ROOT / 'play' / 'run.sh'
 
 
 def ico_pngs(path: Path) -> dict[int, bytes]:
@@ -131,7 +131,7 @@ def main() -> int:
             subprocess.run([refresh, str(data / 'applications')], check=False)
         apps = shutil.which('gtk-launch')
         print()
-        print(f'The entry is installed. It appears in the app launcher as "{APP}"; from a shell, {bindir}/ocarina-recomp '
+        print(f'The entry is installed. It appears in the app launcher as "{APP}"; from a shell, {bindir}/{APP} '
               f'works if {bindir} is on PATH.')
         if apps:
             print(f'Check it with: gtk-launch {APP}')

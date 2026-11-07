@@ -1,4 +1,4 @@
-# totk.ini: settings for totk.exe. Copy this file to totk.ini next to totk.exe and remove the '#' of a line to change it.
+# totk.ini: settings for the game. Copy this file to totk.ini next to the program and remove the '#' of a line to change it.
 # Each line shows the default; on a Steam Deck the device profile ([display]) changes a few of them. A TOTK_*
 # environment variable of the same name (TOTK_FPS_LIMIT for fps_limit) overrides the file. Keys are case-insensitive;
 # '#' and ';' start a comment; [sections] only group lines.

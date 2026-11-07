@@ -1,137 +1,135 @@
-# Como contribuir com o Ocarina Recomp
+# Contributing to GreenHatFlute
 
-[Read in English](CONTRIBUTING.en.md)
+All help counts, even if you do not program. This guide explains how to test, how to build, how to investigate a graphics bug and how to send your contribution.
 
-Toda ajuda conta, inclusive sem saber programar. Este guia explica como testar, como compilar, como investigar um bug gráfico e como enviar sua contribuição.
+## The most important rule
 
-## A regra mais importante
+**Nothing that comes from the game goes into this repository.** That includes:
 
-**Nada que venha do jogo entra neste repositório.** Isso inclui:
+- the game, keys, `exefs`, `romfs` and the `.nup`;
+- `ocarina`, the code in `generated/` and everything in `build/`;
+- saves, the shader cache, SPIR-V of the game's shaders, frame dumps and screenshots.
 
-- o jogo, keys, `exefs`, `romfs` e o `.nup`;
-- o `ocarina.exe`, o código em `generated/` e tudo em `build/`;
-- saves, cache de shaders, SPIR-V dos shaders do jogo, dumps de frame e prints.
+Hashes, addresses (`main+0x6e6dc4`) and descriptions of what the code does are fine.
 
-Hashes, endereços (`main+0x6e6dc4`) e a descrição do que o código faz podem entrar.
+`tools/check_content.py` checks this on every push. Turn on the local check once per clone:
 
-O `tools/check_content.py` confere isso em todo push. Ative a verificação local uma vez por clone:
-
-```powershell
+```sh
 git config core.hooksPath .githooks
 ```
 
-Nunca use `--no-verify`. E não peça nem compartilhe o jogo em issues ou pull requests.
+Never use `--no-verify`. Do not ask for or share the game in issues or pull requests.
 
-## Sem programar: testar
+## Without programming: test
 
-Compile pelo [passo a passo](docs/compilar-manual.md), jogue e abra uma [issue](https://github.com/sostenesfreitas/ocarina-recomp/issues) contando:
+Build using the [step-by-step guide](docs/build-by-hand.md), play, and open an [issue](https://github.com/K-code-AI/GreenHatFlute/issues) with:
 
-- placa de vídeo, versão do driver, processador e quantidade de RAM;
-- onde no jogo aconteceu e como repetir;
-- o que você esperava ver e o que apareceu;
-- o `ultima-partida-erros.log` da pasta de instalação.
+- graphics card, driver version, processor and amount of RAM;
+- where in the game it happened and how to repeat it;
+- what you expected to see and what appeared;
+- `last-run-errors.log` from the project folder.
 
-**O mais útil agora:** testes em placas AMD e Intel, em PCs mais fracos e em áreas além do vilarejo Kokiri.
+**Most useful right now:** tests on AMD and Intel cards, on weaker PCs and in areas beyond Kokiri village.
 
-## Preparar o ambiente
+## Set up your environment
 
-Siga o [passo a passo para compilar](docs/compilar-manual.md): ele deixa as ferramentas, o `.venv` e o `build/` prontos em `C:\OcarinaRecomp`. Depois, faça seu fork e aponte o `origin` para ele:
+Follow the [step-by-step build guide](docs/build-by-hand.md): it leaves the tools, `.venv` and `build/` ready in the project folder. Then make your fork and point `origin` at it:
 
 ```bash
 git remote rename origin upstream
-git remote add origin https://github.com/SEU-USUARIO/ocarina-recomp
+git remote add origin https://github.com/YOUR-USER/GreenHatFlute
 ```
 
-Para recompilar, use um terminal com `C:\msys64\ucrt64\bin` no `PATH`:
+To rebuild, from the project folder (with the toolchain on `PATH`):
 
 ```bash
-# O runtime mudou: é incremental e leva pouco tempo
-.venv/Scripts/python tools/build_game.py --version oot111 --gen generated/oot111 --out build/oot111 \
+# The runtime changed: incremental and quick
+.venv/bin/python tools/build_game.py --version oot111 --gen generated/oot111 --out build/oot111 \
   --expected tools/data/expected-oot111.json --exefs build/exefs --romfs build/romfs
 
-# O tradutor de shaders mudou: rode isto e depois o comando acima
-.venv/Scripts/python tools/build_xlate.py
+# The shader translator changed: run this, then the command above
+.venv/bin/python tools/build_xlate.py
 
-# O lifter (recomp/) mudou: gere de novo e depois rode o primeiro comando
-.venv/Scripts/python recomp/gen.py --exefs build/exefs --out generated/oot111 --modules main,sdk,subsdk0
-.venv/Scripts/python tools/oot/patch_generated.py generated/oot111
+# The lifter (recomp/) changed: generate again, then run the first command
+.venv/bin/python recomp/gen.py --exefs build/exefs --out generated/oot111 --modules main,sdk,subsdk0
+.venv/bin/python tools/oot/patch_generated.py generated/oot111
 ```
 
-Para abrir o jogo, use `jogar\jogar-ocarina.ps1`.
+To open the game, use `play/run.sh`.
 
-## Onde fica cada coisa
+## Where things are
 
-| Pasta | Conteúdo |
+| Folder | Contents |
 |---|---|
-| `recomp/` | Tradutor de ARM64 para C |
-| `runtime/` | O "console": kernel, sistema, áudio, entrada e NVN sobre Vulkan |
-| `runtime/vk_exec_draw.c` | Execução de draws e dispatches, inclusive mesh |
-| `runtime/vk_pipeline.c` | Criação de pipelines |
-| `runtime/ov_*.c` | Substituições de funções do SDK (`HOST_OVERRIDE`) |
-| `runtime/third_party/eglantine/.../ampere/` | Rebaixamento de shaders Ampere para Maxwell |
-| `tools/xlate/patches/` | Patches do tradutor de shaders. A quantidade esperada está em `tools/build_xlate.py` |
-| `tools/oot/` | Partes específicas do Ocarina |
-| `instalador/` | O instalador com janela e o código do executável (`build_exe.sh`) |
-| `jogar/` | O lançador e a configuração inicial |
-| `verificar.ps1`, `compilar.ps1` | Os scripts de compilação. Ao mudar um comando, mude também o instalador e os guias em `docs/` |
+| `recomp/` | ARM64 to C translator |
+| `runtime/` | The "console": kernel, system, audio, input and NVN on Vulkan |
+| `runtime/vk_exec_draw.c` | Runs draws and dispatches, including mesh |
+| `runtime/vk_pipeline.c` | Pipeline creation |
+| `runtime/ov_*.c` | Replacements for SDK functions (`HOST_OVERRIDE`) |
+| `runtime/third_party/eglantine/.../ampere/` | Ampere to Maxwell shader lowering |
+| `tools/xlate/patches/` | Shader translator patches. The expected count is in `tools/build_xlate.py` |
+| `tools/oot/` | Parts specific to Ocarina |
+| `play/` | The launcher (`run.sh`), the desktop entry and the initial settings |
+| `build.sh` | The build script. When you change a command, change the guides in `docs/` too |
+| `tools/install_linux.py` | Installs the desktop entry, the icon and the PATH command |
 
-Os prefixos `TOTK_` e `DKB_` nos nomes vêm dos projetos de origem. Eles continuam assim para o código seguir fácil de comparar com esses projetos. Comentários que citam outros jogos registram onde o comportamento foi descoberto.
+The `TOTK_` and `DKB_` prefixes come from the source projects. They stay so the code remains easy to compare with those projects. Comments that mention other games record where a behavior was discovered.
 
-## Regras do código
+## Code rules
 
-- **Não edite o código gerado à mão.** Ele é recriado. Use `recomp/patches.py` ou, se não couber, `tools/oot/patch_generated.py`.
-- **Marcador `LOCAL TEST`:** mudanças feitas durante a investigação que ainda não têm forma definitiva. Ao melhorar um trecho desses, tire o marcador.
-- **Patch do tradutor:** gere com um diff sobre `build/xlate/ryujinx` e atualize a contagem em `tools/build_xlate.py`. Mudar o tradutor recompila todos os shaders na próxima execução.
-- **Windows:** `long` tem 32 bits. Foi um `1L << 40` que descartou todos os draws indiretos de mesh por dias.
-- **Código copiado:** mantenha o cabeçalho e adicione uma linha em `THIRD_PARTY_NOTICES.md`, com o commit de origem.
-- **Commits:** use a sua própria identidade do git. Nunca envie direto para `main`: abra um pull request.
+- **Do not edit generated code by hand.** It gets recreated. Use `recomp/patches.py` or, if that does not fit, `tools/oot/patch_generated.py`.
+- **`LOCAL TEST` marker:** changes made during investigation that have no final form yet. When you improve one, remove the marker.
+- **Translator patches:** create them with a diff over `build/xlate/ryujinx` and update the count in `tools/build_xlate.py`. Changing the translator recompiles every shader on the next run.
+- **Windows:** `long` is 32 bits. A `1L << 40` dropped every indirect mesh draw for days.
+- **Copied code:** keep its header and add a row to `THIRD_PARTY_NOTICES.md` with the source commit.
+- **Commits:** use your own git identity. Never push directly to `main`: open a pull request.
 
-## Como investigar um bug gráfico
+## How to investigate a graphics bug
 
-O que resolveu os bugs maiores até agora foi **medir e comparar com uma referência**, sem apostar em palpite.
+What solved the biggest bugs so far was **measuring and comparing against a reference**, not guessing.
 
-1. **Crie um cenário repetível.** Use um script de entrada (`TOTK_INPUT_SCRIPT`) com `TOTK_INPUT=none`, porque senão o seu teclado mexe no Link enquanto a janela de teste está em foco:
+1. **Make a repeatable scene.** Use an input script (`TOTK_INPUT_SCRIPT`) with `TOTK_INPUT=none`, otherwise your keyboard moves Link while the test window has focus:
    ```text
    700 A 8
    2300 RSTICK 20000 0 150
    2600 LSTICK 0 32000 240
    ```
-2. **Capture.** `ocarina.exe --seconds 120 --shot saida.png`. Com `TOTK_SHOTS=lo-hi:passo`, ele salva miniaturas ao longo do caminho.
-3. **Isole.** Desligue um programa de cada vez até o defeito sumir, por exemplo com `OOT_MESH_DENY=4049,4047`.
-4. **Compare com o Lichii.** Com `EDEN_NX2_RENDER_TRACE=1`, ele registra os draws, e dá para comparar com os nossos.
-5. **Leia o shader.** Use `TOTK_DUMP=<frame>` e `TOTK_DUMP_DIR=<pasta>`, descompile com `spirv-cross` e compare com o código nativo. Um valor absurdo costuma apontar a causa: foi assim que achamos a colisão de bancos de registradores.
+2. **Capture.** `ocarina --seconds 120 --shot output.png`. With `TOTK_SHOTS=lo-hi:step`, it saves thumbnails along the way.
+3. **Isolate.** Turn off one program at a time until the defect goes away, for example with `OOT_MESH_DENY=4049,4047`.
+4. **Compare with Lichii.** With `EDEN_NX2_RENDER_TRACE=1`, it logs its draws, and you can compare them with ours.
+5. **Read the shader.** Use `TOTK_DUMP=<frame>` and `TOTK_DUMP_DIR=<folder>`, decompile with `spirv-cross` and compare with the native code. An absurd value usually points at the cause: that is how the register bank collision was found.
 
-### Ferramentas de diagnóstico
+### Diagnostic tools
 
-| Variável | O que faz |
+| Variable | What it does |
 |---|---|
-| `OOT_DRAW_ARGS=<frame>` | Registra tipos de draw, argumentos, buffers por estágio e estatísticas por programa |
-| `OOT_MESH_DENY=<a,b,...>` | Descarta draws indiretos de mesh desses programas |
-| `OOT_NO_CULL=1`, `OOT_NO_CULL_PROGS=lo-hi` | Desliga o descarte de faces |
-| `OOT_FOLLOW_DISP=<frame>:<k>:<c0>` | Segue um dispatch, junto com `TOTK_DUMP_BUF=0:<tamanho>` |
-| `TOTK_XLATE_IR=<pasta>` | O tradutor grava os blocos e o IR de cada shader com subrotina |
-| `TOTK_SPV_OVERRIDE=<pasta>` | Troca shaders por arquivos `sh_<hash>.spv`. O hash muda quando o tradutor muda, e o arquivo antigo para de valer sem aviso |
-| `OOT_BIG_CS_WORDS`, `OOT_BIG_CS_OPT=1` | Controlam a compilação em segundo plano dos compute shaders grandes |
-| `TOTK_TRACE=perf` | Registra o tráfego de memória por frame. Comece por aqui quando o fps estiver baixo |
+| `OOT_DRAW_ARGS=<frame>` | Logs draw kinds, arguments, buffers per stage and per-program statistics |
+| `OOT_MESH_DENY=<a,b,...>` | Drops indirect mesh draws of those programs |
+| `OOT_NO_CULL=1`, `OOT_NO_CULL_PROGS=lo-hi` | Turns off face culling |
+| `OOT_FOLLOW_DISP=<frame>:<k>:<c0>` | Follows a dispatch, together with `TOTK_DUMP_BUF=0:<size>` |
+| `TOTK_XLATE_IR=<folder>` | The translator writes the blocks and IR of each shader with a subroutine |
+| `TOTK_SPV_OVERRIDE=<folder>` | Replaces shaders with `sh_<hash>.spv` files. The hash changes when the translator changes, and the old file silently stops applying |
+| `OOT_BIG_CS_WORDS`, `OOT_BIG_CS_OPT=1` | Control background compilation of large compute shaders |
+| `TOTK_TRACE=perf` | Logs memory traffic per frame. Start here when the frame rate is low |
 
-**Ao ler buffers da GPU:** leia depois do `VK_MEM_USE`. Antes dele, você vê uma cópia antiga da CPU.
+**When reading GPU buffers:** read after `VK_MEM_USE`. Before it, you see an old CPU copy.
 
-## Bons pontos para começar
+## Good places to start
 
-- Por que a segunda passada por uma área ainda monta pipelines novos.
-- Testar e corrigir em AMD e Intel.
-- Conferir a porta da casa do Link, quebrar vasos e tocar a ocarina.
-- Conferir o fog em Hyrule Field.
-- Conferir o filme de abertura de New Game.
-- Avaliar os PRs #224, #353, #337, #215 e #345 do Lichii.
-- Trocar a lista de candidatos de ponteiros pela tabela bruta de pools do nxnative (`TryGenerateRawStorageOp`), o que reduziria os compute shaders gigantes.
+- Why the second pass through an area still builds new pipelines.
+- Testing and fixing on AMD and Intel.
+- Checking the door of Link's house, breaking pots and playing the ocarina.
+- Checking the fog in Hyrule Field.
+- Checking the New Game opening movie.
+- Evaluating Lichii PRs #224, #353, #337, #215 and #345.
+- Replacing the pointer candidate list with nxnative's raw pool table (`TryGenerateRawStorageOp`), which would shrink the giant compute shaders.
 
-## Enviar um pull request
+## Send a pull request
 
-1. Crie um branch a partir de `main`.
-2. Faça uma mudança por pull request.
-3. Rode `python tools/check_content.py`. Se mexeu no lifter, rode também os testes em `tests/`.
-4. Teste no jogo. Diga no pull request qual placa e driver usou, em que cena e o que mudou. Se puder medir, melhor ainda: "fps de X para Y", ou "programa Z passou de 0 para N triângulos".
-5. Diga o que você **não** testou. Um "não testei em AMD" evita muita surpresa.
+1. Create a branch from `main`.
+2. Make one change per pull request.
+3. Run `python tools/check_content.py`. If you changed the lifter, also run the tests in `tests/`.
+4. Test in game. Say in the pull request which card and driver you used, in which scene and what changed. If you can measure it, even better: "fps from X to Y", or "program Z went from 0 to N triangles".
+5. Say what you did **not** test. A "not tested on AMD" prevents a lot of surprises.
 
-Ao usar IA para ajudar, revise o resultado e confirme que funciona antes de enviar. Veja também o [código de conduta](CODE_OF_CONDUCT.md).
+If you use AI to help, review the result and confirm it works before sending. See also the [code of conduct](CODE_OF_CONDUCT.md).

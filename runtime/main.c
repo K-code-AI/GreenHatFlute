@@ -452,13 +452,13 @@ static char pp_exefs[PLAT_PATH_MAX * 2], pp_romfs[PLAT_PATH_MAX * 2], pp_profile
           pp_data[PLAT_PATH_MAX * 3];
 
 // Save data is the player's, not the program's, so an installed game keeps it out of the program folder: under this
-// OS's per-user data directory (~/.local/share/ocarina-recomp, or %LOCALAPPDATA%\ocarina-recomp). A "profile" folder
+// OS's per-user data directory (~/.local/share/greenhatflute, or %LOCALAPPDATA%\greenhatflute). A "profile" folder
 // next to the executable still means a portable copy, and that wins here as it does in portable_path below.
 static const char *profile_home(const char *build_default) {
     if (plat_user_data_dir(pp_data, sizeof pp_data)) return build_default;
     size_t n = strlen(pp_data);
-    if (n + sizeof "/ocarina-recomp" > sizeof pp_data) return build_default;
-    memcpy(pp_data + n, "/ocarina-recomp", sizeof "/ocarina-recomp");   // the NUL comes with it
+    if (n + sizeof "/greenhatflute" > sizeof pp_data) return build_default;
+    memcpy(pp_data + n, "/greenhatflute", sizeof "/greenhatflute");   // the NUL comes with it
     return pp_data;
 }
 
