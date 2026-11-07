@@ -745,7 +745,7 @@ static void probe_swkbd(void) {
     if (!b) input_poll(&b, &lx, &ly, &rx, &ry);
     printf("swkbd: %d of %d cases (arguments from the SDK's MakePreset/SetHeaderText/SetGuideText/SetInitialText; "
            "horse-name limits, disabled keys, cancel 0x29f, default name \"%s\", UTF-8 out, surrogate pairs, number pad, "
-           "minimum length, the Win32 window with OK and Cancel)\n", n - bad, n, def);
+           "minimum length, the text entry window with OK and Cancel)\n", n - bad, n, def);
 }
 
 // ---- the menu's input gate: Minus+Plus is consumed, a menu that is open leaves the game a neutral pad

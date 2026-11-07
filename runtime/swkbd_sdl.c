@@ -1,8 +1,7 @@
 // The software keyboard's front end for SDL windows (swkbd.h). Until the in-game text field exists (an ImGui entry in
 // the menu overlay, which SDL_StartTextInput can pair with the Steam Deck's on-screen keyboard), the text entry takes
 // the starting text at once, as GHF_SWKBD_ANSWER=<initial> does: the game's initial text, else the default name from
-// the catalog. TotK asks only for a horse's name. GHF_SWKBD_TEST=cancel stands for Cancel pressed, as in the Win32
-// window.
+// the catalog. TotK asks only for a horse's name. GHF_SWKBD_TEST=cancel stands for Cancel pressed.
 #include <string.h>
 
 #include "cfg.h"

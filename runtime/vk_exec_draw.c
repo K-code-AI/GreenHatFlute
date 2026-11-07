@@ -98,8 +98,8 @@ static CbRes *cur;
 static uint64_t cur_fence;
 
 // Descriptor pools and full-size transient chunks go back to these lists when their command buffer completes, instead
-// of being destroyed and created again for the next one: each creation is a driver memory allocation (on Windows an
-// allocation, a map and a paging-fence wait on the CPU), about ten of them per frame inside the replay.
+// of being destroyed and created again for the next one: each creation is a driver memory allocation plus a map, about
+// ten of them per frame inside the replay.
 #define SPARE_POOLS 64
 #define SPARE_CHUNKS 16
 static PlatMutex spare_lock = PLAT_MUTEX_INIT;
@@ -3526,7 +3526,7 @@ static void op_draw_mesh_ind(VkExec *ex, const p_draw_mesh_ind *d) {
         static long lo = -2, hi;
         if (lo == -2) {
             const char *e = getenv("OOT_MESH_ALLOW");
-            lo = -1, hi = 0x7fffffffL;   // long is 32 bits on Windows: 1L << 40 overflowed and this filter dropped every indirect mesh draw
+            lo = -1, hi = 0x7fffffffL;   // the bounds stay inside a long: a shift past its width overflowed and this filter dropped every indirect mesh draw
             if (e) sscanf(e, "%ld-%ld", &lo, &hi);
         }
         long pr = ex->prog ? (long)ex->prog->serial : 0;

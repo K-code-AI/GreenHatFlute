@@ -497,8 +497,8 @@ int main(int argc, char **argv) {
     plat_crash_hook(crash_handler);
     parse_trace();
     prof_start();
-    // Timed guest waits (kernel.c block_inner) sleep in whole milliseconds; at the default 15.6 ms tick a 1 ms wait
-    // costs a full tick. GHF_TIMER_1MS=0 keeps the default for comparison.
+    // Timed guest waits (kernel.c block_inner) sleep in whole milliseconds. plat_timer_1ms tightens the OS's wake-up
+    // slack so they land near their deadline; GHF_TIMER_1MS=0 leaves the OS's own timing for comparison.
     if (cfg_bool("GHF_TIMER_1MS")) plat_timer_1ms();
     cfg = (RtConfig){.exefs = rt_default_exefs, .romfs = rt_default_romfs, .profile = rt_default_profile,
                      .gpu = cfg_get("GHF_GPU")};
