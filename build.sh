@@ -30,6 +30,20 @@ run() {
     "$@"
 }
 
+# Is this NSO ZBIC-compressed? The NSO header itself is always plain, so the magic is not at byte 0: it is at the
+# start of the first segment, whose offset is the little-endian u32 at 0x10 of the header. Ocarina of Time 1.1.1
+# keeps its header plain and compresses the segments, so looking only at the first four bytes sees "NSO0" and
+# misses a compressed main.
+zbic_compressed() {   # zbic_compressed <file>
+    file=$1
+    set -- $(od -An -j 16 -N 4 -t u1 "$file" 2>/dev/null)   # the header's first-segment offset, as four bytes
+    [ $# = 4 ] || return 1
+    off=$(($1 + $2 * 256 + $3 * 65536 + $4 * 16777216))
+    [ "$off" -gt 0 ] && [ "$off" -lt 65536 ] || return 1
+    # Compared as hex, because the four bytes are read from a binary file and may contain a NUL.
+    [ "$(od -An -j $off -N 4 -t x1 "$file" | tr -d ' \n')" = 5a424943 ]   # 5a 42 49 43 = ZBIC
+}
+
 while [ $# -gt 0 ]; do
     case "$1" in
         --check)   check_only=1 ;;
@@ -128,9 +142,9 @@ else
     fi
     got=$(sha256sum build/exefs/main 2>/dev/null | cut -d' ' -f1)
     if [ "$got" != "$HASH_111" ] && [ "$dry" = 0 ]; then
-        if head -c 4 build/exefs/main | grep -q ZBIC; then
+        if zbic_compressed build/exefs/main; then
             say "main is ZBIC-compressed: decompressing"
-            run git clone -q https://github.com/kinnay/zbic build/zbic
+            [ -d build/zbic/.git ] || run git clone -q https://github.com/kinnay/zbic build/zbic
             run git -C build/zbic checkout -q "$ZBIC"
             run clang -O2 -w -Ibuild/zbic/src tools/oot/unzbic.c -o build/unzbic
             run build/unzbic build/dump/exefs/main build/exefs/main
