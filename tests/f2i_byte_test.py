@@ -144,6 +144,12 @@ def evaluate(code, c0):
             elif inst in (37, 40):   # FMin, FMax: undefined with a NaN operand
                 put(a[1], args, lambda x, y: None if math.isnan(f32(x)) or math.isnan(f32(y)) else
                     u32((min if inst == 37 else max)(f32(x), f32(y))))
+            elif inst in (79, 80):   # NMin, NMax: NaN propagates (0031-maxwell-nan-semantics emits these)
+                put(a[1], args, lambda x, y: u32(float('nan')) if math.isnan(f32(x)) or math.isnan(f32(y)) else
+                    u32((min if inst == 79 else max)(f32(x), f32(y))))
+            elif inst == 81:   # NClamp: NaN propagates
+                put(a[1], args, lambda x, lo, hi: u32(float('nan')) if any(math.isnan(f32(v)) for v in (x, lo, hi)) else
+                    u32(min(max(f32(x), f32(lo)), f32(hi))))
             elif inst == 43:   # FClamp: undefined with a NaN operand
                 put(a[1], args, lambda x, lo, hi: None if any(math.isnan(f32(v)) for v in (x, lo, hi)) else
                     u32(min(max(f32(x), f32(lo)), f32(hi))))
