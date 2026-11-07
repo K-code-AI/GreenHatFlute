@@ -12,7 +12,7 @@ R0 F2I.S8, R1 F2I.U8, R2 F2I.S16 and R3 F2I.S32, all truncating. The test execut
 with a small evaluator of exactly the operations it uses, and compares the four integer results with the
 saturating conversions of the Ampere instructions. No game data or GPU is used.
 
-Usage: python tests/f2i_byte_test.py --translator build/xlate/greenhatflute_xlate.exe [--spirv-val PATH]
+Usage: python tests/f2i_byte_test.py --translator build/xlate/greenhatflute_xlate [--spirv-val PATH]
 """
 import argparse
 import json
