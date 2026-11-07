@@ -23,7 +23,7 @@ On other distributions install the same packages under their own names. Two are 
 
   ```sh
   tar xzf libvpx-1.15.1.tar.gz && cd libvpx-1.15.1
-  ./configure --prefix="$PWD/../ocarina-deps" --enable-static --disable-shared \
+  ./configure --prefix="$PWD/../greenhatflute-deps" --enable-static --disable-shared \
       --disable-examples --disable-tools --disable-unit-tests --enable-multithread
   make -j"$(nproc)" && make install
   ```
@@ -122,12 +122,12 @@ rm -rf build/dump
 cp play/totk.ini build/oot111/totk.ini
 ```
 
-The compile takes about 7 minutes on 16 cores and links a 305 MB ELF (`build/oot111/ocarina`).
+The compile takes about 7 minutes on 16 cores and links a 305 MB ELF (`build/oot111/GreenHatFlute`).
 
 ## 8. Check and play
 
 ```sh
-build/oot111/ocarina --selftest          # layout, dispatch table, host functions: no game files needed
+build/oot111/GreenHatFlute --selftest   # layout, dispatch table, host functions: no game files needed
 play/run.sh                              # the settings this port is tuned with
 ```
 
@@ -156,7 +156,7 @@ still overrides that; a `profile` folder next to the executable means a portable
 
 | | Linux |
 |---|---|
-| Executable | `build/oot111/ocarina`, an ELF; `runtime/*_sdl.*` and `runtime/platform/linux.c` replace the `*_win.*` files, `platform/win32.c` and `totk.rc` |
+| Executable | `build/oot111/GreenHatFlute`, an ELF; `runtime/*_sdl.*` and `runtime/platform/linux.c` replace the `*_win.*` files, `platform/win32.c` and `totk.rc` |
 | Libraries | system Vulkan, SDL3, Opus, zstd and dav1d; libvpx from your own folder; `libstdc++` static, `$ORIGIN` in the rpath |
 | Linker | `-no-pie` (the function tables need no load-time relocation) and lld when present |
 | CPU-visible pools | shadow storage by default (`runtime/vk_memory.c`): a host-visible copy per pool instead of importing the guest pages; see [building.md](building.md), "Linux" |
@@ -172,4 +172,4 @@ still overrides that; a `profile` folder next to the executable means a portable
 | `device-local allocation failed (-2)` | the card's free VRAM is smaller than the game's pools: close what holds it and check with `nvidia-smi`. The run survives on host memory (the log says `keeps the game's storage`) but slowly |
 | `gpu 0 skipped: no graphics+compute+present queue family` | no display for the probe: see step 8 |
 
-Do not share `ocarina`, `generated/` or `build/`: they come from your game.
+Do not share `GreenHatFlute`, `generated/` or `build/`: they come from your game.

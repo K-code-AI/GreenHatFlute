@@ -17,7 +17,7 @@ first (rpath $ORIGIN). docs/building.md lists the packages.
 
 Every runtime/*.c is compiled. build/<version>/modules.c carries the layout, the linked function tables, the
 expected SHA-256 of each ExeFS file (tools/data/expected-<display version>.json) and the default game paths
-(--exefs, --romfs, --profile), which totk.exe uses unless its own command line names others. tools/romfs_index.py
+(--exefs, --romfs, --profile), which GreenHatFlute uses unless its own command line names others. tools/romfs_index.py
 writes build/<version>/romfs-index.bin and romfs_config.h from the RomFS directory's index.json (runtime/romfs.c reads
 the index next to totk.exe).
 
@@ -78,7 +78,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # them. MAIN_ROOT is where they land, so resolved paths still print and compare relative to a root.
 MAIN_ROOT = (ROOT / 'build').resolve().parent
 UCRT = Path(r'C:\msys64\ucrt64\bin')
-EXE = 'ocarina.exe' if WIN else 'ocarina'
+EXE = 'GreenHatFlute.exe' if WIN else 'GreenHatFlute'
 
 
 def on_path(name):

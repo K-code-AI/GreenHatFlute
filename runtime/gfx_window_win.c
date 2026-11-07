@@ -208,7 +208,7 @@ static void miojo_key(HWND h, WPARAM w, LPARAM l) {
     at = w == (WPARAM)name[at] ? at + 1 : w == 'M';
     if (name[at]) return;
     at = 0;
-    SetWindowTextW(h, L"Ocarina Recomp - feito com miojo");
+    SetWindowTextW(h, L"GreenHatFlute - miojo says hi");
     menu_miojo();
 }
 
@@ -312,7 +312,7 @@ static void window_main(void *arg) {
     // button flashes until it is brought up, and TOTK_FULLSCREEN waits for that first activation.
     // TOTK_BACKGROUND_WINDOW=1 (test runs): no flashing, never fullscreen at start, and F11 keeps the window's place.
     int background = g_background = cfg_get("TOTK_BACKGROUND_WINDOW") && atoi(cfg_get("TOTK_BACKGROUND_WINDOW"));
-    g_hwnd = CreateWindowExW(0, wc.lpszClassName, L"Ocarina Recomp", WND_STYLE, CW_USEDEFAULT, CW_USEDEFAULT, ow, oh, NULL,
+    g_hwnd = CreateWindowExW(0, wc.lpszClassName, L"GreenHatFlute", WND_STYLE, CW_USEDEFAULT, CW_USEDEFAULT, ow, oh, NULL,
                              NULL, inst, NULL);
     if (!g_hwnd) {
         rt_log("gfx: CreateWindowEx failed (%lu)", GetLastError());

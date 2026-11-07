@@ -14,7 +14,7 @@ requests about this build belong here; the project we came from does not take re
 
 > [!IMPORTANT]
 > This repository **does not contain the game, keys or an executable**, and it does not explain how to get them. You
-> need your own copy. Everything the build creates (`ocarina`, the generated code, the shader cache and the saves)
+> need your own copy. Everything the build creates (`GreenHatFlute`, the generated code, the shader cache and the saves)
 > comes from your game: **do not share it**.
 
 ## Project status

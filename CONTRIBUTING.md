@@ -7,7 +7,7 @@ All help counts, even if you do not program. This guide explains how to test, ho
 **Nothing that comes from the game goes into this repository.** That includes:
 
 - the game, keys, `exefs`, `romfs` and the `.nup`;
-- `ocarina`, the code in `generated/` and everything in `build/`;
+- `GreenHatFlute`, the code in `generated/` and everything in `build/`;
 - saves, the shader cache, SPIR-V of the game's shaders, frame dumps and screenshots.
 
 Hashes, addresses (`main+0x6e6dc4`) and descriptions of what the code does are fine.
@@ -106,7 +106,7 @@ What solved the biggest bugs so far was **measuring and comparing against a refe
    2300 RSTICK 20000 0 150
    2600 LSTICK 0 32000 240
    ```
-2. **Capture.** `ocarina --seconds 120 --shot output.png`. With `TOTK_SHOTS=lo-hi:step`, it saves thumbnails along the way.
+2. **Capture.** `GreenHatFlute --seconds 120 --shot output.png`. With `TOTK_SHOTS=lo-hi:step`, it saves thumbnails along the way.
 3. **Isolate.** Turn off one program at a time until the defect goes away, for example with `OOT_MESH_DENY=4049,4047`.
 4. **Compare with Lichii.** With `EDEN_NX2_RENDER_TRACE=1`, it logs its draws, and you can compare them with ours.
 5. **Read the shader.** Use `TOTK_DUMP=<frame>` and `TOTK_DUMP_DIR=<folder>`, decompile with `spirv-cross` and compare with the native code. An absurd value usually points at the cause: that is how the register bank collision was found.

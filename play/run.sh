@@ -1,9 +1,9 @@
 #!/bin/sh
 # Opens GreenHatFlute.
 #
-#   play/run.sh [--seconds S] [--shot PNG] [other ocarina arguments]
+#   play/run.sh [--seconds S] [--shot PNG] [other GreenHatFlute arguments]
 #
-# Extra arguments go to the game: see `build/oot111/ocarina --help` for the test modes.
+# Extra arguments go to the game: see `build/oot111/GreenHatFlute --help` for the test modes.
 # A run's output and errors go to last-run.log and last-run-errors.log.
 #
 # The window works on both Wayland and X11: SDL3 picks the session's own back end, so nothing here chooses one.
@@ -13,7 +13,7 @@
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 builddir="$root/build/oot111"
 
-[ -x "$builddir/ocarina" ] || { echo "no $builddir/ocarina: run the build first (docs/build-by-hand.md)" >&2; exit 1; }
+[ -x "$builddir/GreenHatFlute" ] || { echo "no $builddir/GreenHatFlute: run the build first (docs/build-by-hand.md)" >&2; exit 1; }
 
 # The settings this port is tuned with.
 TOTK_GPL=0               # bindless set 2 + an allocated vertex set in an independent layout loses the device
@@ -43,5 +43,5 @@ if [ -n "$free_mib" ] && [ "$free_mib" -lt 2048 ]; then
     echo "         close what is holding it (nvidia-smi lists the processes) and open it again." >&2
 fi
 
-echo "opening $builddir/ocarina"
-exec ./ocarina "$@" > "$root/last-run.log" 2> "$root/last-run-errors.log"
+echo "opening $builddir/GreenHatFlute"
+exec ./GreenHatFlute "$@" > "$root/last-run.log" 2> "$root/last-run-errors.log"

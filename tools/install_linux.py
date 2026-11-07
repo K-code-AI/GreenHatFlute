@@ -93,9 +93,9 @@ def main() -> int:
                     p.unlink()
         return 0
 
-    if not (ROOT / 'build' / 'oot111' / 'ocarina').exists():
+    if not (ROOT / 'build' / 'oot111' / 'GreenHatFlute').exists():
         # Not fatal: the entry can be installed before the build, but say so rather than leave a dead icon.
-        print('note: build/oot111/ocarina is not there yet, so the entry will open a launcher that reports a missing '
+        print('note: build/oot111/GreenHatFlute is not there yet, so the entry will open a launcher that reports a missing '
               'build. Run this again after the build, or ignore it if the build goes elsewhere.', file=sys.stderr)
 
     written: list[Path] = []

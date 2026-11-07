@@ -61,7 +61,7 @@ as `--version oot111`.
    .venv/bin/python tools/build_xlate.py
    ```
 
-4. Lift the modules to C, then compile and link `build/oot111/ocarina`:
+4. Lift the modules to C, then compile and link `build/oot111/GreenHatFlute`:
 
    ```sh
    .venv/bin/python recomp/gen.py --exefs build/exefs --out generated/oot111 --modules main,sdk,subsdk0
@@ -87,7 +87,7 @@ Settings live in `totk.ini` next to the program ([totk.ini.example](../totk.ini.
 
 `.venv/bin/python tools/package_build.py --version oot111` writes `build/oot111-portable`, which runs on another of
 your machines without Python or .NET. `romfs.bin` stays out unless you pass `--with-romfs`; otherwise put it in
-`romfs/` next to the program or point `TOTK_ROMFS` at its folder. Run `ocarina --prepare-shaders` once in the copied
+`romfs/` next to the program or point `TOTK_ROMFS` at its folder. Run `GreenHatFlute --prepare-shaders` once in the copied
 folder. The folder holds code and data derived from your game: for your own machines only.
 
 ## Memory on this port
@@ -117,7 +117,7 @@ Before a commit:
 
 - `python tools/check_content.py --staged`: nothing game-derived is staged. CI runs the same check;
   `git config core.hooksPath .githooks` runs it before each local commit.
-- `build/oot111/ocarina --selftest`: layout, dispatch table and host-function registry, without game files.
+- `build/oot111/GreenHatFlute --selftest`: layout, dispatch table and host-function registry, without game files.
 
 The lifter (`recomp/`) and the CPU headers (`runtime/cpu.h`, `runtime/simd.h`) are checked against Unicorn. Every lifter
 change passes these, all run with `.venv`:
@@ -136,7 +136,7 @@ Many tests under `tests/` are harnesses that need their tools named: pass `--cc`
 `--spirv-val` (or set `TOTK_TOOLCHAIN`). Run them with `.venv/bin/python`, and set `TOTK_INPUT=none` so the probes do
 not take the keyboard.
 
-Runtime probes, each a mode of `ocarina` (the list is at the top of `runtime/main.c`): `--probe-kernel`,
+Runtime probes, each a mode of `GreenHatFlute` (the list is at the top of `runtime/main.c`): `--probe-kernel`,
 `--probe-vkexec`, `--probe-nvn-tex` and `--probe-shader` cover most runtime changes. The probes open a window, so from
 an SSH session they need the desktop session's display, or they stop at `gpu 0 skipped: no
 graphics+compute+present queue family`: on Wayland `XDG_RUNTIME_DIR=/run/user/$(id -u)
