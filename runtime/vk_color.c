@@ -1,6 +1,6 @@
 // Colour adjustment on the present (vk_color.h): brightness, contrast, saturation and gamma of the game's picture, after
-// the game and before the FSR 1 pass or the blit scale it to the window. Settings TOTK_COLOR_BRIGHTNESS (-30..30, %
-// added), TOTK_COLOR_CONTRAST and TOTK_COLOR_SATURATION (%, 100 = unchanged) and TOTK_COLOR_GAMMA (exponent, 1 =
+// the game and before the FSR 1 pass or the blit scale it to the window. Settings GHF_COLOR_BRIGHTNESS (-30..30, %
+// added), GHF_COLOR_CONTRAST and GHF_COLOR_SATURATION (%, 100 = unchanged) and GHF_COLOR_GAMMA (exponent, 1 =
 // unchanged), read when the settings change; the menu's colour profiles only write these four. At the default values
 // nothing is recorded and the present is what it was. Design and preset values: STS78721's colour profiles (issue #136).
 //
@@ -116,10 +116,10 @@ static int adjusting(void) {
     unsigned v = cfg_version();
     if (v != C.seen) {
         C.seen = v;
-        C.adj[0] = (float)cfg_double("TOTK_COLOR_BRIGHTNESS") / 100.0f;
-        C.adj[1] = (float)cfg_double("TOTK_COLOR_CONTRAST") / 100.0f;
-        C.adj[2] = (float)cfg_double("TOTK_COLOR_SATURATION") / 100.0f;
-        C.adj[3] = (float)cfg_double("TOTK_COLOR_GAMMA");
+        C.adj[0] = (float)cfg_double("GHF_COLOR_BRIGHTNESS") / 100.0f;
+        C.adj[1] = (float)cfg_double("GHF_COLOR_CONTRAST") / 100.0f;
+        C.adj[2] = (float)cfg_double("GHF_COLOR_SATURATION") / 100.0f;
+        C.adj[3] = (float)cfg_double("GHF_COLOR_GAMMA");
     }
     return C.adj[0] != 0.0f || C.adj[1] != 1.0f || C.adj[2] != 1.0f || C.adj[3] != 1.0f;
 }

@@ -1,5 +1,5 @@
 // RGBA8 texels to BC3 blocks on the GPU, one invocation per 4x4 block: the second pass of the ASTC decode when
-// TOTK_ASTC_BC is on (vk_astc.c), so a decoded ASTC texture takes 8 bits per texel in video memory instead of 32.
+// GHF_ASTC_BC is on (vk_astc.c), so a decoded ASTC texture takes 8 bits per texel in video memory instead of 32.
 // Texels past the right or bottom edge repeat the last column or row.
 //
 // Colour: the BC1 four-colour block of the box around the block's colours, its diagonal turned to the sign of the

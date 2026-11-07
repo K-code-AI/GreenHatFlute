@@ -86,7 +86,7 @@ class TranslatorOptions(unittest.TestCase):
                 command.append('--defined-float-minmax')
             result = subprocess.run(command, capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual((self.work / 'totk_xlate.id').read_text().strip(),
+            self.assertEqual((self.work / 'greenhatflute_xlate.id').read_text().strip(),
                              builder.identity(defined_float_minmax=opt_in))
 
 

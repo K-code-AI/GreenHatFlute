@@ -143,7 +143,7 @@ if [ -n "$got" ] && [ "$got" != "$HASH_111" ] && [ "$dry" = 0 ]; then
 fi
 
 # ---- 4. the shader translator -----------------------------------------------------------------------------
-if [ -x build/xlate/totk_xlate ]; then
+if [ -x build/xlate/greenhatflute_xlate ]; then
     say "shader translator: already built"
 else
     say "shader translator (.NET; a few minutes the first time)"
@@ -173,8 +173,8 @@ fi
 say "compiling and linking"
 run .venv/bin/python tools/build_game.py --version "$version" --gen "generated/$version" --out "build/$version" \
     --expected "tools/data/expected-$version.json" --exefs build/exefs --romfs build/romfs --jobs "$(nproc)"
-if [ -f play/totk.ini ] && [ ! -f "build/$version/totk.ini" ]; then
-    run cp play/totk.ini "build/$version/totk.ini"
+if [ -f play/greenhatflute.ini ] && [ ! -f "build/$version/greenhatflute.ini" ]; then
+    run cp play/greenhatflute.ini "build/$version/greenhatflute.ini"
 fi
 
 say "done"

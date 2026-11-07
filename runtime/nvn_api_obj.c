@@ -6,7 +6,7 @@
 //
 // Objects are stored in place in the NVN object memory the game provides (nvn_obj.h); every argument is read from the
 // AAPCS64 registers (host.h arg_x / arg_s / arg_p) and every result returned with ret_x. Command-buffer procs are in
-// nvn_api_cmd.c, the TOTK extension procs in nvn_ext.c.
+// nvn_api_cmd.c, the TotK extension procs in nvn_ext.c.
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -449,7 +449,7 @@ static int prog_set_shaders(prog_t *o, int n, const NVNshaderData *sd) {
         // Raw NVN2 controls have a different compact layout. Only the host's
         // explicitly tagged legacy-shaped controls are copied here.
         if (!ctl || !code || gfx_shader_is_nvn2(ctl) ||
-            memcmp(ctl + NVN_GEOMETRY_CONTROL_OFFSET, "TKGSMETA", 8)) continue;
+            memcmp(ctl + NVN_GEOMETRY_CONTROL_OFFSET, "GHFGMETA", 8)) continue;
         uint32_t length = nvn_geometry_control_u32(ctl + 0x704);
         if (nvn_geometry_control_get(ctl, 0x880, code, length, NULL) != 1) goto fail;
         if (!owned && !(owned = malloc((size_t)n * 0x880))) goto fail;
@@ -662,7 +662,7 @@ NVN_API(nvnWindowBuilderSetTextures) {
     b->ntex = n;
     for (int i = 0; i < n; i++) b->tex[i] = t[i];
 }
-// TOTK sets two active images; the limit bounds what WindowAcquireTexture hands out. No prototype in nvn.h.
+// TotK sets two active images; the limit bounds what WindowAcquireTexture hands out. No prototype in nvn.h.
 NVN_API(nvnWindowBuilderSetNumActiveTextures) {
     int n = (int)arg_x(c, 1);
     if (n < 2 || n > 4) rt_fatal("nvn: unsupported active texture count %d", n);
@@ -723,7 +723,7 @@ NVN_API(nvnWindowSetCrop) {
 // ---------- Present pacing
 // The vsync thread ticks at a fixed 60 Hz whatever the monitor does, so one game frame lasts `interval` ticks. With
 // the real-time frame step (frame_rate.c) game speed does not depend on the interval, so a frame is shown when it is
-// ready, at most at the frame limit (TOTK_FPS_LIMIT: 30 to 360 per second or the monitor's rate): holding it to the
+// ready, at most at the frame limit (GHF_FPS_LIMIT: 30 to 360 per second or the monitor's rate): holding it to the
 // 2nd or 3rd tick would only add latency and 50 ms frames.
 #define VSYNC_HZ 60ull
 static uint64_t present_period(const win_t *o) {

@@ -4,7 +4,7 @@
 Nothing in the build changes; this only writes the three files a desktop session reads:
 
   ~/.local/share/applications/greenhatflute.desktop   from play/greenhatflute.desktop, with the launcher's path
-  ~/.local/share/icons/hicolor/<N>x<N>/apps/greenhatflute.png   the sizes carried in runtime/totk.ico
+  ~/.local/share/icons/hicolor/<N>x<N>/apps/greenhatflute.png   the sizes carried in runtime/greenhatflute.ico
   ~/.local/bin/greenhatflute                          a link to play/run.sh
 
 XDG paths are used, so no root is needed and nothing is written under /usr. The app id the game sets on Wayland
@@ -25,7 +25,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = 'greenhatflute'
-ICO = ROOT / 'runtime' / 'totk.ico'
+ICO = ROOT / 'runtime' / 'greenhatflute.ico'
 DESKTOP = ROOT / 'play' / f'{APP}.desktop'
 LAUNCHER = ROOT / 'play' / 'run.sh'
 
@@ -93,9 +93,9 @@ def main() -> int:
                     p.unlink()
         return 0
 
-    if not (ROOT / 'build' / 'oot111' / 'ocarina').exists():
+    if not (ROOT / 'build' / 'oot111' / 'GreenHatFlute').exists():
         # Not fatal: the entry can be installed before the build, but say so rather than leave a dead icon.
-        print('note: build/oot111/ocarina is not there yet, so the entry will open a launcher that reports a missing '
+        print('note: build/oot111/GreenHatFlute is not there yet, so the entry will open a launcher that reports a missing '
               'build. Run this again after the build, or ignore it if the build goes elsewhere.', file=sys.stderr)
 
     written: list[Path] = []

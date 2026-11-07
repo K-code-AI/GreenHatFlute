@@ -44,7 +44,7 @@ int gfx_shader_resources(const GfxShader *s,int kind,const GfxShaderRes **out) {
 static int enabled,fix_c0,warnings,async_on,translate_fail,translate_pending,translations,awaits,last_stage;
 static GfxShaderAnswers last_answers;
 static const uint8_t *native_code;
-int cfg_bool(const char *name) { return !strcmp(name,"TOTK_NATIVE_GS")?0:!strcmp(name,"TOTK_FIX_C0")?fix_c0:enabled; }
+int cfg_bool(const char *name) { return !strcmp(name,"GHF_NATIVE_GS")?0:!strcmp(name,"GHF_FIX_C0")?fix_c0:enabled; }
 static int c0_on(void) { return fix_c0; }
 static void warn_once(int key,const char *format,...) { (void)key;(void)format;warnings++; }
 uint64_t nvn2_origin(const uint8_t *code) { return code==native_code?17:0; }

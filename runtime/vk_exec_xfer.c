@@ -10,11 +10,11 @@
 //
 // Events and counters are CPU-visible side effects. Their values go into guest memory on the completion thread through
 // vk_completion_add, in submit order, as gfx_null.c does: event WRITE / ADD, counter {0, timestamp} for every type but
-// samples passed. A timestamp report puts 0 in the counter word: TOTK gates its clears on two such words being unequal.
+// samples passed. A timestamp report puts 0 in the counter word: TotK gates its clears on two such words being unequal.
 //
 // Samples passed (NVN_COUNTER_TYPE_SAMPLES_PASSED) is a running count on the queue: RESET_COUNTER zeroes it, every
 // draw after it adds the samples that passed the depth and stencil tests, REPORT_COUNTER writes the running value.
-// TOTK resets and reports it 3 to 8 times a frame in the field and its CPU reads the results back (f_70010c3298); a 0
+// TotK resets and reports it 3 to 8 times a frame in the field and its CPU reads the results back (f_70010c3298); a 0
 // there culls what the query tested. The replay counts with Vulkan occlusion queries ("occlusion counts" below).
 //
 // Conditional rendering is a CPU-side skip, not VK_EXT_conditional_rendering: the extension compares one 32-bit word
@@ -23,7 +23,7 @@
 // as unknown if it is samples passed. An unknown count renders: the report usually sits in the command buffer being
 // recorded, so its value cannot be waited for, and the word in memory still holds an older query's count. Rendering
 // costs at most the work the condition would have saved (MacNativeGames nvn_mtl.m decides the same); in the field
-// TOTK conditions only on timestamp reports. The condition sets VkExec.render_disabled, which vk_exec.c honours for
+// TotK conditions only on timestamp reports. The condition sets VkExec.render_disabled, which vk_exec.c honours for
 // clears and vk_exec_draw.c for draws and dispatches. A condition that cannot be read (address outside every pool)
 // renders.
 // Copies and CLEAR_TEX are not conditional (as in MacNativeGames, nvn_mtl.m).
@@ -100,7 +100,7 @@ static void write_counter(uint64_t addr, uint64_t counter) {
 }
 
 // A timestamp report. On the console the GPU runs a submission as soon as the game submits it and its work takes a few
-// milliseconds; here the replay comes first (up to a frame later with TOTK_REPLAY_ASYNC), and the completion is seen
+// milliseconds; here the replay comes first (up to a frame later with GHF_REPLAY_ASYNC), and the completion is seen
 // later still, so "now" at completion is mostly the replay's delay. Bananza paces itself on (end-of-frame timestamp -
 // CPU frame start): with that delay in it, it measured every frame as longer than 1/60 s and dropped to a longer present
 // interval. For a Switch 2 game the report keeps that existing entry-tick approximation, copied into its callback
@@ -124,7 +124,7 @@ static unsigned pending_head;
 //
 // After a SAMPLES_PASSED reset, the first draw of a pass begins an occlusion query (precise when the device has
 // occlusionQueryPrecise); the query ends with the pass, or at the next report or reset of the counter, and the next
-// draw begins another. A Vulkan query begun inside a render pass must end inside it. TOTK always resets, draws the
+// draw begins another. A Vulkan query begun inside a render pass must end inside it. TotK always resets, draws the
 // tested proxies, reports, so counting stops at a report and restarts at the next reset: queries cover only the draws
 // between the two, not every pass of the frame. Once the game reports twice without a reset in between, counting stays
 // on for good (cumulative NVN semantics; that one report misses the draws since the previous one). The queries closed since the last

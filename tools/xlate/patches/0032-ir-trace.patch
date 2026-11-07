@@ -38,10 +38,10 @@
 +
 +namespace Ryujinx.Graphics.Shader.Translation
 +{
-+    // TOTK_XLATE_IR=<dir>: each shader leaves its decoded blocks and its IR before and after optimization in a file.
++    // GHF_XLATE_IR=<dir>: each shader leaves its decoded blocks and its IR before and after optimization in a file.
 +    static class IrTrace
 +    {
-+        private static readonly string _dir = Environment.GetEnvironmentVariable("TOTK_XLATE_IR");
++        private static readonly string _dir = Environment.GetEnvironmentVariable("GHF_XLATE_IR");
 +        [ThreadStatic] private static StringBuilder _text;
 +
 +        public static void Decoded(int index, DecodedFunction function)

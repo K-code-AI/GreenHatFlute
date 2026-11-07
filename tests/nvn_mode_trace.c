@@ -60,12 +60,12 @@ void rt_log(const char *format,...) {
 void rt_fatal(const char *format,...) {(void)format;abort();}
 void nvn_called(uint8_t *seen,const char *name) {(void)seen;(void)name;__atomic_fetch_add(&normal_calls,1,__ATOMIC_RELAXED);}
 int cfg_bool(const char *name) {
-    if(strcmp(name,"TOTK_NVN2_MODE_TRACE"))abort();__atomic_fetch_add(&config_calls,1,__ATOMIC_RELAXED);return on;
+    if(strcmp(name,"GHF_NVN2_MODE_TRACE"))abort();__atomic_fetch_add(&config_calls,1,__ATOMIC_RELAXED);return on;
 }
 int cfg_int(const char *name) {
     __atomic_fetch_add(&config_int_calls,1,__ATOMIC_RELAXED);
-    if(!strcmp(name,"TOTK_NVN2_MODE_TRACE_START_MS"))return configured_start;
-    if(!strcmp(name,"TOTK_NVN2_MODE_TRACE_DURATION_MS"))return configured_duration;
+    if(!strcmp(name,"GHF_NVN2_MODE_TRACE_START_MS"))return configured_start;
+    if(!strcmp(name,"GHF_NVN2_MODE_TRACE_DURATION_MS"))return configured_duration;
     abort();
 }
 uint64_t plat_now_ns(void) {

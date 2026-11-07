@@ -23,34 +23,37 @@ import geometry_shader_fixture as original
 
 ROOT = Path(__file__).resolve().parents[1]
 NAMES = ('points', 'lines', 'lines_adjacency', 'triangles', 'triangles_adjacency')
-# Captured from the original fixture on unmodified 840ddb5, not game data. The
-# independent hashlib/wire oracle below additionally documents the vector bytes.
+# Our own pinned vectors for the shader cache's hash and wire formats: they are the
+# regression guard, so a change here is deliberate and the values are re-captured on
+# purpose, never to match another project. Not game data. The independent
+# hashlib/wire oracle below additionally documents the vector bytes.
+# (code hash, input id, namespace-4 key, namespace-4 provisional key)
 LEGACY = {
     0: ('6ac9e5e5fb6b7d12c61b1873795ec36dda86092d1bd1ee797a5f963b2a266dea',
-        'bca70f36e6964422738eb8e833da0989d7ec888adeb77257bf7ceb6243ee3a82',
-        'd7889500875d1e84f5383f7519d0f77c9205121361fe7c9506f912c967872150',
-        '7cf55aba4fd55d57cf55a36d791e8a65fe01892893122370ae154bb8fc63b6a1'),
+        '2ab269d553af04c558d2bece1ddea596f2d41f10349fb98351cf3a7e1044ed35',
+        'a0e00ebe91bff4b9cc2265e78bdadcecea2b2a9fadcb56056d0b2549286a270e',
+        '1e641c4a062ec0fac13245c0fcc46513a99e7d60e88791322b8e952fa6fdc304'),
     4: ('6d05e9686ee2f9e93df8c8c084c61d1ef5ab7fda70e088caaa65db87d02c8c74',
-        '8ffc3071b3a58b5bc529475161b73621cb9675ff388fc565744ceba7ca038e4b',
-        'a573e40c24c25fe0fed26380732074d23c90a02d30c5809ef44b476e7795c71e',
-        '9a1452bf3b5e266fe454de31b26785c2f535c7b6382440212d3898b0a3f87e57'),
+        'b5ea2e600dcfa8234b4bb06e8a20401f7a3c76a208f411eed6fae32a4d9a5532',
+        '162b45870c0164578c315d292b54f7534202e8a5275328e74adcf3846a84bbf8',
+        '19f2a2dc0c113da5e1463a9e6832577d04a9536efb4b7ca1ccc947f2a422cee6'),
     5: ('2faf37fb1a25c83c42263672b9d291a9b7be38ff4a4b68613127114884475d32',
-        'bafb52d408a21ff8c3c511e42f7821b8a87e62fc45c42f71756ea04cb0e5880e',
-        '60808388abce834ba51f32ef2410f701ef7bf645ef9a30ae65cafbecbcd0744b',
-        'fbdd5e4d02c39f59572de9113890534a98eaec3392889255725be9a8354e4a19'),
+        '67465cf6f3ae06f9e5e7c1d79f4c92d8ec3d0e92061448fe0cd85a82b6984d77',
+        'affd53c2df483bc42cf93644316bd2d7957805746756b882288c87fb225afb27',
+        '32850046cbe451acf4d0ba9d5a82cba70ce2a5ebc8e3a4e1ae05e4a4bea8b67a'),
 }
 
-# Upstream #42 intentionally moved output keys to namespace 5 for guarded storage.
-# Code hashes, input IDs and answer bytes above stay fixed. These namespace-5
-# keys are independently derived from the documented TKSK/TKSP wire protocol;
-# both upstream-only baselines are checked, rather than accepting arbitrary new versions.
+# KEY_VERSION 5 moved output keys to the guarded storage binding contract. Code
+# hashes, input IDs and answer bytes above stay fixed across that move; these are
+# the namespace-5 keys, derived from the documented GHFK/GHFP wire protocol. Both
+# namespaces are checked, so a new KEY_VERSION fails until it is written down here.
 LEGACY_KEYS_V5 = {
-    0: ('ab75ed28a9981e15679a0f640b47e917418e286177fa2ce09603f4a4f19d6db6',
-        '48ec83659d4de92333074197855defc49dcf0535fbbbbb35c6424924b6c70ddf'),
-    4: ('f497e7660d9376c1ad2782d78acbe37de2c84820effc838040831092c1be52c1',
-        'daa682de03417f197c87a4d773fa14a54e89de31bae827756799eae15d4fa61f'),
-    5: ('15ca93b36c99c0af313d54bdfa5fc4c9fa4710b22c933f6a4b700e651c899918',
-        '66529ec9f94c50e509e0fcd6a4dd2ce81c2565476c9d0ca5d42cf0fb86f5cefe'),
+    0: ('4a831997e4f4fdadb2d5f030f4a10e981f68b7a65380d43d00b025f6b047306a',
+        'f9c9ba09e6db2fcca1fdc5c08e27d9914a9bbc4f7a29f4ee52cc1b5b2f05aaba'),
+    4: ('7437044de8c4bfcc0e0899bba65bd58d267c3a1dc88950f558ce0df3bc1c77fe',
+        '5cac4993c5f1437153d6d8b45d6e66debdb77be14765d553c0e6550f71536158'),
+    5: ('df373286c8c88e17661bf1d688afb3973b9a76185f9c1655a3c419eb7b621666',
+        '4ab45835ddeed14aa81b518dec407f53a7af646c05a1b6d41b84af31dec0842d'),
 }
 
 
@@ -166,13 +169,13 @@ class GeometryCache(unittest.TestCase):
             with self.subTest(stage=stage):
                 result = self.identity(stage)
                 version = result['key_version']
-                self.assertIn(version, (4, 5), 'an upstream namespace change needs explicit new golden vectors')
+                self.assertIn(version, (4, 5), 'a key namespace change needs explicit new golden vectors')
                 data = struct.pack('<I', stage) + self.control.read_bytes() + struct.pack('<Q', 64) + self.code.read_bytes()
                 data += struct.pack('<I', 8) + bytes.fromhex('123456789abcdef0')
                 code_hash = hashlib.sha256(data).digest()
-                iid = hashlib.sha256(b'TKSI' + struct.pack('<I', 1) + code_hash + masked).digest()
-                key = hashlib.sha256(b'TKSK' + struct.pack('<I', version) + bytes(range(0x80, 0xa0)) + iid).hexdigest()
-                provisional = hashlib.sha256(b'TKSP' + struct.pack('<I', version) + bytes(range(0x80, 0xa0)) + code_hash + answers).hexdigest()
+                iid = hashlib.sha256(b'GHFI' + struct.pack('<I', 1) + code_hash + masked).digest()
+                key = hashlib.sha256(b'GHFK' + struct.pack('<I', version) + bytes(range(0x80, 0xa0)) + iid).hexdigest()
+                provisional = hashlib.sha256(b'GHFP' + struct.pack('<I', version) + bytes(range(0x80, 0xa0)) + code_hash + answers).hexdigest()
                 self.assertEqual(result['answers'], answers.hex())
                 self.assertEqual((result['hash'], result['iid'], result['key'], result['provisional']),
                                  (code_hash.hex(), iid.hex(), key, provisional))
@@ -461,7 +464,7 @@ class GeometryCache(unittest.TestCase):
                 data = path.read_bytes()
                 header = struct.unpack_from('<6I', data)
                 expected_size = 148 if stage == 3 else 152
-                self.assertEqual(header[:3], (0x49534b54, 2 if stage == 3 else 1, stage))
+                self.assertEqual(header[:3], (0x49464847, 2 if stage == 3 else 1, stage))
                 self.assertEqual(header[5], expected_size)
                 start = 24 + expected_size
                 self.assertEqual(data[start:start + 0x880], control.read_bytes())
@@ -497,7 +500,7 @@ class GeometryCache(unittest.TestCase):
                 self.assertFalse(self.run_fixture('load-input', written['iid'], cache=cache)['accepted'])
         code, control = self.request_packet(3)
         wire = bytes.fromhex(self.identity(0)['answers'])
-        data = (struct.pack('<6I', 0x49534b54, 2, 3, len(code.read_bytes()), 8, 148) + wire + b'\x01' +
+        data = (struct.pack('<6I', 0x49464847, 2, 3, len(code.read_bytes()), 8, 148) + wire + b'\x01' +
                 control.read_bytes() + code.read_bytes() + bytes.fromhex('123456789abcdef0'))
         iid = hashlib.sha256(b'original v2 stored-input control').hexdigest()
         for name, selector in (('valid', 1), ('absent', 0), ('unknown', 6)):
@@ -517,7 +520,7 @@ class GeometryCache(unittest.TestCase):
             if version == 2:
                 body.append(selector)
             body.append(priority)
-        return struct.pack('<8sII', b'TOTKSANS', version, 216 if version == 1 else 217) + body
+        return struct.pack('<8sII', b'GHF_SANS', version, 216 if version == 1 else 217) + body
 
     def test_answer_v1_v2_read_only_and_atomic_migration_preserve_priorities(self):
         legacy_records = [(0, 0, 2, 'a'), (4, 0, 1, 'b'), (5, 0, 0, 'c')]
@@ -561,7 +564,7 @@ class GeometryCache(unittest.TestCase):
                                              (5, 0, 0, 'retained-c')])
         path.write_bytes(original_file)
         program_path = cache / 'shader-programs.bin'
-        original_programs = struct.pack('<8sII', b'TOTKSPRG', 1, 0)
+        original_programs = struct.pack('<8sII', b'GHF_SPRG', 1, 0)
         program_path.write_bytes(original_programs)
         code, control = self.request_packet(0)
         result = self.run_fixture('record-atomic-failure', 0, 0, code, control, cache=cache)
@@ -576,7 +579,7 @@ class GeometryCache(unittest.TestCase):
             data = path.read_bytes()
             self.assertEqual(data[:len(original_file)], original_file)
             self.assertEqual(len(data), len(original_file) + 216)
-            self.assertEqual(struct.unpack_from('<8sII', data), (b'TOTKSANS', 1, 216))
+            self.assertEqual(struct.unpack_from('<8sII', data), (b'GHF_SANS', 1, 216))
         else:
             self.assertEqual(result['record_version'], 2)
             self.assertEqual((result['migration_attempts'], result['injected_failures'], result['recording']), (1, 1, 0))
@@ -605,7 +608,7 @@ class GeometryCache(unittest.TestCase):
                     expected.append(dict(iid=added['iid'], stage=stage, priority=1 + (2 - i) % 3))
                 programs = (cache / 'shader-programs.bin').read_bytes()
                 (cache / 'seed-programs.bin').write_bytes(programs)
-                (cache / 'seed-answers.bin').write_bytes(struct.pack('<8sII', b'TOTKSANS', version, 216 if version == 1 else 217) + b''.join(records))
+                (cache / 'seed-answers.bin').write_bytes(struct.pack('<8sII', b'GHF_SANS', version, 216 if version == 1 else 217) + b''.join(records))
                 # Warm-list ordering starts with met-in-play records; remove this
                 # fixture-created copy to observe prepared priorities independently.
                 (cache / 'shader-answers.bin').unlink()

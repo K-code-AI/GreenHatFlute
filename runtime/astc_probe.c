@@ -4,7 +4,7 @@
 // weight grid and quantization the random modes reach), then plain random blocks (mostly error blocks, HDR endpoint
 // modes among them). Each case decodes two regions into two mip levels of an RGBA8 image with cropped edges, and
 // compares both the decoder's texels (readback) and what the image holds afterwards. The same regions also go through
-// the BC3 encoder (TOTK_ASTC_BC) into a BC3 image, whose blocks are decoded here and held to error bounds (bc_check).
+// the BC3 encoder (GHF_ASTC_BC) into a BC3 image, whose blocks are decoded here and held to error bounds (bc_check).
 // Also times one 2048x2048 texture on the CPU (astc_decode_ldr_mt) and on the GPU (wall time of the upload batch).
 #include <math.h>
 #include <stdio.h>
@@ -151,7 +151,7 @@ static int gpu_decode(VkCtx *c, const uint8_t *blk, size_t n0, size_t n1, uint32
     return ok;
 }
 
-// The same two regions decoded and encoded to BC3 (TOTK_ASTC_BC) into a BC3 image; out: its blocks read back, level 0
+// The same two regions decoded and encoded to BC3 (GHF_ASTC_BC) into a BC3 image; out: its blocks read back, level 0
 // then level 1, rows of 4x4 blocks. 0 on a Vulkan failure or when nothing was recorded.
 static int gpu_bc(VkCtx *c, const uint8_t *blk, size_t n0, size_t n1, uint32_t w0, uint32_t h0, uint32_t w1, uint32_t h1,
                   uint32_t bw, uint32_t bh, int srgb, uint8_t *out) {
@@ -327,7 +327,7 @@ static int test_case(VkCtx *c, uint32_t bw, uint32_t bh, int srgb) {
 }
 
 // One 2048 x 2048 texture of valid blocks: the CPU worker-pool decode against the GPU time of the dispatches alone
-// (vk_astc.c timestamps, TOTK_ASTC_TIME) and the wall time of the upload batch.
+// (vk_astc.c timestamps, GHF_ASTC_TIME) and the wall time of the upload batch.
 static void timing(VkCtx *c, uint32_t bw, uint32_t bh) {
     uint32_t w = 2048, h = 2048;
     size_t n = (size_t)((w + bw - 1) / bw) * ((h + bh - 1) / bh);
@@ -355,14 +355,14 @@ static void timing(VkCtx *c, uint32_t bw, uint32_t bh) {
 }
 
 int probe_astc(void) {
-    plat_setenv("TOTK_ASTC_BC", "1");   // also builds the BC3 encoder; the RGBA8 cases pass bc 0 and do not use it
+    plat_setenv("GHF_ASTC_BC", "1");   // also builds the BC3 encoder; the RGBA8 cases pass bc 0 and do not use it
     if (!vk_init()) { printf("probe-astc: FAIL vk_init\n"); return 1; }
     VkCtx *c = vk_ctx();
     printf("probe-astc: GPU %s, textureCompressionASTC_LDR %d, mode %d\n", c->props.deviceName, c->has_astc_ldr,
            vk_astc_mode());
     int bad = 0;
     if (!vk_astc_gpu()) {
-        printf("probe-astc: FAIL the compute decoder is not available (TOTK_ASTC=cpu or pipeline creation failed)\n");
+        printf("probe-astc: FAIL the compute decoder is not available (GHF_ASTC=cpu or pipeline creation failed)\n");
         bad = 1;
     }
     for (int i = 0; i < 14 && !bad; i++)

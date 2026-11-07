@@ -132,7 +132,7 @@ class PortablePreparation(unittest.TestCase):
         self.assertEqual((word0 & 31, word0 >> 5 & 31, word0 >> 10 & 15, word0 >> 24 & 1), (1, 3, 4, 1))
         self.assertEqual((word2 >> 24, word3 >> 24 & 15, word4 & 0xfff), (1, 7, 1))
         self.assertEqual(struct.unpack('<8I', (self.folder / 'portable-stage2.mask').read_bytes()), SKIP)
-        self.assertEqual(control[0x800:0x808], b'TKGSMETA')
+        self.assertEqual(control[0x800:0x808], b'GHFGMETA')
         self.assertEqual(struct.unpack_from('<8I', control, 0x818), SKIP)
         words = struct.unpack('<' + 'Q' * ((len(code) - 80) // 8), code[80:])
         self.assertTrue(all(w == original.SCHED for w in words[::4]))

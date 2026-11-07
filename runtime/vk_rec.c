@@ -140,7 +140,7 @@ void rec_begin(VkCommandBuffer cb) {
                 mode = 0;
             } else {
                 rt_log("vk_rec: the replay's Vulkan commands are made by a recorder thread%s",
-                       mode == 2 ? " in the B blocks (TOTK_AB)" : "");
+                       mode == 2 ? " in the B blocks (GHF_AB)" : "");
             }
         }
     }
@@ -157,17 +157,17 @@ void rec_end(void) {
     rec_live = 0;
 }
 
-// TOTK_REC_END (default 1): the thread that recorded the part also ends it, after the breadcrumb crumb (kind 0: none)
+// GHF_REC_END (default 1): the thread that recorded the part also ends it, after the breadcrumb crumb (kind 0: none)
 // that vk_sync.c writes at the end of a submission. On an RX 6700 XT (driver 26.10.1, issue #5) parts the recorder
 // recorded and the submitting thread ended broke when a submission was split (vk_sync.c vk_sync_split): the GPU hung
 // or the scene turned green, then white. The handoff in rec_drain orders the two threads, so Vulkan allows the old
-// split; the driver did not cope with it. TOTK_REC_END=0 brings the old split back.
+// split; the driver did not cope with it. GHF_REC_END=0 brings the old split back.
 typedef struct { int kind; uint64_t n; } A_EndCb;
 int rec_end_cb(VkCommandBuffer cb, int crumb, uint64_t n) {
     static int mode = -1;
     if (mode < 0) {
         mode = rt_knob("REC_END", "1");
-        rt_log("vk_rec: a part the recorder records is ended by %s (TOTK_REC_END=%d)",
+        rt_log("vk_rec: a part the recorder records is ended by %s (GHF_REC_END=%d)",
                mode ? "the recorder" : "the submitting thread", mode);
     }
     if (!rec_live || cb != rec_cb || !mode) {

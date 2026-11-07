@@ -144,8 +144,8 @@ void vk_exec_xfer_shutdown(void);
 int probe_vkpool(void) {
     const GfxBackend *backend = &gfx_vulkan_backend;
     checks = failures = 0;
-    if (gfx_backend() != backend || !cfg_bool("TOTK_FIX_C0")) {
-        printf("probe-vkpool: requires TOTK_GPU=vulkan and TOTK_FIX_C0=1\n");
+    if (gfx_backend() != backend || !cfg_bool("GHF_FIX_C0")) {
+        printf("probe-vkpool: requires GHF_GPU=vulkan and GHF_FIX_C0=1\n");
         return 1;
     }
     uint64_t heap = 0;

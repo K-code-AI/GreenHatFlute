@@ -1,7 +1,7 @@
 // Offline check of the NVN 2 shader path over a DKB_SHADER_DUMP folder (<hash>.ctl control, <hash>.bin code): every
 // stage goes through runtime/nvn2_lower.cpp exactly as nvnProgramSetShaders sends it. Prints how many lower. With an
 // output folder it also writes each lowered stage as TotK Recomp's translator takes it (what gfx_shader.c writes:
-// graphics from +0x30, compute whole) and <out>/jobs.json for `totk_xlate <jobs.json> <outdir>`.
+// graphics from +0x30, compute whole) and <out>/jobs.json for `greenhatflute_xlate <jobs.json> <outdir>`.
 //
 //   clang++ -std=c++20 -O1 -I runtime/third_party/eglantine tools/dkb_lower_test.cpp -o build/dkb_lower_test.exe
 //   build/dkb_lower_test.exe <dump folder> [out folder]

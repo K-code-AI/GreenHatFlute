@@ -10,9 +10,9 @@
 // Back-edge pacing: the present thread submits the blit at once, then holds the host present (vkQueuePresentKHR) until
 // the frame's display time from the pacer (nvn_api_obj.c), so present-to-present intervals stay even whatever the
 // replay took. The blit is already on the queue, so the wait blocks no submission, but the next present waits behind
-// it (TOTK_PRESENT_HOLD, off for Bananza: present_hold).
+// it (GHF_PRESENT_HOLD, off for Bananza: present_hold).
 //
-// Asynchronous replay (TOTK_REPLAY_ASYNC, default 0; 1 turns it on): nvnQueueSubmitCommands
+// Asynchronous replay (GHF_REPLAY_ASYNC, default 0; 1 turns it on): nvnQueueSubmitCommands
 // and nvnQueuePresentTexture only queue. Each item gets its timeline value at enqueue (vk_sync_reserve), in queue
 // order; the replay thread runs the synchronous submit and present bodies in that order, so every value is signalled
 // by the submission it was handed out for. The game runs at most one frame ahead: queueing present N waits until the
@@ -47,7 +47,7 @@ static void wait_until(uint64_t at) {
     while (kern_now_ns() < at) plat_yield();
 }
 
-// TOTK_PRESENT_HOLD: 1 holds the host present until the pacer's display time (back-edge pacing), 0 sends it once the
+// GHF_PRESENT_HOLD: 1 holds the host present until the pacer's display time (back-edge pacing), 0 sends it once the
 // blit is submitted and leaves the pacing to nvnWindowAcquireTexture alone. Unset: 1 for TotK, 0 for Bananza. While
 // this thread holds frame N, the present of frame N+1 stays queued and every vk_present_drain waits for it. Bananza's
 // job workers drain on their reads of GPU-written storage (vk_be_guest_read), so the wait for the display landed in
@@ -57,9 +57,9 @@ static void wait_until(uint64_t at) {
 static int present_hold(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("TOTK_PRESENT_HOLD");
+        const char *e = cfg_get("GHF_PRESENT_HOLD");
         on = e && *e ? strcmp(e, "0") != 0 : rt_game_version != 0;   // 0: Bananza
-        rt_log("vk: the host present %s (TOTK_PRESENT_HOLD=%d)",
+        rt_log("vk: the host present %s (GHF_PRESENT_HOLD=%d)",
                on ? "waits for the pacer's display time" : "goes out once its blit is submitted", on);
     }
     return on;
@@ -90,7 +90,7 @@ static void present_main(void *arg) {
         if (present_hold()) wait_until(j.at);
         uint64_t t1 = kern_now_ns();
         vk_present_flip();
-        // TOTK_TRACE=present: one line per present: the host present's interval, the interval of the game's present
+        // GHF_TRACE=present: one line per present: the host present's interval, the interval of the game's present
         // calls (when the host present went out before back-edge pacing), the wait and how far past its target it went
         if (rt_trace & RT_TRACE_PRESENT)
             rt_log("present: frame %llu interval %.3f ms, game %.3f ms, waited %.3f ms, %.3f ms past target",
@@ -177,15 +177,15 @@ static uint64_t r_presents_queued, r_presents_done, r_submit_done, game_frames;
 static uint64_t r_items_queued, r_items_done;   // every item, for replay_drain
 // Under rl: calls, calls that waited and the time waited per cause, since the last replay_log line and over the run.
 static uint64_t dr_calls[DR_N], dr_waits[DR_N], dr_ns[DR_N], dr_tcalls[DR_N], dr_twaits[DR_N], dr_tns[DR_N];
-// TOTK_REPLAY_CHECK: ReadTexels compared with a read after a full drain (under rl): checked, differing, differing
+// GHF_REPLAY_CHECK: ReadTexels compared with a read after a full drain (under rl): checked, differing, differing
 // although no submission recorded a write to the texture in between, differing with the queue idle at the first read.
 static uint64_t ck_reads, ck_diff, ck_diff_unexplained, ck_diff_idle;
 
 int vk_replay_async(void) {
     static int on = -1;
     if (on < 0) {
-        on = cfg_bool("TOTK_REPLAY_ASYNC");   // off by default: no measured gain yet, one more frame of latency
-        rt_log("vk: replay %s (TOTK_REPLAY_ASYNC=%d)",
+        on = cfg_bool("GHF_REPLAY_ASYNC");   // off by default: no measured gain yet, one more frame of latency
+        rt_log("vk: replay %s (GHF_REPLAY_ASYNC=%d)",
                on ? "on its own thread, at most one frame behind the game" : "on the submitting thread", on);
     }
     return on;
@@ -425,9 +425,9 @@ static void vk_be_finish(void) { vk_sync_start(); replay_drain(DR_FINISH); vk_pr
 static int replay_check(void) {
     static int on = -1;
     if (on < 0) {
-        const char *e = cfg_get("TOTK_REPLAY_CHECK");
+        const char *e = cfg_get("GHF_REPLAY_CHECK");
         on = e && strcmp(e, "0");
-        if (on) rt_log("vk: TOTK_REPLAY_CHECK: every ReadTexels is read again after a full replay drain and compared");
+        if (on) rt_log("vk: GHF_REPLAY_CHECK: every ReadTexels is read again after a full replay drain and compared");
     }
     return on;
 }
@@ -436,7 +436,7 @@ static int replay_check(void) {
 // completed), not for the whole queue. The readback copy goes through the upload batch on the same queue, after every
 // submission the replay has submitted. Submissions still queued or being recorded run after the copy, as on hardware
 // when the GPU has not reached them yet: the game only sees their texels after waiting on a sync, and every sync
-// value covers replay and GPU, so a read the game synchronised sees them. TOTK_REPLAY_CHECK compares with a full drain.
+// value covers replay and GPU, so a read the game synchronised sees them. GHF_REPLAY_CHECK compares with a full drain.
 static void vk_be_read_texels(const tex_t *t, const view_t *v, const NVNcopyRegion *r, uint8_t *dst, uint64_t row,
                               uint64_t img) {
     vk_sync_start();
@@ -503,8 +503,8 @@ static void vk_be_guest_written(uint64_t addr, uint64_t size) { vk_sync_start();
 // A Switch 2 game's small read of a target the GPU is still rendering does not wait on the console: the CPU sees what is
 // in memory, and the GPU's write lands when it gets there. Bananza invalidates 128 bytes of a pool every frame, and
 // waiting here held it for the replay and GPU work of the whole frame, about 15 ms of every frame. The write-back goes to the replay thread instead, queued after the submissions the
-// read would have waited for. This is opt-in with TOTK_NX2_READ_NOWAIT=1: a deferred copy can overwrite a later CPU
-// write after invalidate returned. The default keeps the synchronous read-back even with TOTK_REPLAY_ASYNC=1.
+// read would have waited for. This is opt-in with GHF_NX2_READ_NOWAIT=1: a deferred copy can overwrite a later CPU
+// write after invalidate returned. The default keeps the synchronous read-back even with GHF_REPLAY_ASYNC=1.
 #define NOWAIT_MAX 4096
 #define NOWAIT_SEEN 8
 
@@ -547,7 +547,7 @@ static int read_nowait(uint64_t addr, uint64_t size, uint64_t f) {
     static int on = -1;
     int enabled = __atomic_load_n(&on, __ATOMIC_ACQUIRE);
     if (enabled < 0) {
-        enabled = !rt_game_version && cfg_bool("TOTK_NX2_READ_NOWAIT");
+        enabled = !rt_game_version && cfg_bool("GHF_NX2_READ_NOWAIT");
         __atomic_store_n(&on, enabled, __ATOMIC_RELEASE);
     }
     if (!enabled || size > NOWAIT_MAX) return 0;

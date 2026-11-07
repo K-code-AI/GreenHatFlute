@@ -6,7 +6,7 @@ in a newly claimed capture-<process>-<sequence> directory there.
 The packet contains game-derived shader code/constants: keep all of it local.
 
   python tools/replay_shader_failure.py build/failures/<capture>/<key>.request.json \
-      --translator build/xlate/totk_xlate.exe --out build/failure-replay
+      --translator build/xlate/greenhatflute_xlate.exe --out build/failure-replay
 
 Reuses every recorded job option, rebinding only its code path and output folder.
 Sets DMSH_STACK=1 in the child and saves its reply and stderr (including any stack)

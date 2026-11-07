@@ -35,7 +35,7 @@ FITS(queue_builder_t, NVNqueueBuilder);
 typedef struct { uint32_t magic; NVNdevice *dev; uint64_t submits; } queue_t;                 FITS(queue_t, NVNqueue);
 
 typedef struct { NVNdevice *dev; void *mem; uint64_t size; uint32_t flags; } pool_builder_t;  FITS(pool_builder_t, NVNmemoryPoolBuilder);
-// game_mem/host/span: TOTK host-owned VM storage for physical/virtual pools (totk_vpool.c); host is NULL for game-backed pools.
+// game_mem/host/span: TotK host-owned VM storage for physical/virtual pools (totk_vpool.c); host is NULL for game-backed pools.
 typedef struct { uint32_t magic, flags; uint8_t *mem; uint64_t size; uint8_t *game_mem, *host; uint64_t span; } pool_t; FITS(pool_t, NVNmemoryPool);
 
 typedef struct { const pool_t *pool; int64_t off; int32_t n; } dpool_t;                       // Texture / sampler descriptor pool
@@ -60,28 +60,28 @@ static inline int nvn_dpool_snapshot(const dpool_t *p, uint32_t limit, dpool_ref
 typedef struct {
     NVNdevice *dev; nvn_texdesc d; pool_t *pool; int64_t off;
     uint8_t has_layout, layout[8];
-    const void *pkg_data;                // TOTK: SetPackagedTextureData source, copied into storage at Initialize
+    const void *pkg_data;                // TotK: SetPackagedTextureData source, copied into storage at Initialize
 } tex_builder_t;                                                                             FITS(tex_builder_t, NVNtextureBuilder);
 typedef struct {
     uint32_t magic; nvn_texdesc d; uint8_t has_layout, layout[8];
     nvn_texlayout L; uint8_t *mem; pool_t *pool; int64_t off;
     uint64_t serial;                     // Initialization serial: the back end uses it to find its texture in the host table (the game may copy the object by value, so object pointers cannot be stored)
 } tex_t;                                                                                     FITS(tex_t, NVNtexture);
-// TOTK: the game reserves 16 bytes for NVNtextureView on its stack (main+0x823398 SetDefaults at sp+0x30, its own
+// TotK: the game reserves 16 bytes for NVNtextureView on its stack (main+0x823398 SetDefaults at sp+0x30, its own
 // data at sp+0x40), so the view is packed into 16 bytes. swz = NVN view swizzle selectors. dsmode:
 // NVNtextureDepthStencilMode (nxnative nvn_obj.h:42 packs it the same way).
 typedef struct {
     uint8_t set_levels : 1, set_layers : 1, set_format : 1, set_target : 1, set_swizzle : 1, set_dsmode : 1, dsmode : 2;
     uint8_t base_level, nlevels, target; uint16_t min_layer, nlayers; uint16_t format; uint8_t swz[4]; uint8_t pad1[2];
 } view_t;
-_Static_assert(sizeof(view_t) == 16, "NVNtextureView is 16 bytes in TOTK's NVN");
+_Static_assert(sizeof(view_t) == 16, "NVNtextureView is 16 bytes in TotK's NVN");
 FITS(view_t, NVNtextureView);
 
 // Sampler parameters (one copy shared by builder and object)
-typedef struct { uint8_t minf, magf, ws, wt, wr, cmp_mode, cmp_func, reduction; float lod_min, lod_max, lod_bias, aniso, border[4], lod_snap; } samp_par;   // TOTK: lod_snap stored for queries (Metal has no equivalent)   // Enum values are all < 256
+typedef struct { uint8_t minf, magf, ws, wt, wr, cmp_mode, cmp_func, reduction; float lod_min, lod_max, lod_bias, aniso, border[4], lod_snap; } samp_par;   // TotK: lod_snap stored for queries (Metal has no equivalent)   // Enum values are all < 256
 typedef struct { NVNdevice *dev; samp_par p; } samp_builder_t;                                FITS(samp_builder_t, NVNsamplerBuilder);
 typedef struct { uint32_t magic; samp_par p; } samp_t;                                        FITS(samp_t, NVNsampler);
-_Static_assert(sizeof(samp_par) == 44, "TOTK sampler parameters");
+_Static_assert(sizeof(samp_par) == 44, "TotK sampler parameters");
 
 typedef struct {
     uint32_t magic, nstage;
@@ -107,18 +107,18 @@ typedef struct {
     uint8_t *cur;
     uint64_t guest_flags;                // +0x10: NVN 55 inline code writes the dirty flag here
     uint8_t *end;
-    // TOTK: NVN 55 headers inline fast paths that read the command write pointer at +0x20 and its end at +0x28
+    // TotK: NVN 55 headers inline fast paths that read the command write pointer at +0x20 and its end at +0x28
     // (main+0x70644c) and, when 0x30 bytes fit, emit raw GPU methods themselves. ~0 / 0 never fit, so every
     // call takes the API path (the *Deferred entry points).
     uint64_t inline_cur, inline_end;
     PFNNVNCOMMANDBUFFERMEMORYCALLBACKPROC cb; void *cb_data;
     NVNdevice *dev;
-    uint8_t *seg;                        // TOTK: start of the host recording buffer (records never go into game memory)
-    void *ctl; size_t ctl_size;          // TOTK: control memory given by the game; recording copies live as long as it
-    size_t game_size;                    // TOTK: command memory the game added (accounting only; not used for storage)
-    uintptr_t cmd_base;                  // TOTK: pool storage address + offset of the command memory the game added
+    uint8_t *seg;                        // TotK: start of the host recording buffer (records never go into game memory)
+    void *ctl; size_t ctl_size;          // TotK: control memory given by the game; recording copies live as long as it
+    size_t game_size;                    // TotK: command memory the game added (accounting only; not used for storage)
+    uintptr_t cmd_base;                  // TotK: pool storage address + offset of the command memory the game added
     size_t cmd_used, ctl_used, rec_start;   // rec_start: cmd_used when the current recording began
-    size_t hw_used, last_rec, hw_start;            // TOTK: command memory the real NVN driver would have consumed (what GetCommandMemoryUsed reports; the game sizes resource heaps from it), size of the last record           // TOTK: usage reported to the game since the memory was added (main+0x711e4c submits only non-empty buffers)
+    size_t hw_used, last_rec, hw_start;            // TotK: command memory the real NVN driver would have consumed (what GetCommandMemoryUsed reports; the game sizes resource heaps from it), size of the last record           // TotK: usage reported to the game since the memory was added (main+0x711e4c submits only non-empty buffers)
 } cmd_t;                                                                                     FITS(cmd_t, NVNcommandBuffer);
 _Static_assert(__builtin_offsetof(cmd_t, guest_flags) == 0x10, "NVN inline dirty flag");
 _Static_assert(__builtin_offsetof(cmd_t, inline_cur) == 0x20 && __builtin_offsetof(cmd_t, inline_end) == 0x28, "NVN inline fast-path fields");
@@ -155,8 +155,8 @@ typedef struct { int32_t index, mask; float rgba[4]; } p_clear_color;
 typedef struct { float depth; int32_t depth_mask, stencil, stencil_mask; } p_clear_ds;
 typedef struct { int32_t first, n; float v[16][6]; } p_viewports;          // x, y, w, h, near, far (near and far are overridden by DEPTH_RANGE)
 typedef struct { int32_t x, y, w, h; } p_scissor;
-typedef struct { int32_t value; } p_flag;   // TOTK: single boolean render state (OP_DEPTH_CLAMP)
-typedef struct { int32_t mode; int32_t pad; uint64_t addr; } p_render_cond;   // TOTK: SetRenderEnableConditional: mode 0 = render if the two NVNcounterData.counter values at addr / addr+16 are equal, 1 = if not equal
+typedef struct { int32_t value; } p_flag;   // TotK: single boolean render state (OP_DEPTH_CLAMP)
+typedef struct { int32_t mode; int32_t pad; uint64_t addr; } p_render_cond;   // TotK: SetRenderEnableConditional: mode 0 = render if the two NVNcounterData.counter values at addr / addr+16 are equal, 1 = if not equal
 typedef struct { int32_t enable; uint32_t index; } p_prim_restart;   // SetPrimitiveRestart: indexed strips restart at index
 typedef struct { float n, f; } p_depth_range;
 typedef struct { const prog_t *prog; int32_t stages; } p_bind_program;
@@ -171,7 +171,7 @@ typedef struct { int32_t face, value_mask, mask, ref, which; } p_stencil;  // wh
 typedef struct { float factor, units, clamp; } p_poly_offset;
 typedef struct { uint64_t ind; } p_draw_mesh_ind;
 typedef struct { uint32_t first, count; } p_draw_mesh;
-typedef struct { int32_t prim, first, count, base_instance, instances; } p_draw;   // TOTK: instances 0 = one instance (DrawArrays)
+typedef struct { int32_t prim, first, count, base_instance, instances; } p_draw;   // TotK: instances 0 = one instance (DrawArrays)
 typedef struct { int32_t prim, itype, count, base_vertex, base_instance, instances; uint64_t ibuf; } p_draw_idx;
 typedef struct { int32_t x, y, z; uint64_t caller; } p_dispatch;   // caller: return address of the game call site (to locate the dispatcher)
 typedef struct { dpool_ref pool; } p_set_pool;

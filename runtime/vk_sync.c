@@ -49,7 +49,7 @@ static int stop;
 static Pending *queue;            // side effects in the order they were added
 static int qhead, qn, qcap;
 
-// ---- GPU time (TOTK_TRACE=perf): each submission part (vk_sync_split) writes a timestamp when it starts and when it
+// ---- GPU time (GHF_TRACE=perf): each submission part (vk_sync_split) writes a timestamp when it starts and when it
 // ends, into a ring of query pairs. The completion thread reads a pair once the part's value is reached and adds the
 // part's interval to the busy time, counting overlap with the previous part once. Off (one log line) when the queue
 // family has no timestamp bits or the period is 0. Upload batches (vk_memory.c) are not timed.
@@ -64,7 +64,7 @@ static int ts_cur = -1;                    // the pair of the part being recorde
 static uint64_t ts_last_end;               // completion thread: end of the latest part read (ticks)
 static volatile int64_t ts_busy_ns, ts_parts, ts_missed;
 
-// On the first submission that wants timing (perf_gpu_timing: TOTK_TRACE=perf or the full performance overlay).
+// On the first submission that wants timing (perf_gpu_timing: GHF_TRACE=perf or the full performance overlay).
 static void ts_setup(VkCtx *c) {
     ts_state = -1;
     uint32_t nq = 0;
@@ -92,7 +92,7 @@ static void ts_setup(VkCtx *c) {
 }
 
 // What the replay part being timed draws and dispatches (vk_sync_note), kept with its pair: a part that runs on the GPU
-// for at least TOTK_PERF_SLOW_GPU_MS (default 100) gets a line naming its work, at most 200 lines. A respawn in the
+// for at least GHF_PERF_SLOW_GPU_MS (default 100) gets a line naming its work, at most 200 lines. A respawn in the
 // Ingot Isle Cave-In section (#10) spent about 16.8 s of GPU time per frame inside the replay's parts.
 #define NOTE_PAIRS 6
 #define NOTE_ARGS 65536   // indirect argument addresses and storage writes kept per part
@@ -147,7 +147,7 @@ static void slow_part(const TsRead *t, double ms) {
     static double slow_ms = -1;
     static int lines;
     if (slow_ms < 0) {
-        const char *e = cfg_get("TOTK_PERF_SLOW_GPU_MS");
+        const char *e = cfg_get("GHF_PERF_SLOW_GPU_MS");
         slow_ms = e && atof(e) > 0 ? atof(e) : 100;
     }
     if (!t->noted || ms < slow_ms || lines >= 200) return;
@@ -331,7 +331,7 @@ void vk_sync_start(void) {
     if (__atomic_load_n(&started, __ATOMIC_ACQUIRE)) return;
     plat_mutex_lock(&start_lock);
     if (!started) {
-        if (!vk_init()) rt_fatal("vk: no usable Vulkan device (see the vk: lines above; TOTK_GPU=null runs without a GPU)");
+        if (!vk_init()) rt_fatal("vk: no usable Vulkan device (see the vk: lines above; GHF_GPU=null runs without a GPU)");
         VkCtx *c = vk_ctx();
         VkCommandPoolCreateInfo pi = {.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                                       .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
@@ -356,7 +356,7 @@ void vk_sync_start(void) {
         completion_thread = plat_thread_new(completion_main, c, "vk completion");
         if (!completion_thread) rt_fatal("vk: cannot start the completion thread");
         __atomic_store_n(&started, 1, __ATOMIC_RELEASE);
-        vk_astc_mode();   // decides TOTK_ASTC and builds the ASTC decoder now, not at the first ASTC upload
+        vk_astc_mode();   // decides GHF_ASTC and builds the ASTC decoder now, not at the first ASTC upload
     }
     plat_mutex_unlock(&start_lock);
 }
@@ -472,7 +472,7 @@ uint64_t vk_sync_submit_record(VkSyncRecordFn record, void *context, uint64_t su
     vk_sync_start();
     VkCtx *c = vk_ctx();
     plat_mutex_lock(&sub_lock);
-    vk_mem_dirty_submit();   // TOTK_TRACE=perf: what a mirror would upload before this submit
+    vk_mem_dirty_submit();   // GHF_TRACE=perf: what a mirror would upload before this submit
     uint64_t fence = __atomic_load_n(&issued, __ATOMIC_ACQUIRE) + 1;
     cur_fence = fence;
     // A texture alias can retire an image or view used earlier in this recording. Collection must wait for this

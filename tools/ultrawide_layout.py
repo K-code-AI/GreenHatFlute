@@ -1,13 +1,13 @@
 # Adapted from MacNativeGames games/totk/scripts/ultrawide_layout.py @ 933b6a0 (MIT, Copyright (c) 2026
 # MacNativeGames contributors). Used by tools/make_romfs_patches.py --aspect.
-"""The game's UI layouts for a canvas of another shape than 16:9 (output_res = 3440x1440 or 1280x800 in totk.ini),
+"""The game's UI layouts for a canvas of another shape than 16:9 (output_res = 3440x1440 or 1280x800 in greenhatflute.ini),
 edited in place in the decompressed UI/LayoutArchive/Common.Product.*.blarc (tools/make_romfs_patches.py --aspect).
 
 The game lays its UI out on a 1920x1080 grid and maps that grid onto the canvas, so on a 21:9 canvas every layout comes
 out 34% too wide and on a 16:10 one 11% too tall. Here each layout's root pane is scaled back to 16:9 on the stretched
 axis (scale x = 16/9 over the aspect when wider, scale y = the aspect over 16/9 when narrower), backgrounds that must
 cover the whole screen are stretched back, and the HUD's parts move out to the screen's corners (wider) or its top and
-bottom edges (narrower). The pane list and the distances are the ones the community TOTK-Ultrawide mod for emulators
+bottom edges (narrower). The pane list and the distances are the ones the community TotK-Ultrawide mod for emulators
 found for 1.0.0 .. 1.2.1 (GPL; only those values are taken, no code; THIRD_PARTY_NOTICES.md). This is an independent
 implementation, checked against 1.2.1's Common.Product.110 and 1.4.3's Common.Product.140: every pane is found by name
 and every pane field and animation key holds the value the edit expects before it is written.

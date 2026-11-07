@@ -5,13 +5,16 @@
 The game's code is translated to C and compiled into a Linux program. The Switch 2 graphics are converted to Vulkan.
 All of this happens **on your PC, from your own copy of the game**.
 
-This is a Linux-only fork of [sostenesfreitas/ocarina-recomp](https://github.com/sostenesfreitas/ocarina-recomp),
-which it diverges from deliberately: no Windows tooling, no installer, English throughout, Wayland and X11 both first
-class.
+GreenHatFlute continues [sostenesfreitas/ocarina-recomp](https://github.com/sostenesfreitas/ocarina-recomp), the
+project it comes from, and keeps its history and its license. From there it goes its own way: Linux only, English
+throughout, no Windows tooling, no installer, Wayland and X11 both first class.
+
+**This repository is where the project is developed and where problems are reported.** Issues, questions and pull
+requests about this build belong here; the project we came from does not take reports about it.
 
 > [!IMPORTANT]
 > This repository **does not contain the game, keys or an executable**, and it does not explain how to get them. You
-> need your own copy. Everything the build creates (`ocarina`, the generated code, the shader cache and the saves)
+> need your own copy. Everything the build creates (`GreenHatFlute`, the generated code, the shader cache and the saves)
 > comes from your game: **do not share it**.
 
 ## Project status
@@ -72,7 +75,7 @@ Prefer to read every command first? Follow the **[step-by-step build guide](docs
 ### Where your saves go
 
 `~/.local/share/greenhatflute` (or `$XDG_DATA_HOME/greenhatflute`) — not next to the executable, so the build folder
-can be moved or deleted without losing a game. `TOTK_PROFILE_DIR` or `--profile DIR` overrides that.
+can be moved or deleted without losing a game. `GHF_PROFILE_DIR` or `--profile DIR` overrides that.
 
 ### What you need
 
@@ -113,8 +116,8 @@ helps a lot.
 
 ## Credits
 
-The upstream project is maintained by **Miojo** ([sostenesfreitas](https://github.com/sostenesfreitas)). This fork
-keeps its history.
+The project comes from **Miojo** ([sostenesfreitas](https://github.com/sostenesfreitas)), who started it and maintains
+the original. We keep its history and thank them for it; questions about this build go to us, not to them.
 
 This project exists thanks to the work of many people:
 

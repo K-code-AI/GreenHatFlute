@@ -84,7 +84,7 @@ static int stored_input_valid(const char *cache, const uint8_t iid[32], unsigned
         memcpy(head, file, sizeof head);
         uint8_t answers[148] = {0};
         answers[147] = (uint8_t)input;
-        ok = head[0] == 0x49534b54u && head[1] == 2 && head[2] == GFX_STAGE_GS && head[3] == PROGRAM_BYTES &&
+        ok = head[0] == 0x49464847u && head[1] == 2 && head[2] == GFX_STAGE_GS && head[3] == PROGRAM_BYTES &&
              head[4] == 0 && head[5] == 148 && !memcmp(file + sizeof head, answers, sizeof answers) &&
              !memcmp(file + sizeof head + 148, control, CONTROL_BYTES) &&
              !memcmp(file + sizeof head + 148 + CONTROL_BYTES, code, PROGRAM_BYTES);
@@ -94,10 +94,10 @@ static int stored_input_valid(const char *cache, const uint8_t iid[32], unsigned
 }
 
 int probe_geometry_shader(void) {
-    const char *cache = getenv("TOTK_SHADER_CACHE"), *translator = getenv("TOTK_XLATE");
-    CHECK(cache && *cache && strlen(cache) < 1024, "launcher must set TOTK_SHADER_CACHE to a fresh owned directory");
+    const char *cache = getenv("GHF_SHADER_CACHE"), *translator = getenv("GHF_XLATE");
+    CHECK(cache && *cache && strlen(cache) < 1024, "launcher must set GHF_SHADER_CACHE to a fresh owned directory");
     CHECK(translator && *translator && strlen(translator) < 1024 && plat_file_exists(translator),
-          "launcher must set TOTK_XLATE to the native translator");
+          "launcher must set GHF_XLATE to the native translator");
     int nonempty = 0;
     CHECK(plat_fs_kind(cache) == PLAT_FS_DIR && plat_fs_list(cache, cache_entry, &nonempty) == PLAT_FS_OK && !nonempty,
           "cache must already exist and be empty; no existing cache is deleted");

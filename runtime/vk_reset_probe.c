@@ -254,7 +254,7 @@ void vk_exec_xfer_shutdown(void);
 int probe_vkreset(void) {
     checks = failures = 0;
     if (gfx_backend() != &gfx_vulkan_backend) {
-        printf("probe-vkreset: requires TOTK_GPU=vulkan\n");
+        printf("probe-vkreset: requires GHF_GPU=vulkan\n");
         return 1;
     }
     uint64_t heap = 0;

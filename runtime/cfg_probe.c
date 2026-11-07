@@ -1,4 +1,4 @@
-// --probe-cfg: totk.ini parsing, the environment override, the DKB_ names and a missing file (cfg.c). Needs no game
+// --probe-cfg: greenhatflute.ini parsing, the environment override, the DKB_ names and a missing file (cfg.c). Needs no game
 // files.
 #include <stdint.h>
 #include <stdio.h>
@@ -29,39 +29,39 @@ int probe_cfg(void) {
         "Realtime=0\r\n"
         "[Display]\r\n"
         "GPU_name = \"My GPU 1\"\r\n"
-        "TOTK_Locale = de-DE\r\n"
+        "GHF_Locale = de-DE\r\n"
         "lang =\r\n"
         "trace = a\r\n"
         "trace = b\r\n"
         "no_such_setting = 1\r\n"
         "no equals sign\r\n"
         "last = no newline at the end";
-    plat_setenv("TOTK_LOCALE", NULL);
-    plat_setenv("TOTK_FPS60", NULL);
+    plat_setenv("GHF_LOCALE", NULL);
+    plat_setenv("GHF_FPS60", NULL);
     CHECK(plat_file_write(path, ini, sizeof ini - 1), "write the probe ini");
     CHECK(cfg_load(path) == 1, "load the probe ini");
-    CHECK(EQ(cfg_get("TOTK_FPS60"), "0"), "value read, whitespace trimmed, lower-case key");
-    CHECK(EQ(cfg_get("TOTK_REALTIME"), "0"), "key without spaces, mixed case");
-    CHECK(EQ(cfg_get("TOTK_GPU_NAME"), "My GPU 1"), "quoted value, section ignored");
-    CHECK(EQ(cfg_get("TOTK_LOCALE"), "de-DE"), "TOTK_ prefix accepted in the file");
-    CHECK(cfg_get("TOTK_LANG") == NULL, "empty value is unset");
-    CHECK(EQ(cfg_get("TOTK_TRACE"), "b"), "later line wins");
-    CHECK(cfg_get("TOTK_CLOTH_REALTIME") == NULL, "absent key is NULL");
-    CHECK(cfg_get("TOTK_comment") == NULL, "comment is not a key");
-    CHECK(EQ(cfg_get("TOTK_NO_SUCH_SETTING"), "1"), "unknown key is still readable");
-    plat_setenv("TOTK_FPS60", "1");
-    CHECK(EQ(cfg_get("TOTK_FPS60"), "1"), "environment overrides the file");
-    plat_setenv("TOTK_FPS60", NULL);
-    CHECK(EQ(cfg_get("TOTK_FPS60"), "0"), "file value returns when the variable is removed");
+    CHECK(EQ(cfg_get("GHF_FPS60"), "0"), "value read, whitespace trimmed, lower-case key");
+    CHECK(EQ(cfg_get("GHF_REALTIME"), "0"), "key without spaces, mixed case");
+    CHECK(EQ(cfg_get("GHF_GPU_NAME"), "My GPU 1"), "quoted value, section ignored");
+    CHECK(EQ(cfg_get("GHF_LOCALE"), "de-DE"), "GHF_ prefix accepted in the file");
+    CHECK(cfg_get("GHF_LANG") == NULL, "empty value is unset");
+    CHECK(EQ(cfg_get("GHF_TRACE"), "b"), "later line wins");
+    CHECK(cfg_get("GHF_CLOTH_REALTIME") == NULL, "absent key is NULL");
+    CHECK(cfg_get("GHF_comment") == NULL, "comment is not a key");
+    CHECK(EQ(cfg_get("GHF_NO_SUCH_SETTING"), "1"), "unknown key is still readable");
+    plat_setenv("GHF_FPS60", "1");
+    CHECK(EQ(cfg_get("GHF_FPS60"), "1"), "environment overrides the file");
+    plat_setenv("GHF_FPS60", NULL);
+    CHECK(EQ(cfg_get("GHF_FPS60"), "0"), "file value returns when the variable is removed");
     plat_setenv("DKB_FPS60", "1");
-    CHECK(EQ(cfg_get("TOTK_FPS60"), "1") && cfg_from_env("TOTK_FPS60"), "DKB_ name stands for the TOTK_ one");
-    plat_setenv("TOTK_FPS60", "0");
-    CHECK(EQ(cfg_get("TOTK_FPS60"), "1"), "DKB_ name wins over the TOTK_ one");
+    CHECK(EQ(cfg_get("GHF_FPS60"), "1") && cfg_from_env("GHF_FPS60"), "DKB_ name stands for the GHF_ one");
+    plat_setenv("GHF_FPS60", "0");
+    CHECK(EQ(cfg_get("GHF_FPS60"), "1"), "DKB_ name wins over the GHF_ one");
     plat_setenv("DKB_FPS60", NULL);
-    plat_setenv("TOTK_FPS60", NULL);
+    plat_setenv("GHF_FPS60", NULL);
     plat_file_delete(path);
     CHECK(cfg_load(path) == 0, "missing file is not an error");
-    CHECK(cfg_get("TOTK_FPS60") == NULL, "missing file leaves no keys");
+    CHECK(cfg_get("GHF_FPS60") == NULL, "missing file leaves no keys");
 
     // cfg_set / cfg_save: only changed lines move, comments stay, a missing key goes under its section
     static const char before[] =
@@ -97,18 +97,18 @@ int probe_cfg(void) {
         "\r\n"
         "[audio]\r\n"
         "volume = 40\r\n";
-    plat_setenv("TOTK_MOTION", NULL);
-    plat_setenv("TOTK_VOLUME", NULL);
-    plat_setenv("TOTK_RUMBLE_STRENGTH", NULL);
+    plat_setenv("GHF_MOTION", NULL);
+    plat_setenv("GHF_VOLUME", NULL);
+    plat_setenv("GHF_RUMBLE_STRENGTH", NULL);
     CHECK(plat_file_write(path, before, sizeof before - 1), "write the save ini");
     CHECK(cfg_load(path) == 1, "load the save ini");
     unsigned v0 = cfg_version();
-    cfg_set("TOTK_FPS60", "0");
-    cfg_set("TOTK_MOTION", "0");
-    cfg_set("TOTK_RUMBLE_STRENGTH", "80");
-    cfg_set("TOTK_VOLUME", "40");
+    cfg_set("GHF_FPS60", "0");
+    cfg_set("GHF_MOTION", "0");
+    cfg_set("GHF_RUMBLE_STRENGTH", "80");
+    cfg_set("GHF_VOLUME", "40");
     CHECK(cfg_version() == v0 + 4, "cfg_set bumps the version");
-    CHECK(EQ(cfg_get("TOTK_FPS60"), "0") && EQ(cfg_get("TOTK_VOLUME"), "40"), "cfg_set values are read back at once");
+    CHECK(EQ(cfg_get("GHF_FPS60"), "0") && EQ(cfg_get("GHF_VOLUME"), "40"), "cfg_set values are read back at once");
     CHECK(cfg_save_to(path) == 1, "cfg_save_to writes");
     uint64_t got_n = 0;
     uint8_t *got = plat_file_read(path, &got_n);
@@ -120,16 +120,16 @@ int probe_cfg(void) {
     got = plat_file_read(path, &got_n);
     CHECK(got && got_n == sizeof after - 1 && !memcmp(got, after, got_n), "a save with nothing changed keeps the file");
     free(got);
-    CHECK(cfg_load(path) == 1 && EQ(cfg_get("TOTK_FPS60"), "0") && EQ(cfg_get("TOTK_MOTION"), "0") &&
-          EQ(cfg_get("TOTK_RUMBLE_STRENGTH"), "80") && EQ(cfg_get("TOTK_VOLUME"), "40") &&
-          EQ(cfg_get("TOTK_ROMFS_MODS"), "C:\\mods"), "the saved file reads back");
-    const char *held = cfg_get("TOTK_VOLUME");
-    plat_setenv("TOTK_VOLUME", "70");
-    cfg_set("TOTK_VOLUME", "90");
-    CHECK(cfg_from_env("TOTK_VOLUME") && EQ(cfg_get("TOTK_VOLUME"), "70"), "environment wins over cfg_set");
+    CHECK(cfg_load(path) == 1 && EQ(cfg_get("GHF_FPS60"), "0") && EQ(cfg_get("GHF_MOTION"), "0") &&
+          EQ(cfg_get("GHF_RUMBLE_STRENGTH"), "80") && EQ(cfg_get("GHF_VOLUME"), "40") &&
+          EQ(cfg_get("GHF_ROMFS_MODS"), "C:\\mods"), "the saved file reads back");
+    const char *held = cfg_get("GHF_VOLUME");
+    plat_setenv("GHF_VOLUME", "70");
+    cfg_set("GHF_VOLUME", "90");
+    CHECK(cfg_from_env("GHF_VOLUME") && EQ(cfg_get("GHF_VOLUME"), "70"), "environment wins over cfg_set");
     CHECK(EQ(held, "40"), "a pointer cfg_get handed out stays valid after cfg_set");
-    plat_setenv("TOTK_VOLUME", NULL);
-    CHECK(!cfg_from_env("TOTK_VOLUME") && EQ(cfg_get("TOTK_VOLUME"), "90"), "cfg_set value returns without the variable");
+    plat_setenv("GHF_VOLUME", NULL);
+    CHECK(!cfg_from_env("GHF_VOLUME") && EQ(cfg_get("GHF_VOLUME"), "90"), "cfg_set value returns without the variable");
     plat_file_delete(path);
     CHECK(cfg_save_to(path) == 1, "cfg_save_to creates a missing file");
     got = plat_file_read(path, &got_n);
@@ -141,7 +141,7 @@ int probe_cfg(void) {
     CHECK(m && EQ(m->def, "1") && m->live, "meta: fps60 defaults to 1 and is live");
     m = cfg_meta("ASYNC_PREEMPT");
     CHECK(m && EQ(m->values, "0|1|2") && !m->live, "meta: async_preempt takes 0|1|2 and needs a restart");
-    m = cfg_meta("totk_vk_present");
+    m = cfg_meta("ghf_vk_present");
     CHECK(m && EQ(m->key, "VK_PRESENT") && EQ(m->values, "mailbox|fifo|immediate") && m->live,
           "meta: prefix and case are accepted");
     m = cfg_meta("RUMBLE_STRENGTH");
@@ -151,20 +151,20 @@ int probe_cfg(void) {
     CHECK(cfg_meta("BIND_A") == NULL && cfg_meta("FPS_COUNTER") == NULL && cfg_meta("NO_SUCH") == NULL,
           "meta: keys the menu does not show are NULL");
 
-    // cfg_reset: the key's active lines leave totk.ini, the commented example stays
+    // cfg_reset: the key's active lines leave greenhatflute.ini, the commented example stays
     static const char rbase[] = "[audio]\n# volume = 100\n[input]\nmotion = 0\n";
     static const char *const vol[] = {"VOLUME"};
-    plat_setenv("TOTK_VOLUME", NULL);
+    plat_setenv("GHF_VOLUME", NULL);
     CHECK(plat_file_write(path, rbase, sizeof rbase - 1), "write the reset ini");
     CHECK(cfg_load(path) == 1, "load the reset ini");
-    cfg_set("TOTK_VOLUME", "40");
+    cfg_set("GHF_VOLUME", "40");
     CHECK(cfg_save_to(path) == 1 && cfg_last_save_ok(), "reset: volume saved");
     got = plat_file_read(path, &got_n);
     CHECK(got && strstr((const char *)got, "\nvolume = 40\n"), "reset: the active line is in the file");
     free(got);
     unsigned v1 = cfg_version();
     CHECK(cfg_reset(vol, 1) == 1, "reset: one key reset");
-    CHECK(cfg_version() > v1 && cfg_get("TOTK_VOLUME") == NULL, "reset: the value is gone in memory, the version moved");
+    CHECK(cfg_version() > v1 && cfg_get("GHF_VOLUME") == NULL, "reset: the value is gone in memory, the version moved");
     CHECK(cfg_reset(vol, 1) == 0, "reset: a key already reset counts 0");
     CHECK(cfg_save_to(path) == 1, "reset: save");
     got = plat_file_read(path, &got_n);
@@ -172,31 +172,31 @@ int probe_cfg(void) {
           "reset: no active volume line, the commented example and the other keys stay");
     if (got && (got_n != sizeof rbase - 1 || memcmp(got, rbase, got_n))) fprintf(stderr, "---- saved:\n%s\n----\n", got);
     free(got);
-    cfg_set("TOTK_VOLUME", "55");
-    CHECK(cfg_reset(vol, 1) == 1 && cfg_get("TOTK_VOLUME") == NULL, "reset: a value set after a save resets too");
-    cfg_set("TOTK_VOLUME", "60");
-    CHECK(cfg_save_to(path) == 1 && EQ(cfg_get("TOTK_VOLUME"), "60"), "reset then set before the save: the set wins");
+    cfg_set("GHF_VOLUME", "55");
+    CHECK(cfg_reset(vol, 1) == 1 && cfg_get("GHF_VOLUME") == NULL, "reset: a value set after a save resets too");
+    cfg_set("GHF_VOLUME", "60");
+    CHECK(cfg_save_to(path) == 1 && EQ(cfg_get("GHF_VOLUME"), "60"), "reset then set before the save: the set wins");
     got = plat_file_read(path, &got_n);
     CHECK(got && strstr((const char *)got, "\nvolume = 60\n"), "reset then set: the new line is written");
     free(got);
 
     // an active line with an empty value has no entry in memory; Reset still removes it from the file
     static const char rempty[] = "[audio]\n# volume = 100\nvolume =\n[input]\nmotion = 0\n";
-    CHECK(plat_file_write(path, rempty, sizeof rempty - 1) && cfg_load(path) == 1 && cfg_get("TOTK_VOLUME") == NULL,
+    CHECK(plat_file_write(path, rempty, sizeof rempty - 1) && cfg_load(path) == 1 && cfg_get("GHF_VOLUME") == NULL,
           "reset: load an ini with an empty value");
     CHECK(cfg_reset(vol, 1) == 0 && cfg_save_to(path) == 1, "reset: an empty-valued key saves");
     got = plat_file_read(path, &got_n);
     CHECK(got && got_n == sizeof rbase - 1 && !memcmp(got, rbase, got_n), "reset: the empty-valued line is gone");
     free(got);
-    cfg_set("TOTK_VOLUME", "60");
+    cfg_set("GHF_VOLUME", "60");
     CHECK(cfg_save_to(path) == 1, "reset: volume 60 again for the environment case");
 
     // a key the environment sets is skipped and keeps its file line
-    CHECK(cfg_load(path) == 1 && EQ(cfg_get("TOTK_VOLUME"), "60"), "reset: reload");
-    plat_setenv("TOTK_VOLUME", "70");
+    CHECK(cfg_load(path) == 1 && EQ(cfg_get("GHF_VOLUME"), "60"), "reset: reload");
+    plat_setenv("GHF_VOLUME", "70");
     CHECK(cfg_reset(vol, 1) == 0, "reset: an environment-set key is skipped");
-    plat_setenv("TOTK_VOLUME", NULL);
-    CHECK(EQ(cfg_get("TOTK_VOLUME"), "60"), "reset: the skipped key keeps its value");
+    plat_setenv("GHF_VOLUME", NULL);
+    CHECK(EQ(cfg_get("GHF_VOLUME"), "60"), "reset: the skipped key keeps its value");
     CHECK(cfg_save_to(path) == 1, "reset: save after a skip");
     got = plat_file_read(path, &got_n);
     CHECK(got && strstr((const char *)got, "\nvolume = 60\n"), "reset: the skipped key keeps its file line");
@@ -204,16 +204,16 @@ int probe_cfg(void) {
 
     // a failed save: the call fails, cfg_last_save_ok says so, the value stays set and a later save works
     CHECK(cfg_last_save_ok() == 1, "save status: ok after a good save");
-    cfg_set("TOTK_VOLUME", "20");
+    cfg_set("GHF_VOLUME", "20");
     char bad[1100];
     snprintf(bad, sizeof bad, "%s", path);
     strcpy(plat_last_sep(bad) + 1, "no-such-dir/cfg-probe.ini");
-    CHECK(cfg_save_to(bad) == 0 && cfg_last_save_ok() == 0 && EQ(cfg_get("TOTK_VOLUME"), "20"),
+    CHECK(cfg_save_to(bad) == 0 && cfg_last_save_ok() == 0 && EQ(cfg_get("GHF_VOLUME"), "20"),
           "save status: an unwritable path fails, the value stays");
-    cfg_set("TOTK_VOLUME", "21");
+    cfg_set("GHF_VOLUME", "21");
     CHECK(plat_file_write(path, rbase, sizeof rbase - 1), "write the read-only ini");
     CHECK(plat_file_set_readonly(path, 1), "set the file read-only");
-    CHECK(cfg_save_to(path) == 0 && cfg_last_save_ok() == 0 && EQ(cfg_get("TOTK_VOLUME"), "21"),
+    CHECK(cfg_save_to(path) == 0 && cfg_last_save_ok() == 0 && EQ(cfg_get("GHF_VOLUME"), "21"),
           "save status: a read-only file fails, cfg_get returns the new value");
     plat_file_set_readonly(path, 0);
     CHECK(cfg_save_to(path) == 1 && cfg_last_save_ok() == 1, "save status: the retry after the failure works");
@@ -359,24 +359,24 @@ int probe_cfg(void) {
     CHECK(!strcmp(line, "none"), "edit: a stick direction without keys is none");
     // defaults live in the CfgMeta table: cfg_value and the typed accessors fall back to it
     cfg_load("cfg-probe-missing.ini");
-    plat_setenv("TOTK_FPS60", NULL);
-    plat_setenv("TOTK_MOUSE_SENS", NULL);
-    plat_setenv("TOTK_FREE_CORES", NULL);
-    CHECK(cfg_bool("TOTK_FPS60") == 1, "default: unset FPS60 is on");
-    CHECK(EQ(cfg_value("TOTK_VK_PRESENT"), "mailbox") && cfg_int("TOTK_SPLIT_DRAWS") == 64, "default: text and integer");
-    plat_setenv("TOTK_MOUSE_SENS", "2.5");
-    CHECK(cfg_double("TOTK_MOUSE_SENS") == 2.5, "double: the environment value");
-    plat_setenv("TOTK_MOUSE_SENS", "fast");
-    CHECK(cfg_double("TOTK_MOUSE_SENS") == 1.0, "double: a value that does not parse gives the default");
-    plat_setenv("TOTK_MOUSE_SENS", NULL);
-    cfg_set("TOTK_MOUSE_SENS", "3");
-    CHECK(cfg_double("TOTK_MOUSE_SENS") == 3.0 && cfg_int("TOTK_MOUSE_SENS") == 3, "a cfg_set value beats the default");
-    CHECK(cfg_bool("TOTK_FREE_CORES") == 0, "free_cores unset: off");
-    plat_setenv("TOTK_FREE_CORES", "0");
-    CHECK(cfg_bool("TOTK_FREE_CORES") == 0, "free_cores 0 gives the same as unset");
-    plat_setenv("TOTK_FREE_CORES", "1");
-    CHECK(cfg_bool("TOTK_FREE_CORES") == 1, "free_cores 1: on");
-    plat_setenv("TOTK_FREE_CORES", NULL);
+    plat_setenv("GHF_FPS60", NULL);
+    plat_setenv("GHF_MOUSE_SENS", NULL);
+    plat_setenv("GHF_FREE_CORES", NULL);
+    CHECK(cfg_bool("GHF_FPS60") == 1, "default: unset FPS60 is on");
+    CHECK(EQ(cfg_value("GHF_VK_PRESENT"), "mailbox") && cfg_int("GHF_SPLIT_DRAWS") == 64, "default: text and integer");
+    plat_setenv("GHF_MOUSE_SENS", "2.5");
+    CHECK(cfg_double("GHF_MOUSE_SENS") == 2.5, "double: the environment value");
+    plat_setenv("GHF_MOUSE_SENS", "fast");
+    CHECK(cfg_double("GHF_MOUSE_SENS") == 1.0, "double: a value that does not parse gives the default");
+    plat_setenv("GHF_MOUSE_SENS", NULL);
+    cfg_set("GHF_MOUSE_SENS", "3");
+    CHECK(cfg_double("GHF_MOUSE_SENS") == 3.0 && cfg_int("GHF_MOUSE_SENS") == 3, "a cfg_set value beats the default");
+    CHECK(cfg_bool("GHF_FREE_CORES") == 0, "free_cores unset: off");
+    plat_setenv("GHF_FREE_CORES", "0");
+    CHECK(cfg_bool("GHF_FREE_CORES") == 0, "free_cores 0 gives the same as unset");
+    plat_setenv("GHF_FREE_CORES", "1");
+    CHECK(cfg_bool("GHF_FREE_CORES") == 1, "free_cores 1: on");
+    plat_setenv("GHF_FREE_CORES", NULL);
     cfg_load("cfg-probe-missing.ini");
     int listed = 0;
     for (int i = 0; cfg_meta_at(i); i++) {
@@ -384,7 +384,7 @@ int probe_cfg(void) {
         if (!*m->def) continue;
         listed++;
         char name[96];
-        snprintf(name, sizeof name, "TOTK_%s", m->key);
+        snprintf(name, sizeof name, "GHF_%s", m->key);
         plat_setenv(name, "");
         CHECK(EQ(cfg_value(name), m->def), "cfg_value returns the table default");
         int ok = 0;

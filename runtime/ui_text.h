@@ -21,7 +21,7 @@ typedef enum {
     UI_MENU_AFTER_RESTART,    // note on a setting that is read at start
     UI_MENU_SET_BY_ENV,       // note on a setting an environment variable fixes
     UI_MENU_SAVE_FAILED,
-    UI_MENU_VERSION,          // "Ocarina Recomp %s, game %s": the port version and the game update, beside the title
+    UI_MENU_VERSION,          // "GreenHatFlute %s, game %s": the port version and the game update, beside the title
 
     // Screen
     UI_MENU_FULLSCREEN, UI_MENU_FULLSCREEN_DESC,
@@ -184,6 +184,6 @@ int ui_text_defined(const char *lang, UiTextId id);
 // The catalog language for a Switch language code ("en-GB" -> "en", "zh-CN" -> "zh-Hans", ...).
 const char *ui_text_lang(const char *switch_code);
 
-// Menu text: ui_text_in(menu language, id). The menu language is TOTK_MENU_LANG ("en" / "ru"); unset, Russian when the
+// Menu text: ui_text_in(menu language, id). The menu language is GHF_MENU_LANG ("en" / "ru"); unset, Russian when the
 // system UI language is Russian, else English. Follows a live change of the setting.
 const char *menu_text(UiTextId id);

@@ -279,8 +279,8 @@ done:
 static int gp_run(int passthrough, int ordered) {
     gp_passthrough = passthrough;
     const GfxBackend *backend = &gfx_vulkan_backend;
-    if (gfx_backend() != backend || cfg_bool("TOTK_FIX_C0")) {
-        printf("probe-vkgeometry: requires TOTK_GPU=vulkan and TOTK_FIX_C0=0 (ordinary Maxwell only)\n");
+    if (gfx_backend() != backend || cfg_bool("GHF_FIX_C0")) {
+        printf("probe-vkgeometry: requires GHF_GPU=vulkan and GHF_FIX_C0=0 (ordinary Maxwell only)\n");
         return 1;
     }
     gp_checks = gp_failures = 0;
@@ -414,7 +414,7 @@ done:
     vk_pipeline_shutdown(), vk_exec_draw_shutdown(), vk_exec_xfer_shutdown(), vk_backend_shutdown();
     long errors = vk_validation_errors_total();
     printf("probe-vkgeometry: %s (%u checks, %u failures, %ld validation errors, enabled %d)\n",
-        gp_failures || errors ? "FAILED" : "passed", gp_checks, gp_failures, errors, cfg_bool("TOTK_EXPERIMENTAL_GEOMETRY"));
+        gp_failures || errors ? "FAILED" : "passed", gp_checks, gp_failures, errors, cfg_bool("GHF_EXPERIMENTAL_GEOMETRY"));
     printf("probe-vkgeometry: %s, user-c3 store, %s; ",
            gp_passthrough ? "portable triangles->triangle" : "ordinary points->triangle",
            ordered ? "explicit NVN dependency in one NVN submission" : "separate completed-submission indirect consumption");

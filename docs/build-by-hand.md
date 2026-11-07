@@ -23,7 +23,7 @@ On other distributions install the same packages under their own names. Two are 
 
   ```sh
   tar xzf libvpx-1.15.1.tar.gz && cd libvpx-1.15.1
-  ./configure --prefix="$PWD/../ocarina-deps" --enable-static --disable-shared \
+  ./configure --prefix="$PWD/../greenhatflute-deps" --enable-static --disable-shared \
       --disable-examples --disable-tools --disable-unit-tests --enable-multithread
   make -j"$(nproc)" && make install
   ```
@@ -91,7 +91,7 @@ sha256sum build/exefs/main
 python tools/build_xlate.py
 ```
 
-On Linux this publishes `build/xlate/totk_xlate` for `linux-x64`; NativeAOT links it with the system clang and needs no
+On Linux this publishes `build/xlate/greenhatflute_xlate` for `linux-x64`; NativeAOT links it with the system clang and needs no
 MSVC. The 34 selected patches apply cleanly.
 
 ## 5. Convert the game code
@@ -119,15 +119,15 @@ rm -rf build/dump
 ```sh
 .venv/bin/python tools/build_game.py --version oot111 --gen generated/oot111 --out build/oot111 \
     --expected tools/data/expected-oot111.json --exefs build/exefs --romfs build/romfs --jobs "$(nproc)"
-cp play/totk.ini build/oot111/totk.ini
+cp play/greenhatflute.ini build/oot111/greenhatflute.ini
 ```
 
-The compile takes about 7 minutes on 16 cores and links a 305 MB ELF (`build/oot111/ocarina`).
+The compile takes about 7 minutes on 16 cores and links a 305 MB ELF (`build/oot111/GreenHatFlute`).
 
 ## 8. Check and play
 
 ```sh
-build/oot111/ocarina --selftest          # layout, dispatch table, host functions: no game files needed
+build/oot111/GreenHatFlute --selftest   # layout, dispatch table, host functions: no game files needed
 play/run.sh                              # the settings this port is tuned with
 ```
 
@@ -145,22 +145,22 @@ python tools/install_linux.py            # menu entry, icon and greenhatflute on
 ```
 
 It writes only under XDG paths (`~/.local/share`, `~/.local/bin`), so it needs no root and touches nothing in `/usr`.
-The icon comes from the PNG sizes already inside `runtime/totk.ico`; the menu entry is `play/greenhatflute.desktop`
+The icon comes from the PNG sizes already inside `runtime/greenhatflute.ico`; the menu entry is `play/greenhatflute.desktop`
 with the launcher's path filled in. `--dry-run` shows what would be written, `--uninstall` removes it.
 
 Saves, cache and the log live in **`~/.local/share/greenhatflute`** (or `$XDG_DATA_HOME/greenhatflute`), not next to
-the executable, so the build folder can be moved or deleted without losing a game. `TOTK_PROFILE_DIR` or `--profile DIR`
+the executable, so the build folder can be moved or deleted without losing a game. `GHF_PROFILE_DIR` or `--profile DIR`
 still overrides that; a `profile` folder next to the executable means a portable copy and wins.
 
 ## What differs from the upstream Windows port
 
 | | Linux |
 |---|---|
-| Executable | `build/oot111/ocarina`, an ELF; `runtime/*_sdl.*` and `runtime/platform/linux.c` replace the `*_win.*` files, `platform/win32.c` and `totk.rc` |
+| Executable | `build/oot111/GreenHatFlute`, an ELF; `runtime/*_sdl.*` and `runtime/platform/linux.c` replace the `*_win.*` files, `platform/win32.c` and `greenhatflute.rc` |
 | Libraries | system Vulkan, SDL3, Opus, zstd and dav1d; libvpx from your own folder; `libstdc++` static, `$ORIGIN` in the rpath |
 | Linker | `-no-pie` (the function tables need no load-time relocation) and lld when present |
 | CPU-visible pools | shadow storage by default (`runtime/vk_memory.c`): a host-visible copy per pool instead of importing the guest pages; see [building.md](building.md), "Linux" |
-| Shader translator | `totk_xlate` for `linux-x64`, NativeAOT over the system clang |
+| Shader translator | `greenhatflute_xlate` for `linux-x64`, NativeAOT over the system clang |
 
 ## Common problems
 
@@ -172,4 +172,4 @@ still overrides that; a `profile` folder next to the executable means a portable
 | `device-local allocation failed (-2)` | the card's free VRAM is smaller than the game's pools: close what holds it and check with `nvidia-smi`. The run survives on host memory (the log says `keeps the game's storage`) but slowly |
 | `gpu 0 skipped: no graphics+compute+present queue family` | no display for the probe: see step 8 |
 
-Do not share `ocarina`, `generated/` or `build/`: they come from your game.
+Do not share `GreenHatFlute`, `generated/` or `build/`: they come from your game.

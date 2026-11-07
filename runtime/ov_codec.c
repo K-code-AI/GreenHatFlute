@@ -33,7 +33,7 @@ enum { SLOTS = 16, DECODERS = 4, WAITERS = 4, QUEUED = 8 };
 enum { S_FREE, S_WAIT, S_FILLED };   // registered; acquired with no picture yet; acquired holding a picture
 enum { FENCE_TAG = 0xc0de0000u };    // fence token: tag | decoder << 8 | buffer
 
-// TOTK_TRACE=codec: a line for each decoder call that moves a buffer or a picture, to follow a player that stops.
+// GHF_TRACE=codec: a line for each decoder call that moves a buffer or a picture, to follow a player that stops.
 #define TRACE(...)                                                                                                   \
     do {                                                                                                             \
         if (rt_trace & RT_TRACE_CODEC) rt_log("codec: " __VA_ARGS__);                                                \
