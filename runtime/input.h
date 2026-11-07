@@ -1,4 +1,4 @@
-// Host input sampling (runtime/input.c, with input_win.c or input_sdl.c): SDL3 gamepad and the keyboard as one Switch npad.
+// Host input sampling (runtime/input.c, with input_sdl.c): SDL3 gamepad and the keyboard as one Switch npad.
 #pragma once
 #include <stdint.h>
 
@@ -31,7 +31,7 @@ int input_pad_label(int pad);
 // start (a held key counts once released and pressed again) and returns NONE; then it returns KEY or PAD with *id the
 // key or pad id (input_map.h) pressed since the last call, or CANCEL for Esc. Keys count only while the game window is in front.
 enum { INPUT_CAPTURE_NONE, INPUT_CAPTURE_KEY, INPUT_CAPTURE_PAD, INPUT_CAPTURE_CANCEL };
-struct InputMap;   // input_map.h (not included here: swkbd_win.c has button names of its own)
+struct InputMap;   // input_map.h (not needed here: only a pointer crosses this seam)
 void input_map_snapshot(struct InputMap *m);
 int input_capture(int reset, int *id);
 // The character on a punctuation key (KEY_MINUS..KEY_GRAVE) in the keyboard layout in use, 0 for another key.
@@ -39,11 +39,11 @@ uint32_t input_key_char(int key);
 // F8, the flight recorder's key (no KEY_ id), held while the game window is in front.
 int input_flight_key(void);
 
-// Mouse camera and cursor (input_win.c, Win32 window thread). The window procedure calls input_window_msg first for raw
-// mouse input, cursor hiding and confinement; it returns 1 with *res set when the message is handled. input_cursor_suspend(1)
-// releases the cursor around an F11 window change, (0) captures it again once the client area has its new size.
+// Mouse camera and cursor (input_sdl.c, on the window thread). input_sdl_event takes every SDL event first, for the mouse
+// buttons, cursor hiding and confinement; gfx_window_sdl.c's event loop calls it before menu_sdl_event.
+// input_cursor_suspend(1) releases the cursor around an F11 window change, (0) captures it again once the client area has its new size.
 void input_cursor_suspend(int on);
-int input_cursor_released(void);   // Esc or a non-client activation released the cursor (probe)
+int input_cursor_released(void);   // Esc released the cursor and no click in the window has taken it back (probe)
 
 // Rumble: SDL_RumbleGamepad on the open gamepad, low (heavy, left) and high (light, right) motor 0..65535 for ms
 // milliseconds. 1 if a gamepad with rumble took it. Callable from any thread.
@@ -59,7 +59,7 @@ void input_motion_start(void);
 // GHF_MOTION is not "0" (a live setting: read again when cfg_version changes). Off: the sensor reads at rest.
 int input_motion_enabled(void);
 // SDL sensor values (accelerometer m/s^2, gyro rad/s, SDL gamepad axes) to the Switch controller frame motion_feed
-// takes (acceleration in G as gravity reads, rotation rad/s). The mapping is documented in input_win.c.
+// takes (acceleration in G as gravity reads, rotation rad/s). The mapping is documented in input.c.
 void input_motion_axes(const float sdl_acc[3], const float sdl_gyro[3], double acc_g[3], double gyro[3]);
 
 // motion_fusion.c: nn::hid::SixAxisSensorState and the sensor fusion that produces it.
@@ -71,7 +71,7 @@ typedef struct {
 _Static_assert(sizeof(MotionState) == 0x60, "SixAxisSensorState ABI");
 typedef struct MotionFusion MotionFusion;
 MotionFusion *motion_new(void);
-MotionFusion *motion_global(void);   // the gamepad's, fed by input_win.c
+MotionFusion *motion_global(void);   // the gamepad's, fed by input.c
 void motion_feed(MotionFusion *m, const double acc_g[3], const double gyro_rad_s[3], uint64_t now_ns);
 int motion_read(MotionFusion *m, MotionState *out, int max, uint64_t now_ns);   // newest first; 0 = none in 200 ms
 void motion_restart(MotionFusion *m);   // angle and direction start over at the next sample

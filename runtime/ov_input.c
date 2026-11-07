@@ -1,7 +1,7 @@
 // Adapted from MacNativeGames games/totk/runtime/input.c and hid_feedback.c @ b75be8cf (MIT, Copyright (c) 2026
 // MacNativeGames contributors).
 // nn::hid overrides: one connected controller fed by input_poll (gamepad and keyboard,
-// runtime/input_win.c; nothing pressed with GHF_INPUT=none). Docked (default) it is a full-key controller as player 1 (id 0, style bit 0); with
+// runtime/input.c; nothing pressed with GHF_INPUT=none). Docked (default) it is a full-key controller as player 1 (id 0, style bit 0); with
 // GHF_OPERATION_MODE=handheld it is the handheld controller (id 0x20, style bit 1) and player 1 is not connected,
 // which is the controller the game reads in that mode. Mouse and keyboard report no input. The controller has two
 // vibration devices (left, right) played on the gamepad's motors (GHF_RUMBLE=0: none) and a six-axis sensor fed by

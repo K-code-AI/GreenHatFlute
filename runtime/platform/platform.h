@@ -1,5 +1,5 @@
 // Platform layer: threads, time, locks, atomics, files. Runtime code calls this instead of the OS; one implementation
-// per OS (win32.c, linux.c). The FP control register lives in the per-architecture fp_*.h headers, inline, because
+// per OS (linux.c here). The FP control register lives in the per-architecture fp_*.h headers, inline, because
 // lifted FP code touches it on every operation.
 #pragma once
 #include <stddef.h>

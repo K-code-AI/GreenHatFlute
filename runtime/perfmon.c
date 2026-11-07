@@ -1,5 +1,5 @@
 // Performance overlay numbers (runtime/perfmon.h). Frame times come from the game's presents (perf_present, only while
-// the overlay is on); the per-frame waits from the perf counters prof_win.c keeps. The machine's numbers are sampled
+// the overlay is on); the per-frame waits from the perf counters perf.c keeps. The machine's numbers are sampled
 // twice a second on a thread of their own (some calls take milliseconds), which runs only while the overlay is full.
 // The OS calls sit behind platform.h (plat_cpu_load, plat_mem_info, plat_gpu_load). Temperature, power and clock come
 // from the GPU vendor's driver library, loaded at run time: NVML on NVIDIA, ADL's PM log on AMD; on a machine without

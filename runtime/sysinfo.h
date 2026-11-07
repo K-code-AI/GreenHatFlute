@@ -12,7 +12,7 @@ extern "C" {
 int sysinfo_text(char *buf, size_t n);
 // The CPU's brand string ("AMD Ryzen 7 7800X3D 8-Core Processor"); "" when the CPU has none.
 void sysinfo_cpu_name(char *out, size_t n);
-// The folder with the log: the folder of logs\greenhatflute.log when this run writes it, else of the file stderr goes to, else
+// The folder with the log: the folder of logs/greenhatflute.log when this run writes it, else of the file stderr goes to, else
 // of GreenHatFlute. 0 on failure.
 int sysinfo_log_folder(char *out, size_t n);
 

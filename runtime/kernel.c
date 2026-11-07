@@ -4,7 +4,7 @@
 // virtual cores from MacNativeGames threads.c @ 33e8fa8 (MIT, as above).
 // Threads, synchronization, virtual cores and fibers of the Horizon kernel.
 //
-// One guest thread = one Windows thread with a 256 MiB reserved host stack (every guest BL is a host call) and its own
+// One guest thread = one host thread with a 256 MiB reserved host stack (every guest BL is a host call) and its own
 // Cpu. The SDK's nn::os runs as lifted code; only the kernel under it is the host. Every wait hangs on one global lock
 // G with one condition variable per thread; wake order is the kernel's: lower priority value first, then first come.
 // Semantics follow the public Horizon kernel (KConditionVariable, KAddressArbiter, KSynchronization).

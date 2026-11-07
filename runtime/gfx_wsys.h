@@ -1,5 +1,4 @@
-// Between gfx_present.c (swapchain, present, vsync) and the window system's back end (gfx_window_win.c with Win32,
-// gfx_window_sdl.c with SDL). Host threads only.
+// Between gfx_present.c (swapchain, present, vsync) and the window system's back end (gfx_window_sdl.c). Host threads only.
 #pragma once
 #include "vk.h"
 

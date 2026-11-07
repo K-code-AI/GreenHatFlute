@@ -1,4 +1,4 @@
-"""In-launch A/B summary of a GHF_AB run (runtime/prof_win.c rt_ab): per perf window of 60 presents wholly in an A or a
+"""In-launch A/B summary of a GHF_AB run (runtime/perf.c rt_ab): per perf window of 60 presents wholly in an A or a
 B block, the frame interval and the replay time; their means per frame on each side, and B - A.
 
 usage: ab_summary.py <log> [--skip <seconds>]

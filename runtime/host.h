@@ -17,7 +17,7 @@
 
 // ---- logging and results
 void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));   // "[host] <msg>\n" to the log, one write
-// The log is stderr plus, in a game run whose stderr is not a file, logs\greenhatflute.log next to GreenHatFlute (main.c log_open).
+// The log is stderr plus, in a game run whose stderr is not a file, logs/greenhatflute.log next to GreenHatFlute (main.c log_open).
 // rt_logf and rt_log_raw write to both without the prefix and the newline: crash reports, fatal errors, guest output.
 void rt_logf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void rt_vlogf(const char *fmt, va_list ap);
@@ -26,7 +26,7 @@ const char *rt_log_path(void);                  // the log file, NULL when this 
 enum { RT_TRACE_SVC = 1, RT_TRACE_HOSTCALL = 2, RT_TRACE_IPC = 4, RT_TRACE_FS = 8, RT_TRACE_GFX = 16, RT_TRACE_PERF = 32,
        RT_TRACE_SCHED = 64, RT_TRACE_AUDIO = 128, RT_TRACE_PRESENT = 256, RT_TRACE_CODEC = 512 };
 extern unsigned rt_trace;                       // from GHF_TRACE=svc,host,ipc,fs,gfx,perf,sched,audio,present,codec (or all)
-// prof_win.c: GHF_PROFILE=<path> sampling profiler; GHF_TRACE=perf frame timing (waits of the render thread)
+// GHF_PROFILE=<path> sampling profiler (the OS's, when this host has one); GHF_TRACE=perf frame timing (waits of the render thread)
 // PERF_TEX: texture uploads on the render thread (deswizzle, decode, staging), PERF_ASTC included
 enum { PERF_PACE, PERF_FENCE, PERF_DRAIN, PERF_PIPE, PERF_XLATE, PERF_TEX, PERF_ASTC, PERF_N };
 void prof_start(void);
@@ -49,7 +49,7 @@ enum { PERF_CNT_PIPE_ASYNC, PERF_CNT_PIPE_SKIP, PERF_CNT_TEX_UP, PERF_CNT_TEX_RE
 void perf_count(int kind);
 void perf_present(uint64_t frame);
 void perf_summary_flush(void);                  // prints the frame-time summary of the running period (exit); the 60 s lines come from perf_present
-void gfx_exit_log(void);                        // back end's lines for the exit summary (weak no-op in prof_win.c)
+void gfx_exit_log(void);                        // back end's lines for the exit summary (weak no-op in perf.c, the real one in vk_backend.c)
 int vk_backend_selftest(void);                  // replay write-back deduplication cases; failures (vk_backend.c)
 void perf_gpu_wait(uint64_t t0);                // a wait for a GPU fence ended (any thread; the render thread's also counts as PERF_FENCE)
 // GPU side of the 60-frame perf line, filled by the graphics back end when it set perf_gpu_stats. gpu_ns: GPU busy time

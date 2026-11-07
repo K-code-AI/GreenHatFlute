@@ -1,5 +1,4 @@
-// Between input.c (gamepad, merging, scripts) and the keyboard and mouse of the window system's back end (input_win.c
-// with Win32, input_sdl.c with SDL). Any thread.
+// Between input.c (gamepad, merging, scripts) and the keyboard and mouse of the window system's back end (input_sdl.c). Any thread.
 #pragma once
 #include <stdint.h>
 

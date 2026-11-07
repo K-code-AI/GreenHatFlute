@@ -1,4 +1,4 @@
-// The SDL3 window's input seams (Linux and other hosts without Win32): gfx_window_sdl.c owns the window and its event
+// The SDL3 window's input seams: gfx_window_sdl.c owns the window and its event
 // loop, input_sdl.c the keyboard, the mouse and the cursor, ui/menu_sdl.cpp the menu's events. Window thread, except
 // where noted.
 #pragma once

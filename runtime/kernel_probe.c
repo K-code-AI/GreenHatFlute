@@ -626,7 +626,7 @@ static void probe_main(Cpu *c) {
     test_exit_process(c);
 }
 
-// ---- platform layer (platform/win32.c): a thread handing values over a condition variable, and plat_sleep_ns(1 ms)
+// ---- platform layer (platform/linux.c): a thread handing values over a condition variable, and plat_sleep_ns(1 ms)
 // overshoot (median of 21 under 0.5 ms; frame pacing depends on it).
 static PlatMutex g_pm = PLAT_MUTEX_INIT;
 static PlatCond g_pc = PLAT_COND_INIT;

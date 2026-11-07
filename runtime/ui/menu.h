@@ -1,5 +1,5 @@
-// The in-game menu (ui/menu.cpp, Dear ImGui) and its seams to the platform side: the window and its input (ui/menu_win.cpp
-// on Windows, ui/menu_sdl.cpp with SDL), the gamepad (input_pad_read, input.h) and the present path
+// The in-game menu (ui/menu.cpp, Dear ImGui) and its seams to the platform side: the window and its input (ui/menu_sdl.cpp),
+// the gamepad (input_pad_read, input.h) and the present path
 // (gfx_present.c). The menu core calls no window system: events come in through menu_event_*, the drawing happens in the
 // present path's command buffer.
 //
@@ -58,7 +58,7 @@ void menu_vk_release(void);               // before the device goes away (gfx_wi
 // whole font and refuses a cut-off one, one without a character map and one with an unknown tag (--probe-window).
 int menu_font_check(void);
 
-// ---- what the menu asks of the platform side (gfx_window_win.c, gfx_window_sdl.c)
+// ---- what the menu asks of the platform side (gfx_window_sdl.c)
 void gfx_window_apply_settings(void);     // GHF_FULLSCREEN or GHF_WINDOW_SIZE changed: the window follows
 void gfx_window_request_close(void);      // as the window's close button: the process ends
 int gfx_window_monitor_size(int *w, int *h);   // pixels of the monitor the window is on; 0 when unknown

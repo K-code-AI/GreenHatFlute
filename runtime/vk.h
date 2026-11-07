@@ -20,7 +20,7 @@ typedef struct VkCtx {
     VkDevice device;
     VkPhysicalDeviceProperties props;
     VkPhysicalDeviceMemoryProperties mem_props;
-    uint32_t gfx_family;                    // graphics + compute + presentation on win32
+    uint32_t gfx_family;                    // graphics + compute + presentation (vk_device.c find_gfx_family)
     uint32_t xfer_family;                   // a transfer-only family when the GPU has one, else gfx_family
     VkQueue gfx_queue;                      // graphics + present
     VkQueue xfer_queue;                     // equals gfx_queue when xfer_shared
@@ -120,7 +120,7 @@ void gfx_fit_rect(int cw, int ch, int dw, int dh, int out[4]);
 void vk_present_capture(int on);
 int vk_present_captured(const uint8_t **px, int *w, int *h, VkFormat *fmt);
 
-// The window system's part of device creation (gfx_window_win.c with Win32, gfx_window_sdl.c with SDL): the instance
+// The window system's part of device creation (gfx_window_sdl.c): the instance
 // extensions a surface needs (their count, at most max), and whether a queue family of pd can present to it.
 int gfx_window_vk_extensions(const char **out, int max);
 int gfx_window_vk_presentable(VkInstance inst, VkPhysicalDevice pd, uint32_t family);

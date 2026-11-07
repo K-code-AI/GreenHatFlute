@@ -1,4 +1,4 @@
-// The SDL3 back end of the window (gfx_wsys.h), for hosts without Win32: the window on a thread of its own that also
+// The SDL3 back end of the window (gfx_wsys.h): the window on a thread of its own that also
 // runs SDL's event loop, F11 fullscreen (borderless, the desktop's mode), the settings GHF_WINDOW_SIZE and
 // GHF_FULLSCREEN, the display's refresh rate, focus, the Vulkan surface. The swapchain and the present are
 // gfx_present.c's. Keyboard and mouse events go to input_sdl.c and to the menu (ui/menu_sdl.cpp).

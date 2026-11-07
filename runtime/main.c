@@ -15,8 +15,8 @@
 //     (no mode)         run the game
 //
 // Also here: the runtime services the generated code calls besides rt_dispatch and rt_svc (rt_brk, rt_udf,
-// rt_ticks, the function profiler hook), logging, SHA-256, and the crash reporter (a vectored exception handler that
-// names the lifted function, the guest registers and the guest frame-pointer chain).
+// rt_ticks, the function profiler hook), logging, SHA-256, and the crash reporter (a signal handler that names the
+// lifted function, the guest registers and the guest frame-pointer chain).
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,9 +32,10 @@
 // ---- logging, tracing, hashing
 unsigned rt_trace;
 
-// Log file. A game run whose stderr is not a file already (started from Explorer, a shortcut or a console) also
-// writes its log to logs\greenhatflute.log next to GreenHatFlute, so a player has one to attach to a report; run_game.py and
-// `2> file` keep their own file. Each start moves the earlier logs to greenhatflute.1.log .. greenhatflute.4.log. A file stops at 64 MiB
+// Log file. A game run whose stderr is not a file already (started from a desktop entry, or a terminal that keeps no
+// log) also writes its log to logs/greenhatflute.log next to GreenHatFlute, so a player has one to attach to a report;
+// play/run.sh, tools/run_game.py and `2> file` keep their own file. Each start moves the earlier logs to
+// greenhatflute.1.log .. greenhatflute.4.log. A file stops at 64 MiB
 // (GHF_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
 // nothing else lands in the guest address space, and an earlier open would put the CRT's heap there.
 #define LOG_KEEP 5

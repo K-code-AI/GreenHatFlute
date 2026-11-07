@@ -1,5 +1,4 @@
-// nn::swkbd::ShowKeyboard (swkbd.c) and its front end, the window that takes the text (swkbd_win.c with Win32,
-// swkbd_sdl.c with SDL).
+// nn::swkbd::ShowKeyboard (swkbd.c) and its front end, the window that takes the text (swkbd_sdl.c).
 #pragma once
 #include <stddef.h>
 #include <stdint.h>

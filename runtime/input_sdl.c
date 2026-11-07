@@ -3,9 +3,9 @@
 // Key and button state comes from the window's events (window thread) and is read by any thread. Keys and their map:
 // docs/controls.md.
 //
-// The capture follows the Win32 back end's rules (input_win.c): captured while the window has the focus, the mouse
-// camera is on and no text entry or menu is open; Esc releases it until a click in the window (and closing the menu
-// opened by that Esc gives it back); losing the focus releases it until the window has the focus again.
+// The capture is held while the window has the focus, the mouse camera is on and no text entry or menu is open; Esc
+// releases it until a click in the window (and closing the menu opened by that Esc gives it back); losing the focus
+// releases it until the window has the focus again.
 #include <string.h>
 
 #include <SDL3/SDL.h>
@@ -23,7 +23,7 @@ static volatile int32_t esc_held, f8_held, focused;
 static volatile int32_t mouse_dx, mouse_dy;   // relative motion since the last ikb_mouse_take, whole counts
 static float rem_x, rem_y;                    // window thread: the fractions SDL reported beyond them
 static volatile int32_t captured;             // relative mouse mode is on
-enum { CUR_REL = 1, CUR_ESC = 2 };            // as input_win.c: released by Esc or a click elsewhere; by Esc
+enum { CUR_REL = 1, CUR_ESC = 2 };            // CUR_REL: the cursor is released; CUR_ESC: Esc did it, so closing the menu takes it back
 static volatile int32_t cur_rel, cur_suspend, cur_pending;
 static uint32_t wake_event;                   // SDL_RegisterEvents: wakes the window thread for a cursor change
 

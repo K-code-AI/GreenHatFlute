@@ -1,7 +1,7 @@
 // Host input for nn::hid (runtime/ov_input.c): an SDL3 gamepad (no SDL window needed), the keyboard and the mouse,
 // merged into Switch npad button bits and stick axes. Button order follows libnx HidNpadButton (ISC). The key and pad
 // bindings are the tables in input_map.c (greenhatflute.ini overrides them). The keyboard and the mouse come from the window
-// system's back end (input_wsys.h: input_win.c with Win32, input_sdl.c with SDL), which also owns the cursor capture.
+// system's back end (input_wsys.h: input_sdl.c), which also owns the cursor capture.
 // Keys and their map: docs/controls.md.
 // The gamepad also rumbles (input_rumble) and, when it has a gyro and an accelerometer, feeds the six-axis sensor from a
 // thread of its own (input_motion_start). Every SDL call on the gamepad is made under `lock`.

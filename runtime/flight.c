@@ -5,7 +5,7 @@
 // GHF_FLIGHT_SPIKE_MS (100; 0 off; at most one dump per 10 s), and GHF_FLIGHT_AT=<frame>[,<frame>...]. A dump holds
 // the frames up to FLIGHT_POST presents after the trigger, so the aftermath is in it too. tools/flight_view.py reads it.
 //
-// Records come from perf_present (prof_win.c) on the render thread; the counts are differences of the GHF_TRACE=perf
+// Records come from perf_present (perf.c) on the render thread; the counts are differences of the GHF_TRACE=perf
 // running totals and of vk_exec_frame. Off, the only cost is the flight_on branch in perf_present and vk_backend.c.
 #include <stdio.h>
 #include <stdlib.h>
