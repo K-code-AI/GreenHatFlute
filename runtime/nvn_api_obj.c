@@ -641,7 +641,7 @@ NVN_API(nvnVertexStreamStateSetDefaults) { *ST(vs_st, c) = (vs_st){0, 0}; }
 NVN_API(nvnVertexStreamStateSetStride) { ST(vs_st, c)->stride = (uint32_t)arg_x(c, 1); }
 NVN_API(nvnVertexStreamStateSetDivisor) { ST(vs_st, c)->divisor = (uint32_t)arg_x(c, 1); }
 
-// ---------- Windows
+// ---------- Window objects
 #define WB(c) ((win_builder_t *)arg_p(c, 0))
 #define WN(c) ((win_t *)arg_p(c, 0))
 NVN_API(nvnWindowBuilderSetDefaults) {

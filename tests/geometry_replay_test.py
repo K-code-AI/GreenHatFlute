@@ -286,7 +286,7 @@ def main():
     fixture.write_text(source())
     failed = 0
     for opt in ('-O0', '-O2'):
-        exe = out / ('replay' + opt + ('.exe' if os.name == 'nt' else ''))
+        exe = out / ('replay' + opt)
         command = [args.cc, opt, '-Wall', '-Wextra', '-Werror', '-I', str(ROOT / 'runtime'),
                    '-I', str(args.deps / 'include'), '-I', str(args.deps / 'include/vma'), str(fixture), '-o', str(exe)]
         run = subprocess.run(command, capture_output=True, text=True)

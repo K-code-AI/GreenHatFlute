@@ -17,7 +17,7 @@
 
 // ---- logging and results
 void rt_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));   // "[host] <msg>\n" to the log, one write
-// The log is stderr plus, in a game run whose stderr is not a file, logs\greenhatflute.log next to GreenHatFlute.exe (main.c log_open).
+// The log is stderr plus, in a game run whose stderr is not a file, logs/greenhatflute.log next to GreenHatFlute (main.c log_open).
 // rt_logf and rt_log_raw write to both without the prefix and the newline: crash reports, fatal errors, guest output.
 void rt_logf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void rt_vlogf(const char *fmt, va_list ap);
@@ -26,7 +26,7 @@ const char *rt_log_path(void);                  // the log file, NULL when this 
 enum { RT_TRACE_SVC = 1, RT_TRACE_HOSTCALL = 2, RT_TRACE_IPC = 4, RT_TRACE_FS = 8, RT_TRACE_GFX = 16, RT_TRACE_PERF = 32,
        RT_TRACE_SCHED = 64, RT_TRACE_AUDIO = 128, RT_TRACE_PRESENT = 256, RT_TRACE_CODEC = 512 };
 extern unsigned rt_trace;                       // from GHF_TRACE=svc,host,ipc,fs,gfx,perf,sched,audio,present,codec (or all)
-// prof_win.c: GHF_PROFILE=<path> sampling profiler; GHF_TRACE=perf frame timing (waits of the render thread)
+// GHF_PROFILE=<path> sampling profiler (the OS's, when this host has one); GHF_TRACE=perf frame timing (waits of the render thread)
 // PERF_TEX: texture uploads on the render thread (deswizzle, decode, staging), PERF_ASTC included
 enum { PERF_PACE, PERF_FENCE, PERF_DRAIN, PERF_PIPE, PERF_XLATE, PERF_TEX, PERF_ASTC, PERF_N };
 void prof_start(void);
@@ -49,7 +49,7 @@ enum { PERF_CNT_PIPE_ASYNC, PERF_CNT_PIPE_SKIP, PERF_CNT_TEX_UP, PERF_CNT_TEX_RE
 void perf_count(int kind);
 void perf_present(uint64_t frame);
 void perf_summary_flush(void);                  // prints the frame-time summary of the running period (exit); the 60 s lines come from perf_present
-void gfx_exit_log(void);                        // back end's lines for the exit summary (weak no-op in prof_win.c)
+void gfx_exit_log(void);                        // back end's lines for the exit summary (weak no-op in perf.c, the real one in vk_backend.c)
 int vk_backend_selftest(void);                  // replay write-back deduplication cases; failures (vk_backend.c)
 void perf_gpu_wait(uint64_t t0);                // a wait for a GPU fence ended (any thread; the render thread's also counts as PERF_FENCE)
 // GPU side of the 60-frame perf line, filled by the graphics back end when it set perf_gpu_stats. gpu_ns: GPU busy time
@@ -98,14 +98,9 @@ typedef struct { const char *name; GuestFn fn; } RtHostEntry;
 #define RT_CAT2(a, b) a##b
 #define RT_CAT(a, b) RT_CAT2(a, b)
 // File-scope declarations; fn must be declared before. The loader binds them by symbol name. The entries of every
-// object file meet in one section per kind, which hostfn.c walks: on PE/COFF ".ovr$m", which the linker sorts between
-// hostfn.c's ".ovr$a" and ".ovr$z" markers; on ELF "ghf_ovr", which the linker brackets with __start_ghf_ovr and
-// __stop_ghf_ovr.
-#ifdef _WIN32
-#define RT_HOST_SECTION(kind) section("." #kind "$m")
-#else
+// object file meet in one section per kind, which hostfn.c walks: the linker brackets "ghf_ovr" and "ghf_obs" with
+// __start_ghf_ovr / __stop_ghf_ovr and __start_ghf_obs / __stop_ghf_obs.
 #define RT_HOST_SECTION(kind) section("ghf_" #kind)
-#endif
 #define HOST_OVERRIDE(sym, fn) /* replaces sym in every GOT/GLOB_DAT/ABS64 of every module */                  \
     __attribute__((used, RT_HOST_SECTION(ovr))) static const RtHostEntry RT_CAT(rt_ovr_, __COUNTER__) = {sym, fn}
 #define HOST_OBSERVER(sym, fn) /* JUMP_SLOT only; fn calls rt_original(c) */                                    \
@@ -299,11 +294,10 @@ typedef struct { const char *exefs, *romfs, *profile; int boot; double seconds; 
 const RtConfig *rt_config(void);
 void rt_boot_event(const char *what, Cpu *c, const char *detail);   // checkpoint log; "nvn" ends --boot
 void rt_boot(void);                                        // boot.c
-// Modes of GreenHatFlute.exe. main.c has run mem_init and parsed the paths; each mode calls ldr_load itself if it needs the
+// Modes of GreenHatFlute. main.c has run mem_init and parsed the paths; each mode calls ldr_load itself if it needs the
 // modules, registers its host functions, then seals (hostfn_seal, or implicitly at the first rt_call). Return the
 // process exit code.
 int probe_cfg(void);                                       // cfg_probe.c
-int probe_dpi(void);                                       // dpi_probe_win.c (Windows only)
 int probe_loader(void), probe_kernel(void), probe_ipc(void), probe_ipc_lifetime(void), probe_services(void), probe_fs(void);
 int probe_gfx_abi(void);                                   // gfx_abi_probe.c
 int probe_vkdevice(void);                                 // vk_device.c

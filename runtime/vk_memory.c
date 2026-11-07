@@ -1296,11 +1296,7 @@ static void mirror_mode(int discrete) {
     freeze_idle = fi && *fi ? atoi(fi) : 60;
     if (freeze_idle < 0) freeze_idle = 0;
     const char *sh = cfg_get("GHF_SHADOW");
-#ifdef _WIN32
-    shadow_on = sh && *sh && strcmp(sh, "0");
-#else
     shadow_on = !sh || !*sh || strcmp(sh, "0");
-#endif
     if (shadow_on) rt_log("mem: shadow storage: CPU-visible pools are host-visible copies of guest memory, not imports%s",
                           sh && *sh ? " (GHF_SHADOW)" : "");
     rt_log("mem: mode %s (%s): %s", mode == 2 ? "verify" : mode ? "mirror" : "import", why,

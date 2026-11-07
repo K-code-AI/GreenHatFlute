@@ -232,7 +232,7 @@ SI VTU FN(vcmp)(Cpu *c, int op, VT a, VT b) {
 }
 
 // ---- rounding to integral (FRINT*): rm 0 N, 1 P, 2 M, 3 Z, 4 A; 5 X / 6 I = FPCR mode
-// (rint = ties-to-even: the host stays in round-to-nearest outside the slow paths; no roundeven in MinGW's CRT)
+// (rint = ties-to-even: the host stays in round-to-nearest outside the slow paths)
 SI T FN(rnd)(T x, int rm) {
     switch (rm) {
     case 0: return __builtin_elementwise_rint(x);

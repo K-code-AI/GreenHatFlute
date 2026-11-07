@@ -1,5 +1,5 @@
 // Binding tables (keyboard/mouse and gamepad), their greenhatflute.ini overrides, the pure mapping functions and the Buttons
-// tab's edits (input_map.h). No Win32 or SDL here.
+// tab's edits (input_map.h). No SDL or window system here.
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>

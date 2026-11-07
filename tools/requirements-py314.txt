@@ -1,6 +1,5 @@
-# Python 3.14 venv at .venv-py314: MacNativeGames TotK scripts (need stdlib compression.zstd, 3.14+). Source: refs/MacNativeGames/games/totk/requirements-dev.txt
-# Recreate: uv venv --python 3.14 .venv-py314 && uv pip install --python .venv-py314/Scripts/python.exe -r tools/requirements-py314.txt
-ansicon==1.89.0
+# Python 3.14 venv at .venv-py314: the vendored extraction scripts (they need stdlib compression.zstd, 3.14+).
+# Recreate: uv venv --python 3.14 .venv-py314 && uv pip install --python .venv-py314/bin/python -r tools/requirements-py314.txt
 blessed==1.51.0
 brotli==1.2.0
 capstone==5.0.9

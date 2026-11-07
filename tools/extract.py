@@ -85,8 +85,8 @@ def version_dir(expected):
     return 'v0' if expected['version'] == 0 else 'v' + expected['display_version'].replace('.', '')
 
 
-# The embeddable Python (a ._pth file) does not put a script's directory on sys.path, so a vendored script that imports
-# its siblings fails when started by path. This stub adds the directory, then runs the script as __main__.
+# A vendored script may import its siblings, which works only when its own directory is on sys.path. This stub adds the
+# directory, then runs the script as __main__ with its own argv.
 RUN_SCRIPT = ('import os, runpy, sys; p = sys.argv[1]; sys.path.insert(0, os.path.dirname(p)); sys.argv = sys.argv[1:]; '
               "runpy.run_path(p, run_name='__main__')")
 
@@ -275,7 +275,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--config', type=Path, default=ROOT / 'config.local.toml')
     parser.add_argument('--hactool', type=Path,
-                        default=ROOT / 'toolchain' / 'hactool' / ('hactool.exe' if os.name == 'nt' else 'hactool'))
+                        default=ROOT / 'toolchain' / 'hactool' / 'hactool')
     parser.add_argument('--base', type=Path, help='base game (default: input.base of the config)')
     parser.add_argument('--update', type=Path, action='append',
                         help='an update NSP, repeatable (default: input.updates of the config)')

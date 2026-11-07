@@ -92,12 +92,11 @@ folder. The folder holds code and data derived from your game: for your own mach
 
 ## Memory on this port
 
-Upstream's Windows port lets the GPU import guest memory and uses `GetWriteWatch` to track the CPU's writes to it. On
-Linux, re-protecting imported memory invalidates the driver's userptr buffer on every submit (about 1.3 ms per 16 MiB
-on amdgpu), and importing pins the pages, which drops their write protection. Each CPU-visible pool therefore gets a
-host-visible copy — shadow storage, `runtime/vk_memory.c`: the pages the CPU wrote go in before each submit, and the
-GPU's writes come back at its fence. In play that costs about 0.2 ms a frame and doubles the memory of those pools
-(about 1.1 GB). `GHF_SHADOW=1` turns it on explicitly.
+The GPU can import the game's pools as host memory, but re-protecting imported memory invalidates the driver's userptr
+buffer on every submit (about 1.3 ms per 16 MiB on amdgpu), and importing pins the pages, which drops their write
+protection. Each CPU-visible pool therefore gets a host-visible copy — shadow storage, `runtime/vk_memory.c`: the
+pages the CPU wrote go in before each submit, and the GPU's writes come back at its fence. In play that costs about
+0.2 ms a frame and doubles the memory of those pools (about 1.1 GB). `GHF_SHADOW=1` turns it on explicitly.
 
 When the card cannot give a pool device-local memory, the log says `physical pool of ... device-local allocation failed
 (-2)` and the pool keeps the game's storage in host memory instead. The run continues and renders; it is slower, and
@@ -148,4 +147,4 @@ Kingdom* addresses, not Ocarina's, and report failures here that are not regress
 ## Reverse engineering (optional)
 
 - Ghidra 12.1.2 with Adubbz's Ghidra-Switch-Loader in `toolchain/ghidra/` (JDK 21) opens the game modules (NSO).
-- `tools/fetch_refs.sh` clones the upstream projects this port builds on into `refs/`, read-only.
+- `tools/fetch_refs.sh` clones the projects this code builds on into `refs/`, read-only.

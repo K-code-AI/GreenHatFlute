@@ -22,7 +22,7 @@
 #define LOW_SEARCH_FROM 0x100000000ull
 // Switch 2 sizes (Donkey Kong Bananza): the game sizes its heap from TotalMemorySize (GetInfo 6), so the pool and the
 // heap block are the Switch 2's, not the Switch 1's 0xCD500000 and 4 GiB. The heap is committed as the game asks
-// (SetHeapSize), and Windows commit charge only grows with it.
+// (SetHeapSize): the address space is reserved up front, and only the pages the game touches cost memory.
 #define LOW_SIZE (16 * GiB)
 #define STACK_OFF 0x10000000ull
 #define STACK_SIZE 0x10000000ull
@@ -201,7 +201,7 @@ static void protect(uint64_t a, uint64_t n, int prot, const char *what) {
     if (!ok) rt_fatal("memory: protect %s %#llx+%#llx failed", what, (unsigned long long)a, (unsigned long long)n);
 }
 
-// The process is re-run when a region is taken: Windows places DLLs, heaps and thread stacks at random addresses,
+// The process is re-run when a region is taken: the OS places libraries, heaps and thread stacks at random addresses,
 // and a fresh process gets a fresh layout.
 static void reexec_or_fail(const char *what) {
     const char *e = cfg_get("GHF_REEXEC");

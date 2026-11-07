@@ -1,7 +1,7 @@
 // Adapted from MacNativeGames games/totk/runtime/opus_codec.c @ b75be8cf (MIT, Copyright (c) 2026 MacNativeGames
 // contributors).
 // The hardware Opus decoder (nn::codec), decoded with libopus on the host. The software keyboard (nn::swkbd) is
-// in swkbd_win.c.
+// in swkbd_sdl.c.
 #include <stdint.h>
 #include <limits.h>
 #include <stdlib.h>

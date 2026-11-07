@@ -1,5 +1,5 @@
 // Frame timing (GHF_TRACE=perf, the frame-time summary, the performance overlay's counts), the A/B switches (rt_ab,
-// rt_knob) and GHF_ONE_PER_CORE. The sampling profiler (GHF_PROFILE) is the OS's (prof_win.c); without one the weak
+// rt_knob) and GHF_ONE_PER_CORE. The sampling profiler (GHF_PROFILE) is the OS's; this host has none, so the weak
 // prof_sampler_* below do nothing.
 #include <stdio.h>
 #include <stdlib.h>

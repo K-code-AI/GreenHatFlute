@@ -98,8 +98,8 @@ static CbRes *cur;
 static uint64_t cur_fence;
 
 // Descriptor pools and full-size transient chunks go back to these lists when their command buffer completes, instead
-// of being destroyed and created again for the next one: each creation is a driver memory allocation (on Windows an
-// allocation, a map and a paging-fence wait on the CPU), about ten of them per frame inside the replay.
+// of being destroyed and created again for the next one: each creation is a driver memory allocation plus a map, about
+// ten of them per frame inside the replay.
 #define SPARE_POOLS 64
 #define SPARE_CHUNKS 16
 static PlatMutex spare_lock = PLAT_MUTEX_INIT;
@@ -2856,7 +2856,9 @@ static int prepare_draw(VkExec *ex, int prim, int32_t count, int restart) {
         static int skip_w = -1, skip_h;   // OOT_SKIP_PASS=<w>x<h>: no draws in passes of that size
         if (skip_w < 0) { const char *e = getenv("OOT_SKIP_PASS"); skip_w = 0; if (e) sscanf(e, "%dx%d", &skip_w, &skip_h); }
         if (skip_w && (int)ex->pass_w == skip_w && (int)ex->pass_h == skip_h) return 0;
-        if (ex->pass_w == 256 && ex->pass_h == 144 && getenv("OOT_COUNT_256")) {
+        static int count_small = -1;   // this is the hot draw path: an environment lookup belongs outside the per-draw work
+        if (count_small < 0) count_small = getenv("OOT_COUNT_256") != NULL;
+        if (ex->pass_w == 256 && ex->pass_h == 144 && count_small) {
             static int told;
             if (told++ < 200) rt_log("256-draw prog %llu count %d frame %llu", ex->prog ? (unsigned long long)ex->prog->serial : 0ull, (int)count, (unsigned long long)__atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED));
         }
@@ -2935,16 +2937,32 @@ static int prepare_draw(VkExec *ex, int prim, int32_t count, int restart) {
             }
         }
     }
+    // Before the vertex slot is read as a vertex shader: a shader still translating there can turn out to be a task
+    // shader, and a task shader handed to the driver as a pipeline's vertex stage crashes its compiler.
+    // A draw into a target the previous frame did not render (or into none) waits for a pending shader or pipeline:
+    // one-shot draws (volumes and LUTs generated once, later only sampled) would leave their target empty for the
+    // session. A draw into per-frame targets is skipped until they are ready and comes back next frame.
+    int oneshot = -1, skip = pipe_skip_mode();   // -1: not looked up
+    if (vs_wait || fs_wait || gs_wait) {
+        if (!(oneshot = !vk_exec_targets_recent(ex, skip >= 1))) return perf_count(PERF_CNT_SHADER_SKIP), 0;   // skipped until ready
+        perf_count(PERF_CNT_ONESHOT_WAIT);
+        if (vs_wait) vs = shader_for(ex, NVN_STAGE_VS, &has_vs, NULL, 1);
+        if (fs_wait) fs = shader_for(ex, NVN_STAGE_FS, &has_fs, NULL, 1);
+        native_gs_vs = vs, native_gs_fs = fs;
+        if (gs_wait) gs = shader_for(ex, NVN_STAGE_GS, &has_gs, NULL, 1);
+    }
     const GfxShader *ts = NULL;
     if (vs && gfx_shader_is_task(vs)) {   // LOCAL TEST (Ocarina): task in the vertex slot, mesh in the tessellation slot
         int has_mesh = 0;
         ts = vs;
         vs = shader_for(ex, 4, &has_mesh, NULL, 1);
-        if (!vs) return draw_why(ex, "task without a mesh stage"), 0;
+        if (!vs || !gfx_shader_is_mesh(vs)) return draw_why(ex, "task without a mesh stage"), 0;
         mesh_task_draw = 1;
         B.c0_valid[0] = 0;
     }
-    if (ts && getenv("OOT_NO_TASK")) return 0;   // LOCAL TEST (Ocarina)
+    static int no_task = -1;
+    if (no_task < 0) no_task = getenv("OOT_NO_TASK") != NULL;
+    if (ts && no_task) return 0;   // LOCAL TEST (Ocarina)
     if (vs && gfx_shader_is_mesh(vs)) mesh_task_draw = 1;
     if (!has_vs) return warn_once(W_NO_VS, "a draw with a program that has no vertex stage is skipped"), 0;
     if (vs && gfx_shader_is_mesh(vs) != draw_is_mesh) return draw_why(ex, "mesh program in a vertex draw, or the reverse"), 0;
@@ -2973,18 +2991,6 @@ static int prepare_draw(VkExec *ex, int prim, int32_t count, int restart) {
             }
         }
     }
-    // A draw into a target the previous frame did not render (or into none) waits for a pending shader or pipeline:
-    // one-shot draws (volumes and LUTs generated once, later only sampled) would leave their target empty for the
-    // session. A draw into per-frame targets is skipped until they are ready and comes back next frame.
-    int oneshot = -1, skip = pipe_skip_mode();   // -1: not looked up
-    if (vs_wait || fs_wait || gs_wait) {
-        if (!(oneshot = !vk_exec_targets_recent(ex, skip >= 1))) return perf_count(PERF_CNT_SHADER_SKIP), 0;   // skipped until ready
-        perf_count(PERF_CNT_ONESHOT_WAIT);
-        if (vs_wait) vs = shader_for(ex, NVN_STAGE_VS, &has_vs, NULL, 1);
-        if (fs_wait) fs = shader_for(ex, NVN_STAGE_FS, &has_fs, NULL, 1);
-        native_gs_vs = vs, native_gs_fs = fs;
-        if (gs_wait) gs = shader_for(ex, NVN_STAGE_GS, &has_gs, NULL, 1);
-    }
     if (stage_diag_skip(ex, vs)) { if (draw_is_mesh) draw_why(ex, "stage diag skip"); return 0; }
     if (light_quad_fault_skip(ex, vs, fs)) return draw_why(ex, "light quad skip"), 0;
     if (!vs || (has_fs && !fs) || (want_gs && (!has_gs || !gs))) {
@@ -2995,33 +3001,37 @@ static int prepare_draw(VkExec *ex, int prim, int32_t count, int restart) {
     uint32_t fbl = feedback_prepare(ex, fs);
     VkPipeState s = ex->pipe;
     { uint64_t f_ = __atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED); if (f_ >= 1798 && f_ <= 1799 && ex->pass_w == 2560) rt_log("vk: draw into 2560 frame %llu program %llu viewport %g %g %g %g scissor %d %d %u %u", (unsigned long long)f_, (unsigned long long)ex->prog->serial, ex->vp[0][0], ex->vp[0][1], ex->vp[0][2], ex->vp[0][3], sc.offset.x, sc.offset.y, sc.extent.width, sc.extent.height); }
-    {   // LOCAL TEST (Ocarina): the value the material shaders divide by, per frame (fragment slot 2 + 0x8c)
+    {   // Material diagnostics: the resource scan and the memory inspect only run while their output can be used.
         static uint64_t last;
+        static int flash_log = -1;
+        if (flash_log < 0) flash_log = getenv("OOT_FLASH_LOG") != NULL;
         uint64_t f_ = __atomic_load_n(&gfx_counters.frames, __ATOMIC_RELAXED);
-        uint64_t a_ = ex->ssbo[NVN_STAGE_FS][2].addr;
-        VkMemInspect mi;
-        int mat_ = 0;
-        if (fs) {
-            const GfxShaderRes *r_;
-            int n_ = gfx_shader_resources(fs, GFX_RES_SSBO, &r_);
-            for (int i_ = 0; i_ < n_; i_++) mat_ |= r_[i_].cbuf_slot == 0 && r_[i_].handle * 4 == 0x530;
-        }
-        {   // per frame: the random rotation in fragment c6[38], for correlating with OOT_FLASH_LOG
-            static uint64_t lastf;
-            static char line[97];
-            static int nl_;
-            const p_bind_buf *u6 = &ex->ubo[NVN_STAGE_FS][3];
-            if (getenv("OOT_FLASH_LOG") && mat_ && f_ != lastf && u6->addr && u6->size >= 0x270) {
-                lastf = f_;
-                const float *q = (const float *)(uintptr_t)(u6->addr + 38 * 16);
-                line[nl_++] = q[1] < 0 ? '-' : '+';
-                if (nl_ == 96) { line[96] = 0; rt_log("rot: frame %llu: %s", (unsigned long long)f_, line); nl_ = 0; }
+        if (flash_log || (f_ >= 1700 && f_ < 1801)) {
+            uint64_t a_ = ex->ssbo[NVN_STAGE_FS][2].addr;
+            VkMemInspect mi;
+            int mat_ = 0;
+            if (fs) {
+                const GfxShaderRes *r_;
+                int n_ = gfx_shader_resources(fs, GFX_RES_SSBO, &r_);
+                for (int i_ = 0; i_ < n_; i_++) mat_ |= r_[i_].cbuf_slot == 0 && r_[i_].handle * 4 == 0x530;
             }
-        }
-        if (mat_ && f_ >= 1700 && f_ < 1801 && f_ != last && ex->pass_w == 1280 && a_ && vk_mem_inspect(a_ + 0x8c, 4, &mi) && mi.pool_kind == VK_MEM_INSPECT_POOL_IMPORT) {
-            last = f_;
-            const float *v_ = (const float *)(uintptr_t)(a_ + 0x80);
-            rt_log("vk: f %llu slot2 %#llx +0x80: %g %g %g %g", (unsigned long long)f_, (unsigned long long)a_, v_[0], v_[1], v_[2], v_[3]);
+            {   // per frame: the random rotation in fragment c6[38], for correlating with OOT_FLASH_LOG
+                static uint64_t lastf;
+                static char line[97];
+                static int nl_;
+                const p_bind_buf *u6 = &ex->ubo[NVN_STAGE_FS][3];
+                if (flash_log && mat_ && f_ != lastf && u6->addr && u6->size >= 0x270) {
+                    lastf = f_;
+                    const float *q = (const float *)(uintptr_t)(u6->addr + 38 * 16);
+                    line[nl_++] = q[1] < 0 ? '-' : '+';
+                    if (nl_ == 96) { line[96] = 0; rt_log("rot: frame %llu: %s", (unsigned long long)f_, line); nl_ = 0; }
+                }
+            }
+            if (mat_ && f_ >= 1700 && f_ < 1801 && f_ != last && ex->pass_w == 1280 && a_ && vk_mem_inspect(a_ + 0x8c, 4, &mi) && mi.pool_kind == VK_MEM_INSPECT_POOL_IMPORT) {
+                last = f_;
+                const float *v_ = (const float *)(uintptr_t)(a_ + 0x80);
+                rt_log("vk: f %llu slot2 %#llx +0x80: %g %g %g %g", (unsigned long long)f_, (unsigned long long)a_, v_[0], v_[1], v_[2], v_[3]);
+            }
         }
     }
     s.vs = vs, s.fs = fs, s.gs = gs, s.ts = ts;
@@ -3516,7 +3526,7 @@ static void op_draw_mesh_ind(VkExec *ex, const p_draw_mesh_ind *d) {
         static long lo = -2, hi;
         if (lo == -2) {
             const char *e = getenv("OOT_MESH_ALLOW");
-            lo = -1, hi = 0x7fffffffL;   // long is 32 bits on Windows: 1L << 40 overflowed and this filter dropped every indirect mesh draw
+            lo = -1, hi = 0x7fffffffL;   // the bounds stay inside a long: a shift past its width overflowed and this filter dropped every indirect mesh draw
             if (e) sscanf(e, "%ld-%ld", &lo, &hi);
         }
         long pr = ex->prog ? (long)ex->prog->serial : 0;
@@ -3599,7 +3609,9 @@ static void op_draw_mesh_ind(VkExec *ex, const p_draw_mesh_ind *d) {
 // lost the device on an RTX 5090 (an invalid instruction pointer, the same address in every run). Such a giant is replaced
 // (this NVN 2 stage only) by a blit from its largest sampled texture to the image it writes. 1 when it was. ponytail: bilinear, not the game's
 // filter; lower the shader's size instead when that is understood. GHF_BIG_CS=0 runs it.
-static int big_compute_blit(VkExec *ex, const GfxShader *cs, const VkPipeInfo *info) {
+// Takes no pipeline: this shader is the biggest in the game (1.4 million SPIR-V words), and waiting for its pipeline
+// to compile left every scene black for minutes on a first run. Its resources are read from the shader instead.
+static int big_compute_blit(VkExec *ex, const GfxShader *cs) {
     uint64_t words = 0;
     gfx_shader_spirv(cs, &words);
     const uint8_t *bctl, *bcode = NULL;
@@ -3612,19 +3624,21 @@ static int big_compute_blit(VkExec *ex, const GfxShader *cs, const VkPipeInfo *i
     }
     if (!on) return 0;
     const VkTexImage *src = NULL, *dst = NULL;
-    for (uint32_t i = 0; i < info->n_bindings; i++) {
-        const VkPipeBinding *bd = &info->bindings[i];
-        if (!bd->res || (bd->kind != GFX_RES_TEX && bd->kind != GFX_RES_IMG)) continue;
-        int slot = bd->res->slot, img = bd->kind == GFX_RES_IMG;
-        uint64_t h = img ? (slot >= 0 && slot < 32 ? ex->img[5][slot] : 0) : (slot >= 0 && slot < 128 ? ex->tex[5][slot] : 0);
-        view_t v;
-        int hv = 0;
-        const VkTexImage *t = h ? vk_texture_by_id(&ex->tex_pool, (int)(h & 0xfffff), &v, &hv) : NULL;
-        if (!t) continue;
-        if (img && (bd->res->flags & 4)) dst = t;
-        else if (!img && t->type == VK_IMAGE_TYPE_2D && !(t->aspect & VK_IMAGE_ASPECT_DEPTH_BIT) &&
-                 (!src || (uint64_t)t->width * t->height > (uint64_t)src->width * src->height))
-            src = t;
+    for (int img = 0; img < 2; img++) {
+        const GfxShaderRes *r;
+        int n = gfx_shader_resources(cs, img ? GFX_RES_IMG : GFX_RES_TEX, &r);
+        for (int i = 0; i < n; i++) {
+            int slot = r[i].slot;
+            uint64_t h = img ? (slot >= 0 && slot < 32 ? ex->img[5][slot] : 0) : (slot >= 0 && slot < 128 ? ex->tex[5][slot] : 0);
+            view_t v;
+            int hv = 0;
+            const VkTexImage *t = h ? vk_texture_by_id(&ex->tex_pool, (int)(h & 0xfffff), &v, &hv) : NULL;
+            if (!t) continue;
+            if (img && (r[i].flags & 4)) dst = t;
+            else if (!img && t->type == VK_IMAGE_TYPE_2D && !(t->aspect & VK_IMAGE_ASPECT_DEPTH_BIT) &&
+                     (!src || (uint64_t)t->width * t->height > (uint64_t)src->width * src->height))
+                src = t;
+        }
     }
     static int logged;
     if (!logged) {
@@ -3819,11 +3833,11 @@ static void op_dispatch(VkExec *ex, const p_dispatch *d) {
             return;
         }
     }
+    if (big_compute_blit(ex, cs)) return;   // before the wait: this shader's pipeline is the slowest to build
     if (!vk_pipeline_compute_ready(cs)) return;
     const VkPipeInfo *info = NULL;
     VkPipeline p = vk_pipeline_compute(cs, &info);
     if (!p || !info) return warn_once(W_PIPELINE, "a compute pipeline could not be created: dispatches with it are skipped");
-    if (big_compute_blit(ex, cs, info)) return;
     vk_exec_barrier(ex);   // ends the pass; earlier writes are visible to the shader
     bind_pipeline(ex, VK_PIPELINE_BIND_POINT_COMPUTE, p);
     c0_dim[0] = (uint32_t)d->x, c0_dim[1] = (uint32_t)d->y, c0_dim[2] = (uint32_t)d->z;

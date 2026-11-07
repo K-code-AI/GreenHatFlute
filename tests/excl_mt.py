@@ -7,14 +7,13 @@
 Needs no game files. Usage: excl_mt.py [--runtime DIR] [--threads N] [--iters K]
 """
 import argparse
-import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'diff'))
-from common import MSYS_BIN, ROOT, compiler  # noqa: E402
+from common import ROOT, compiler  # noqa: E402
 
 SRC = r'''
 #include <pthread.h>
@@ -131,16 +130,13 @@ def main():
     ap.add_argument('--threads', type=int, default=8)
     ap.add_argument('--iters', type=int, default=200000)
     args = ap.parse_args()
-    env = dict(os.environ)
-    if os.name == 'nt' and MSYS_BIN.exists():
-        env['PATH'] = str(MSYS_BIN) + os.pathsep + env.get('PATH', '')
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp) / 'excl_mt.c'
-        exe = Path(tmp) / ('excl_mt.exe' if os.name == 'nt' else 'excl_mt')
+        exe = Path(tmp) / 'excl_mt'
         src.write_text(SRC)
         subprocess.check_call([compiler(), '-O2', '-march=x86-64-v3', '-fno-strict-aliasing', '-I', str(args.runtime),
-                               str(src), '-o', str(exe), '-lpthread'], env=env)
-        return subprocess.run([str(exe), str(args.threads), str(args.iters)], env=env).returncode
+                               str(src), '-o', str(exe), '-lpthread'])
+        return subprocess.run([str(exe), str(args.threads), str(args.iters)]).returncode
 
 
 if __name__ == '__main__':

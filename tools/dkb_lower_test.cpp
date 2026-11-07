@@ -3,8 +3,8 @@
 // output folder it also writes each lowered stage as TotK Recomp's translator takes it (what gfx_shader.c writes:
 // graphics from +0x30, compute whole) and <out>/jobs.json for `greenhatflute_xlate <jobs.json> <outdir>`.
 //
-//   clang++ -std=c++20 -O1 -I runtime/third_party/eglantine tools/dkb_lower_test.cpp -o build/dkb_lower_test.exe
-//   build/dkb_lower_test.exe <dump folder> [out folder]
+//   clang++ -std=c++20 -O1 -I runtime/third_party/eglantine tools/dkb_lower_test.cpp -o build/dkb_lower_test
+//   build/dkb_lower_test <dump folder> [out folder]
 #include <cstdarg>
 #include <cstdio>
 #include <filesystem>

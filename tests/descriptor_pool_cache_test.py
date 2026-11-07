@@ -254,7 +254,7 @@ def main():
     src.write_text(source())
     failed = 0
     for opt in ('-O0', '-O2'):
-        exe = out / ('cache' + opt + ('.exe' if os.name == 'nt' else ''))
+        exe = out / ('cache' + opt)
         command = [args.cc, opt, '-Wall', '-Wextra', '-Werror', '-I', str(ROOT / 'runtime'),
                    '-I', str(args.deps / 'include'), '-I', str(args.deps / 'include/vma'), str(src), '-o', str(exe)]
         run = subprocess.run(command, capture_output=True, text=True)

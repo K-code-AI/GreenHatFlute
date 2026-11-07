@@ -181,10 +181,10 @@ def main():
                  interface.function(source, 'static Pipe *pipe_miss('))
     path = args.out / 'fixture.c'
     path.write_text(generated)
-    exe = args.out / 'fixture.exe'
+    exe = args.out / 'fixture'
     pipeline.run([args.cc, '-std=gnu11', f'-O{args.opt}', '-ffunction-sections', '-fdata-sections',
                   '-I', ROOT / 'runtime', '-I', args.deps / 'include', '-I', args.deps / 'include/vma',
-                  path, '-Wl,--gc-sections,--exclude-all-symbols', '-o', exe], args.out / 'compile.log')
+                  path, '-Wl,--gc-sections,--discard-all', '-o', exe], args.out / 'compile.log')
     result = subprocess.run([str(exe), str(args.out)], capture_output=True, text=True, timeout=30)
     (args.out / 'test.log').write_text(result.stdout + result.stderr)
     manifest = {'result': result.stdout.strip(), 'exit_code': result.returncode, 'opt': args.opt,

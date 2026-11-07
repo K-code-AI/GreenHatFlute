@@ -26,11 +26,9 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     include = args.source_root.resolve() / 'runtime/third_party/eglantine'
     fixture = ROOT / 'tests/native_exit_capture.cpp'
-    exe = args.out / ('native-exit-capture.exe' if os.name == 'nt' else 'native-exit-capture')
+    exe = args.out / 'native-exit-capture'
     command = [args.cxx, '-std=c++20', f'-O{args.opt}', '-Wall', '-Wextra', '-Werror',
                '-I', str(include), str(fixture), '-o', str(exe)]
-    if os.name == 'nt':
-        command += ['-static-libstdc++', '-static-libgcc']
     compile = subprocess.run(command, capture_output=True, text=True, timeout=120)
     (args.out / 'compile.log').write_text(compile.stdout + compile.stderr)
     if compile.returncode:

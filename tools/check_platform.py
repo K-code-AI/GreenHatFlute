@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Fails when runtime code outside runtime/platform/ uses the Win32 API directly.
 
-Runtime code goes through runtime/platform/platform.h. The Win32 back ends of the window system are Win32 by design and
-are not scanned: files named *_win.c / *_win.cpp (runtime/ and runtime/ui/), whose SDL counterparts (*_sdl.*) serve
-other hosts. Any other file that still uses Win32 goes into ALLOWED with the reason; a file in ALLOWED that no longer
+Runtime code goes through runtime/platform/platform.h. The Win32 back ends were removed when the project became
+Linux-only, so every runtime file is scanned: a Win32 use anywhere in runtime/ is a regression, not a portability
+layer. Files named *_win.c / *_win.cpp are still skipped by name, so a host-specific back end added later is exempt
+the same way. Any other file that still uses Win32 goes into ALLOWED with the reason; a file in ALLOWED that no longer
 matches is noted, so the entry gets removed.
 
 Usage: python tools/check_platform.py [--root DIR]   (DIR holds runtime/; default: the repository root)

@@ -31,7 +31,7 @@ def main():
         parser.error('pass --cc with a C compiler')
     out = ROOT / 'build' / 'test' / 'nvn2-compute-c0'
     out.mkdir(parents=True, exist_ok=True)
-    exe = out / ('nvn2_compute_c0.exe' if os.name == 'nt' else 'nvn2_compute_c0')
+    exe = out / 'nvn2_compute_c0'
     extra = []
     if args.baseline:
         # Keep the original production function intact; only replace unrelated global/replay context.

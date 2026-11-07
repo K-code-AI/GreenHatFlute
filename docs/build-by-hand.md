@@ -91,8 +91,8 @@ sha256sum build/exefs/main
 python tools/build_xlate.py
 ```
 
-On Linux this publishes `build/xlate/greenhatflute_xlate` for `linux-x64`; NativeAOT links it with the system clang and needs no
-MSVC. The 34 selected patches apply cleanly.
+This publishes `build/xlate/greenhatflute_xlate` for `linux-x64`; NativeAOT links it with the system clang. The 34
+selected patches apply cleanly.
 
 ## 5. Convert the game code
 
@@ -151,16 +151,6 @@ with the launcher's path filled in. `--dry-run` shows what would be written, `--
 Saves, cache and the log live in **`~/.local/share/greenhatflute`** (or `$XDG_DATA_HOME/greenhatflute`), not next to
 the executable, so the build folder can be moved or deleted without losing a game. `GHF_PROFILE_DIR` or `--profile DIR`
 still overrides that; a `profile` folder next to the executable means a portable copy and wins.
-
-## What differs from the upstream Windows port
-
-| | Linux |
-|---|---|
-| Executable | `build/oot111/GreenHatFlute`, an ELF; `runtime/*_sdl.*` and `runtime/platform/linux.c` replace the `*_win.*` files, `platform/win32.c` and `greenhatflute.rc` |
-| Libraries | system Vulkan, SDL3, Opus, zstd and dav1d; libvpx from your own folder; `libstdc++` static, `$ORIGIN` in the rpath |
-| Linker | `-no-pie` (the function tables need no load-time relocation) and lld when present |
-| CPU-visible pools | shadow storage by default (`runtime/vk_memory.c`): a host-visible copy per pool instead of importing the guest pages; see [building.md](building.md), "Linux" |
-| Shader translator | `greenhatflute_xlate` for `linux-x64`, NativeAOT over the system clang |
 
 ## Common problems
 

@@ -50,7 +50,7 @@ static const char *str_field(const char *from, const char *to, const char *name,
 static int hexval(char c) { return c <= '9' ? c - '0' : (c | 32) - 'a' + 10; }
 
 // The shader census the probes translate (tools/shader_census.py --version <ver>): build/<ver>/shaders in the nearest
-// parent of GreenHatFlute.exe that has one with a jobs.json, the running game version's first, then the others' (any census
+// parent of GreenHatFlute that has one with a jobs.json, the running game version's first, then the others' (any census
 // serves a probe). 1 with that folder in dir.
 int probe_census_dir(char *dir, size_t n) {
     const char *const versions[3] = {RT_V111 ? "v111" : RT_V143 ? "v143" : "v121",

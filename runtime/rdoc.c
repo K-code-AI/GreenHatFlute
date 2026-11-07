@@ -49,11 +49,7 @@ void rdoc_init(void) {
     }
     if (!n_targets) { rt_log("rdoc: GHF_RDOC=%s has no frame numbers", e); return; }
     const char *dll = cfg_get("GHF_RDOC_DLL");
-#ifdef _WIN32
-    const char *def = "C:/Program Files/RenderDoc/renderdoc.dll";
-#else
     const char *def = "librenderdoc.so";
-#endif
     void *m = plat_lib_open(dll && *dll ? dll : def);
     if (!m) { rt_log("rdoc: cannot load %s; set GHF_RDOC_DLL", dll && *dll ? dll : def); return; }
     int (*get_api)(int, void **) = (int (*)(int, void **))plat_lib_sym(m, "RENDERDOC_GetAPI");

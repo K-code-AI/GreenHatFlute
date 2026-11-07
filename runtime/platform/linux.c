@@ -116,7 +116,7 @@ PlatThread *plat_thread_new_ex(PlatThreadFn fn, void *arg, const char *name, siz
     if (name) snprintf(t->name, sizeof t->name, "%s", name);
     pthread_attr_t a;
     pthread_attr_init(&a);
-    // The stack is mapped lazily, as Windows reserves it: only the pages a thread touches cost memory.
+    // The stack is reserved but mapped lazily: only the pages a thread touches cost memory.
     pthread_attr_setstacksize(&a, stack ? stack : PLAT_STACK_DEFAULT);
     int e = pthread_create(&t->t, &a, thread_main, t);
     pthread_attr_destroy(&a);
@@ -179,8 +179,8 @@ uint64_t plat_thread_cpu_ns(uint32_t tid) {
     return ns;
 }
 
-// ---- thread interruption: a signal handshake in place of Windows' SuspendThread / Get/SetThreadContext.
-// The caller moves the handle from IDLE to REQ and signals the thread. The thread's handler stores where it was and
+// ---- thread interruption: a signal handshake that stops a thread, reads and writes its registers, and starts it
+// again. The caller moves the handle from IDLE to REQ and signals the thread. The thread's handler stores where it was and
 // moves REQ to STOPPED, then spins until the caller moves it on to GO (with the redirect in to), changes its own
 // return context, and goes back to IDLE. A caller that sees no STOPPED within INTR_WAIT_NS (the thread is blocked in
 // the kernel and runs no handler) takes REQ back to IDLE; a handler that then finds IDLE returns at once.
@@ -436,7 +436,7 @@ uint32_t plat_cpu_usable(void) {
     return plat_cpu_count();
 }
 
-// Windows' levels map to nice values: IDLE 19, LOWEST 4, BELOW_NORMAL 2, NORMAL 0, ABOVE_NORMAL -2, HIGHEST -5,
+// The seven levels map to nice values: IDLE 19, LOWEST 4, BELOW_NORMAL 2, NORMAL 0, ABOVE_NORMAL -2, HIGHEST -5,
 // TIME_CRITICAL -10. Applied only when the process may lower a nice value again (platform.h says why).
 static int nice_of(int prio) {
     return prio <= PLAT_PRIO_IDLE ? 19 : prio == PLAT_PRIO_LOWEST ? 4 : prio == PLAT_PRIO_BELOW_NORMAL ? 2
@@ -497,7 +497,7 @@ uint64_t plat_counter_hz(void) { return 1000000000u; }
 void plat_timer_1ms(void) { prctl(PR_SET_TIMERSLACK, 1000ul, 0, 0, 0); }
 
 // clock_nanosleep wakes within the timer slack (50 us by default) of its deadline; the last PLAT_SPIN_NS are spent
-// yielding so the deadline is met closely, as on Windows.
+// yielding so the deadline is met closely.
 #define PLAT_SPIN_NS 100000u
 
 void plat_sleep_ns(uint64_t ns) {
@@ -768,8 +768,8 @@ int plat_file_replace(const char *from, const char *to) {
 }
 
 int plat_file_write_atomic(const char *path, const void *data, size_t n) {
-    // A rename replaces a read-only file here (only the folder's permission counts) but not on Windows: a file the
-    // player made read-only stays as it is on both.
+    // A rename would replace a read-only file here (only the folder's permission counts), so the file's own write
+    // access is checked first: a file the player made read-only stays as it is.
     if (access(path, W_OK) && errno != ENOENT) return 0;
     char tmp[PATH_MAX + 48];
     int len = snprintf(tmp, sizeof tmp, "%s.%u.%u.tmp", path, plat_process_id(), plat_thread_id());
@@ -805,7 +805,7 @@ int64_t plat_file_size(const char *path) {
     return stat(path, &st) ? -1 : (int64_t)st.st_size;
 }
 
-// The owner's write permission stands for Windows' read-only attribute.
+// A file is read-only here when this process may not write it: the owner's write permission.
 int plat_file_set_readonly(const char *path, int on) {
     struct stat st;
     if (stat(path, &st)) return 0;
@@ -880,7 +880,7 @@ int plat_mem_reserve(uint64_t addr, uint64_t n, int watch) {
     if (ok) {
         ps_set(addr, n, PS_RESERVED);
         // Transparent huge pages would populate (and count as written) 2 MiB at the first write of one page; writes are
-        // tracked per 4 KiB page, as on Windows.
+        // tracked per 4 KiB page.
         if (watch) madvise(p, n, MADV_NOHUGEPAGE);
         struct uffdio_register reg = {.range = {addr, n}, .mode = UFFDIO_REGISTER_MODE_WP};
         if (watch && ww_fd >= 0 && ioctl(ww_fd, UFFDIO_REGISTER, &reg))
@@ -935,7 +935,7 @@ uint64_t plat_mem_written(uint64_t addr, uint64_t n, uint64_t *pages, uint64_t m
     for (uint64_t at = addr, end = addr + n; at < end && got < max;) {
         // Written means: write-protection cleared, on a populated page (present or swapped out) that is not the shared
         // zero page. A page never touched since its commit has no protection marker either and counts as written to
-        // the kernel; a read maps the zero page there. Neither is a write, as on Windows.
+        // the kernel; a read maps the zero page there. Neither is a write.
         struct pm_scan_arg arg = {.size = sizeof arg,
                                   .flags = reset ? PM_SCAN_WP_MATCHING | PM_SCAN_CHECK_WPASYNC : 0,
                                   .start = at, .end = end, .vec = (uint64_t)(uintptr_t)r, .vec_len = 256,
@@ -956,9 +956,69 @@ uint64_t plat_mem_written(uint64_t addr, uint64_t n, uint64_t *pages, uint64_t m
 
 // One handler for the synchronous faults. A SIGSEGV whose page-fault error code has the write bit set goes to the
 // write-fault hook first (memory.c thaws a frozen region); a fault in this executable's code then goes to the crash
-// hook (main.c); anything else gets the default action. Runs on the thread's signal stack.
+// hook (main.c); a fault anywhere else gets one line naming the module, the thread and its work (fault_report_other)
+// before the default action. Runs on the thread's signal stack.
 static int (*fault_hook)(uint64_t addr);
 static void (*crash_fn)(const PlatCrash *c);
+static _Thread_local const char *crash_note;
+
+void plat_crash_note(const char *note) { crash_note = note; }
+
+// The second number of /proc/self/statm (resident pages) and one line of /proc/meminfo, in MiB. Read with open/read:
+// this runs in a signal handler, where stdio may already be held by the thread that faulted.
+static uint64_t statm_resident_mib(void) {
+    char buf[256];
+    int fd = open("/proc/self/statm", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return 0;
+    ssize_t n = read(fd, buf, sizeof buf - 1);
+    close(fd);
+    if (n <= 0) return 0;
+    buf[n] = 0;
+    char *end;
+    strtoull(buf, &end, 10);            // the first field: total virtual size
+    unsigned long long pages = strtoull(end, &end, 10);
+    return pages * (unsigned long long)sysconf(_SC_PAGESIZE) >> 20;
+}
+
+static uint64_t meminfo_mib(const char *key) {
+    char buf[1024];
+    int fd = open("/proc/meminfo", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return 0;
+    ssize_t n = read(fd, buf, sizeof buf - 1);
+    close(fd);
+    if (n <= 0) return 0;
+    buf[n] = 0;
+    size_t k = strlen(key);
+    for (char *line = buf; line && *line; line = strchr(line, '\n') ? strchr(line, '\n') + 1 : NULL)
+        if (!strncmp(line, key, k) && line[k] == ':') return strtoull(line + k + 1, NULL, 10);   // the value is in KiB
+    return 0;
+}
+
+// A fault outside this executable: a driver, or the C runtime's heap. crash_fn is not called -- its report names
+// GreenHatFlute+<offset>, which would be a lie -- but the process must not end with no word in the log: this is the
+// only account such a crash ever gets. The module and its offset are the same across runs, the thread name says who
+// was in it, and the note is what that thread said it was working on (plat_crash_note). The memory numbers answer
+// "did it run out of memory?" without needing a second run: a driver that cannot allocate may fault on a null
+// pointer instead of returning an error.
+static void fault_report_other(int sig, uintptr_t rip, long err, const Dl_info *at) {
+    const char *file = at && at->dli_fname ? at->dli_fname : "?";
+    const char *slash = strrchr(file, '/');
+    char name[16] = "?";
+    if (pthread_getname_np(pthread_self(), name, sizeof name)) strcpy(name, "?");
+    fprintf(stderr, "[host] crash: %s at %s+%#llx, thread %s (%d)",
+            sig == SIGSEGV ? "SIGSEGV" : sig == SIGBUS ? "SIGBUS" : sig == SIGILL ? "SIGILL" : "SIGFPE",
+            slash ? slash + 1 : file,
+            (unsigned long long)(at && at->dli_fbase ? rip - (uintptr_t)at->dli_fbase : rip), name, (int)syscall(SYS_gettid));
+    if (err & 16) fprintf(stderr, ", executing %#llx", (unsigned long long)rip);
+    else if (err & 2) fprintf(stderr, ", writing");
+    else if (err & 1) fprintf(stderr, ", reading");
+    fprintf(stderr, ", working on: %s\n", crash_note ? crash_note : "(nothing noted)");
+    uint64_t rss = statm_resident_mib(), avail = meminfo_mib("MemAvailable"), total = meminfo_mib("MemTotal");
+    if (rss || avail || total)
+        fprintf(stderr, "[host] crash: memory: this process %llu MiB resident; system %llu of %llu MiB available\n",
+                (unsigned long long)rss, (unsigned long long)avail, (unsigned long long)total);
+    fflush(stderr);
+}
 
 static void fault_handler(int sig, siginfo_t *si, void *uc) {
     ucontext_t *u = uc;
@@ -966,13 +1026,20 @@ static void fault_handler(int sig, siginfo_t *si, void *uc) {
     if (sig == SIGSEGV && fault_hook && (err & 2) && fault_hook((uint64_t)(uintptr_t)si->si_addr)) return;
     uintptr_t rip = (uintptr_t)u->uc_mcontext.gregs[REG_RIP];
     Dl_info at, self;
-    if (crash_fn && dladdr((void *)rip, &at) && dladdr((void *)plat_crash_hook, &self) && at.dli_fbase == self.dli_fbase) {
+    int here = dladdr((void *)rip, &at) && dladdr((void *)plat_crash_hook, &self) && at.dli_fbase == self.dli_fbase;
+    if (crash_fn && here) {
         PlatCrash c = {sig == SIGSEGV ? "access violation" : sig == SIGBUS ? "bus error"
                        : sig == SIGILL ? "illegal instruction" : "arithmetic exception",
                        (uint32_t)sig, rip, rip - (uintptr_t)self.dli_fbase, -1, 0};
         if (sig == SIGSEGV || sig == SIGBUS)
             c.access = (err & 16) ? 8 : (err & 2) ? 1 : 0, c.addr = (uint64_t)(uintptr_t)si->si_addr;
         crash_fn(&c);
+    } else {
+        // Not this executable's code (or dladdr failed): a driver, the C runtime's heap, a module we do not name.
+        // Every path out of this handler ends the process -- the signal is reset and the faulting instruction runs
+        // again -- so a line here is the only record the run leaves.
+        Dl_info *who = dladdr((void *)rip, &at) ? &at : NULL;
+        fault_report_other(sig, rip, err, who);
     }
     signal(sig, SIG_DFL);   // returns into the faulting instruction, which faults again with the default action
 }
@@ -1104,8 +1171,9 @@ int plat_fs_rmdir(const char *path) {
 // Deleting needs write access to the directory, not to the file: a read-only file goes as any other.
 int plat_fs_unlink(const char *path) { return unlink(path) ? fs_err(errno) : PLAT_FS_OK; }
 
-// RENAME_NOREPLACE keeps Windows' rule that a rename never replaces; a file system without it (EINVAL) gets a check
-// first, which another process could race but the save directories are ours.
+// RENAME_NOREPLACE keeps our rule that a rename never replaces an existing name; a file system without it (EINVAL)
+// gets a check first, which another process could race but the save directories are ours. Files left open under a
+// directory never stop renaming the directory here.
 int plat_fs_rename(const char *from, const char *to, int durable) {
     if (syscall(SYS_renameat2, AT_FDCWD, from, AT_FDCWD, to, RENAME_NOREPLACE)) {
         if (errno != EINVAL && errno != ENOSYS) return fs_err(errno);
@@ -1132,12 +1200,6 @@ void plat_fs_sync_dir(const char *path) {
         fsync(fd);
         close(fd);
     }
-}
-
-// Open files never stop a rename here.
-void plat_fs_busy_reason(const char *dir, char *out, size_t cap) {
-    (void)dir;
-    if (cap) *out = 0;
 }
 
 int plat_fs_list(const char *dir, int (*cb)(const char *name, int kind, uint64_t size, void *ctx), void *ctx) {
@@ -1219,8 +1281,8 @@ size_t plat_getenv(const char *name, char *out, size_t cap) {
 }
 
 // Cached per thread: plat_rmutex_lock asks on every acquire, hundreds of thousands of times a second in play, and
-// gettid is a full syscall on Linux (Windows reads GetCurrentThreadId from the TEB). A thread's id never changes, and
-// the runtime starts child processes with posix_spawn only, so no forked copy inherits a stale id.
+// gettid is a full syscall here. A thread's id never changes, and the runtime starts child processes with posix_spawn
+// only, so no forked copy inherits a stale id.
 uint32_t plat_thread_id(void) {
     static __thread uint32_t tid;
     if (!tid) tid = (uint32_t)syscall(SYS_gettid);
@@ -1347,8 +1409,8 @@ void plat_local_time(struct tm *out) {
     localtime_r(&t, out);
 }
 
-// The range of the Windows CRT's localtime_s and gmtime_s (1970 to 3000), which glibc exceeds: the game's time
-// service reports times outside it as invalid on both hosts.
+// The range the game's time service accepts (1970 to 3000), which glibc exceeds: a time outside it is reported as
+// invalid rather than handed back as a date the game has never seen.
 #define PLAT_TIME_MAX 32535215999ll
 
 int plat_localtime(int64_t unix_s, struct tm *out) {
@@ -1610,7 +1672,7 @@ void plat_process_memory(uint64_t *resident, uint64_t *private_bytes) {
 }
 
 // Linux overcommits by default, so CommitLimit binds only with vm.overcommit_memory = 2; Committed_AS is what the
-// system has promised. The process's share is its resident anonymous memory, the nearest to Windows' private bytes.
+// system has promised. The process's share is its resident anonymous memory.
 void plat_commit_info(double *proc_mb, double *used_mb, double *limit_mb) {
     *proc_mb = *used_mb = *limit_mb = -1;
     char line[128];
@@ -1679,7 +1741,7 @@ void plat_child_stop(PlatChild *c) {
     free(c);
 }
 
-// A child that died makes the write fail with EPIPE; SIGPIPE is ignored for the process (main.c), as Windows has none.
+// A child that died makes the write fail with EPIPE; SIGPIPE is ignored for the process (main.c).
 int plat_child_write(PlatChild *c, const void *data, size_t n) { return write_all(c->in, data, n); }
 
 long plat_child_read(PlatChild *c, void *buf, size_t cap) {

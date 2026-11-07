@@ -36,7 +36,7 @@ import numpy as np
 import unicorn as uc
 from unicorn import arm64_const as A
 
-from common import BUF, BUF_SIZE, MSYS_BIN, ROOT, Emu, compiler, diff_state, rand_fpcr, rand_v, rand_x, run_harness
+from common import BUF, BUF_SIZE, ROOT, Emu, compiler, diff_state, rand_fpcr, rand_v, rand_x, run_harness
 import gen
 import patches
 from layout import layout
@@ -177,11 +177,8 @@ def check_function(emitter, entry, end):
 
 
 def build(work, emitted, jobs, cflags):
-    """Compile the emitted functions with harness.c into work/func[.exe]; tests[k] is emitted[k]."""
+    """Compile the emitted functions with harness.c into work/func; tests[k] is emitted[k]."""
     cc = compiler()
-    env = dict(os.environ)
-    if os.name == 'nt' and MSYS_BIN.exists():
-        env['PATH'] = str(MSYS_BIN) + os.pathsep + env.get('PATH', '')
     flags = ['-O1', '-fno-strict-aliasing', '-Wno-return-type', '-Wno-unused-label', '-I', str(ROOT / 'runtime')]
     flags += cflags.split()
     groups = {}
@@ -209,11 +206,11 @@ def build(work, emitted, jobs, cflags):
     for s in srcs:
         o = work / (s.stem + '.o')
         objs.append(o)
-        procs.append(subprocess.Popen([cc] + flags + ['-c', str(s), '-o', str(o)], env=env))
+        procs.append(subprocess.Popen([cc] + flags + ['-c', str(s), '-o', str(o)]))
     if any(p.wait() for p in procs):
         raise SystemExit('compile failed')
-    exe = work / ('func.exe' if os.name == 'nt' else 'func')
-    subprocess.check_call([cc, '-fuse-ld=lld', '-o', str(exe)] + [str(o) for o in objs], env=env)
+    exe = work / 'func'
+    subprocess.check_call([cc, '-fuse-ld=lld', '-o', str(exe)] + [str(o) for o in objs])
     return exe
 
 

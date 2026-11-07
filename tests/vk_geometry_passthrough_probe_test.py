@@ -93,7 +93,8 @@ class PortablePreparation(unittest.TestCase):
         baseline = subprocess.check_output(['git', 'show', '3b09d06fc00443b124edff570ea74393e4d6d7cc:runtime/vk_geometry_probe.c'],
                                            cwd=ROOT, text=True)
         for name, source in (('author', cpu_source()), ('baseline', cpu_source(baseline, legacy=True))):
-            path, exe = args.out / (name + '.c'), args.out / (name + '.exe')
+            # The probe keeps a name of its own: `name` is the folder of files it writes, and one path cannot be both.
+            path, exe = args.out / (name + '.c'), args.out / (name + '-probe')
             path.write_text(source, encoding='utf-8')
             run = subprocess.run([args.cc, '-std=c11', '-O2', '-Wall', '-Wextra', '-Werror',
                                   '-I', str(ROOT / 'runtime'), str(path), '-o', str(exe)], capture_output=True, text=True, timeout=60)

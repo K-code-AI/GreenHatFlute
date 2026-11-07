@@ -62,7 +62,7 @@ def main():
     src.write_text(source(draw))
     results = []
     for opt in ('-O0', '-O2'):
-        exe = out / ('fixture' + opt + ('.exe' if os.name == 'nt' else ''))
+        exe = out / ('fixture' + opt)
         command = [args.cc, '-std=gnu11', opt, '-Wall', '-Wextra', '-Werror',
                    '-Wno-missing-field-initializers',  # unchanged production BS/RS initializers
                    '-I', str(ROOT / 'runtime'), '-I', str(args.deps / 'include'),

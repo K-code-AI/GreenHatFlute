@@ -1,7 +1,7 @@
 // Shader service client: turns an NVN program (control section, code, c1 constants and the
 // translator's answers) into SPIR-V plus reflection through `greenhatflute_xlate --serve` children, started lazily with
 // pipes and kept for the life of the process (a pool: GHF_XLATE_PROCS at run time, more for the boot prewarm).
-// Results are cached in memory and on disk (shader-cache/<key>.spv and <key>.res.json next to GreenHatFlute.exe), so a shader
+// Results are cached in memory and on disk (shader-cache/<key>.spv and <key>.res.json next to GreenHatFlute), so a shader
 // is translated once per machine and translator.
 //
 // Keys. The code hash is sha256 over stage (u32), the 0x880-byte control section, code_size (u64), the code, the c1
@@ -300,8 +300,8 @@ static void xlate_identity(void) {
            xlate_id[3], xlate_id[4], xlate_id[5], xlate_id[6], xlate_id[7], how);
 }
 
-// The repository root is the nearest parent of GreenHatFlute.exe that holds build/xlate/greenhatflute_xlate. The shader cache lives
-// next to GreenHatFlute.exe, so every build dir has its own (as the pipeline cache, vk_pipeline.c cache_path_init).
+// The repository root is the nearest parent of GreenHatFlute that holds build/xlate/greenhatflute_xlate. The shader cache lives
+// next to GreenHatFlute, so every build dir has its own (as the pipeline cache, vk_pipeline.c cache_path_init).
 static void use_preload_start(void);
 
 static void init_paths(void *param) {
@@ -313,7 +313,7 @@ static void init_paths(void *param) {
         for (char *cut = plat_last_sep(exe); cut; cut = plat_last_sep(exe)) {
             *cut = 0;
             char probe[PATH_CAP + 32];
-            snprintf(probe, sizeof probe, "%s/build/xlate/greenhatflute_xlate" PLAT_EXE_SUFFIX, exe);
+            snprintf(probe, sizeof probe, "%s/build/xlate/greenhatflute_xlate", exe);
             if (file_exists(probe)) {
                 strcpy(root, exe);
                 break;
@@ -321,11 +321,11 @@ static void init_paths(void *param) {
         }
     }
     const char *xlate_cfg = cfg_get("GHF_XLATE"), *cache_cfg = cfg_get("GHF_SHADER_CACHE");
-    char beside[PATH_CAP + 32];   // a packaged folder (tools/package_build.py) keeps the translator next to GreenHatFlute.exe
-    if (exe_dir[0]) snprintf(beside, sizeof beside, "%s/greenhatflute_xlate" PLAT_EXE_SUFFIX, exe_dir);
+    char beside[PATH_CAP + 32];   // a packaged folder (tools/package_build.py) keeps the translator next to GreenHatFlute
+    if (exe_dir[0]) snprintf(beside, sizeof beside, "%s/greenhatflute_xlate", exe_dir);
     if (xlate_cfg && *xlate_cfg && strlen(xlate_cfg) < sizeof xlate_exe) strcpy(xlate_exe, xlate_cfg);
     else if (exe_dir[0] && file_exists(beside)) strcpy(xlate_exe, beside);
-    else if (root[0]) snprintf(xlate_exe, sizeof xlate_exe, "%s/build/xlate/greenhatflute_xlate" PLAT_EXE_SUFFIX, root);
+    else if (root[0]) snprintf(xlate_exe, sizeof xlate_exe, "%s/build/xlate/greenhatflute_xlate", root);
     if (cache_cfg && *cache_cfg && strlen(cache_cfg) < sizeof cache_dir) strcpy(cache_dir, cache_cfg);
     else if (exe_dir[0]) snprintf(cache_dir, sizeof cache_dir, "%s/shader-cache", exe_dir);
     xlate_identity();
@@ -2655,7 +2655,7 @@ void gfx_shader_record_flush(int force) {
 }
 
 // ---- preparation from record files: the answers met in play (GHF_TEST_PREPARE_SHADERS=1) or the seed that
-// tools/prepare_shaders.py writes from the MacNativeGames shader list (GreenHatFlute.exe --prepare-shaders). Both use the record
+// tools/prepare_shaders.py writes from the MacNativeGames shader list (GreenHatFlute --prepare-shaders). Both use the record
 // layouts above; a seed record has a zero input id (the use mask, hence the id, is the translator's to find) and its
 // pad byte holds the list priority (0 title, 1 warm-up, 2 rest).
 typedef struct { const uint8_t *rec; } PrgIdx;

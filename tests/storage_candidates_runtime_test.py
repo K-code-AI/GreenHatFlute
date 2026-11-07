@@ -273,7 +273,7 @@ def main():
     src = out / 'runtime.c'
     src.write_text(source())
     for opt in ('-O0', '-O2'):
-        exe = out / ('runtime' + opt + '.exe')
+        exe = out / ('runtime' + opt)
         command = [args.cc, opt, '-Wall', '-Wextra', '-Werror', '-I', str(ROOT / 'runtime'),
                    '-I', str(args.deps / 'include'), '-I', str(args.deps / 'include/vma'), str(src), '-o', str(exe)]
         run = subprocess.run(command, capture_output=True, text=True)

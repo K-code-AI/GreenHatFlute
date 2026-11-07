@@ -89,7 +89,7 @@ class ProbePreparation(unittest.TestCase):
         args.out.mkdir(parents=True, exist_ok=True)
         cls.cfile = args.out / 'author.c'
         cls.cfile.write_text(cpu_source())
-        cls.exe = args.out / ('author.exe' if os.name == 'nt' else 'author')
+        cls.exe = args.out / 'author'
         command = [args.cc, '-std=c11', '-O2', '-Wall', '-Wextra', '-Werror', str(cls.cfile), '-o', str(cls.exe)]
         run = subprocess.run(command, capture_output=True, text=True, timeout=60)
         (args.out / 'compile.log').write_text(run.stdout + run.stderr)

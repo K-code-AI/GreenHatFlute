@@ -1,4 +1,4 @@
-// GreenHatFlute.exe --probe-vkexec: the Vulkan replay, through gfx_vulkan_backend. Sync part: empty
+// GreenHatFlute --probe-vkexec: the Vulkan replay, through gfx_vulkan_backend. Sync part: empty
 // submissions get consecutive fence values; fence_wait and fence_done agree; completion callbacks run in submit order on
 // the completion thread; a guest-memory word a callback writes is visible once fence_wait returns; finish drains every
 // submission; a present of a cleared vk_texture.c image (layout GENERAL) reads back exactly through the swapchain

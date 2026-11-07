@@ -1,5 +1,5 @@
 // The remapping rows of the Controls tab (binds_page.h): edits a copy of the input tables (input_map.h), writes the GHF_BIND_* lines that
-// give the copy, and input_win.c applies them at its next poll; greenhatflute.ini follows a moment later (opt_save_soon). The
+// give the copy, and input.c applies them at its next poll (binds_refresh); greenhatflute.ini follows a moment later (opt_save_soon). The
 // gamepad cells show and change the table of the button layout in use (GHF_PAD_LAYOUT).
 #include <stdio.h>
 #include <string.h>

@@ -6,7 +6,7 @@
 //
 // Environment:
 //   GHF_LANG=<Switch language code>   the game's language as given ("ja", "en-GB", "zh-Hant", ...)
-//   GHF_LOCALE=<BCP 47 tag>           else the language for this locale ("pt-BR"), else the Windows user locale;
+//   GHF_LOCALE=<BCP 47 tag>           else the language for this locale ("pt-BR"), else the host's user locale;
 //                                      a language the game does not ship becomes en-US
 //   GHF_OPERATION_MODE=docked|handheld   operation and performance mode reported to the game (default docked)
 //   GHF_ASSUME_FOCUS=1|0              1 (default, the Game tab's row): GetCurrentFocusState always reports in focus,
@@ -88,13 +88,13 @@ static const char *switch_language(const char *tag) {
     return "en-US";
 }
 
-// The game's language as a Switch language code (GHF_LANG, else GHF_LOCALE, else the Windows user locale). TotK
+// The game's language as a Switch language code (GHF_LANG, else GHF_LOCALE, else the host's user locale). TotK
 // accepts "zh-Hans" and "zh-Hant" for Chinese and falls back to Japanese for "zh-CN" and "zh-TW", so those two
 // spellings, which older greenhatflute.ini files and menus wrote, are mapped to them.
 const char *ov_language(void) {
     static const char *const codes[] = {"ja", "en-US", "fr", "de", "it", "es", "ko", "nl", "pt", "ru",
                                         "en-GB", "fr-CA", "es-419", "zh-Hans", "zh-Hant", "pt-BR"};
-    const char *code = cfg_get("GHF_LANG");   // no fixed default: GHF_LOCALE or the Windows user locale decides when unset
+    const char *code = cfg_get("GHF_LANG");   // no fixed default: GHF_LOCALE or the host's user locale decides when unset
     if (code && *code) {
         if (!strcmp(code, "zh-CN")) return "zh-Hans";
         if (!strcmp(code, "zh-TW")) return "zh-Hant";
@@ -482,7 +482,7 @@ static void ov_nickname(Cpu *c) {
 }
 
 // ==== nn::time (time_host.c): the host clock and time zone. User and network clocks follow the host wall clock; the
-// steady clock counts seconds since Windows started, with one random source id per process. ClockSnapshot has the
+// steady clock counts seconds since the machine started, with one random source id per process. ClockSnapshot has the
 // public 0xD0-byte layout, because game code reads its fields through inline accessors.
 typedef struct { int64_t value; uint8_t source[16]; } SteadyClockTimePoint;
 typedef struct { int64_t offset; SteadyClockTimePoint point; } SystemClockContext;
@@ -561,8 +561,9 @@ static int utc_calendar(int64_t t, CalendarTime *c, CalendarInfo *info) {
     return y >= -32768 && y <= 32767;
 }
 
-// Local calendar fields of a POSIX time in the Windows time zone. The zone name is "UTC" or the UTC offset ("+03",
-// "-0330"), as tzdata names zones without an abbreviation; Windows has no abbreviations. 0 outside localtime's range.
+// Local calendar fields of a POSIX time in the host's local time zone. The zone name the game is told is "UTC" or the
+// UTC offset ("+03", "-0330"): the name field is 8 bytes and the host's zone data gives no short name to put there.
+// 0 outside localtime's range.
 static int local_calendar(int64_t t, CalendarTime *c, CalendarInfo *info) {
     plat_once(&source_once, make_source, NULL);
     struct tm tm;
@@ -729,7 +730,7 @@ const char *ov_shared_font_dir(char *buf, size_t n) {
     const char *e = cfg_get("GHF_SHARED_FONTS");
     if (e && *e) snprintf(buf, n, "%s", e);
     else {
-        char exe[PLAT_PATH_MAX], probe[PLAT_PATH_MAX + 40];   // shared-fonts next to GreenHatFlute.exe (tools/package_build.py), else the repo's
+        char exe[PLAT_PATH_MAX], probe[PLAT_PATH_MAX + 40];   // shared-fonts next to GreenHatFlute (tools/package_build.py), else the repo's
         int len = plat_exe_path(exe, sizeof exe);
         char *cut = len && len < sizeof exe ? plat_last_sep(exe) : NULL;
         if (cut) *cut = 0;
@@ -916,8 +917,8 @@ HOST_OVERRIDE("_ZN2nn3aoc17CountAddOnContentEv", ov_aoc_none);
 // Lifted functions keep their state on the host stack, so setjmp also keeps a copy of the host stack above it: longjmp puts
 // the bytes back and returns from setjmp a second time, through the same frames, into the lifted caller. Guest memory is
 // not copied, as with a real setjmp. Only the copy's frames must be unchanged since: frames above the caller are suspended.
-// The stack the caller runs on is named by plat_stack_base (Windows' TEB StackBase, our fiber's stack top on Linux), so a
-// longjmp that would land on another fiber's stack stops with a fatal instead of corrupting memory.
+// The stack the caller runs on is named by plat_stack_base (a fiber's stack top when it runs one, else the thread's own
+// stack), so a longjmp that would land on another fiber's stack stops with a fatal instead of corrupting memory.
 // ponytail: x86-64; a fixed number of buffers, oldest replaced; host locks held by host functions between setjmp
 // and longjmp are not released, none of the callers has any.
 #if defined(__x86_64__)

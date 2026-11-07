@@ -14,7 +14,7 @@ build/<version>/shaders/ only:
 
 The key is sha256(control[:0x880] + code), as in MNG. Needs Python 3.14 (compression.zstd), so run in .venv-py314:
 
-    .venv-py314\\Scripts\\python tools\\shader_census.py --version v121 --translate
+    .venv-py314/bin/python tools/shader_census.py --version v121 --translate
 """
 import argparse
 import compression.zstd as zstd

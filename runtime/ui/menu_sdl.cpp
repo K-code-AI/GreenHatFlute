@@ -1,4 +1,4 @@
-// SDL3 adapter of the in-game menu: the window's events to menu events (menu.h), as ui/menu_win.cpp does for Win32.
+// SDL3 adapter of the in-game menu: the window's events to menu events (menu.h).
 // Window thread (gfx_window_sdl.c's event loop, after input_sdl_event).
 //
 // F1 opens and closes the menu, Esc opens it (with the menu open, Esc goes to the menu, which closes). Esc also releases

@@ -13,7 +13,7 @@ writes it, and <romfs>/romfs.bin, whose size must match. Output, both in the bui
 
 Both are rewritten only when their bytes change, so Ninja does not rebuild romfs.c for nothing.
 
-    .venv\\Scripts\\python tools\\romfs_index.py --romfs build\\extracted\\v121\\romfs --out build\\v121
+    .venv/bin/python tools/romfs_index.py --romfs build/extracted/v121/romfs --out build/v121
 
 Standard library only.
 """
@@ -84,7 +84,7 @@ def write(romfs, out):
 
 
 def write_placeholder(out):
-    """romfs_config.h without a RomFS (no extracted game on this machine): GreenHatFlute.exe builds, and fs_init stops with a
+    """romfs_config.h without a RomFS (no extracted game on this machine): GreenHatFlute builds, and fs_init stops with a
     named fatal."""
     (out / 'romfs-index.bin').unlink(missing_ok=True)
     config = (f'// No RomFS found by tools/romfs_index.py; do not edit. {GENERATED_MARKER}\n'

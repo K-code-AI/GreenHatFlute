@@ -36,7 +36,7 @@
 #define QUEUE_SLACK_MS 40            // queued audio above the target plus the device's request that ring_pull skips
 #define STALL_MS 50                  // the device took nothing this long (at least 4 periods): the timer paces
 #define SPLITTER_UNUSED 0xffffffffu
-#define dm_guest_write_prepare(p, n) ((void)(p), (void)(n))   // guest memory is plain host memory on Windows
+#define dm_guest_write_prepare(p, n) ((void)(p), (void)(n))   // guest memory is plain host memory
 
 typedef struct { float vol[24]; int32_t dest; uint8_t used; AudrenBiquadFloat biquads[2]; float state[2][2]; } SplitDest;
 typedef struct { int32_t ndest; int32_t *ids; } SplitInfo;

@@ -21,7 +21,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     failed = 0
     for opt in ('-O0', '-O2'):
-        exe = out / ('reset' + opt + ('.exe' if os.name == 'nt' else ''))
+        exe = out / ('reset' + opt)
         command = [args.cc, opt, '-Wall', '-Wextra', '-Werror', '-I', str(ROOT / 'runtime'),
                    str(ROOT / 'tests/indirect_reset.c'), '-o', str(exe)]
         run = subprocess.run(command, capture_output=True, text=True)

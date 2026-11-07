@@ -1,10 +1,9 @@
-// GreenHatFlute.exe entry: reserves the guest address space, parses the command line and runs one mode.
+// GreenHatFlute entry: reserves the guest address space, parses the command line and runs one mode.
 //
-//   GreenHatFlute.exe [--exefs DIR] [--romfs DIR] [--profile DIR] <mode>
+//   GreenHatFlute [--exefs DIR] [--romfs DIR] [--profile DIR] <mode>
 //     --selftest        layout, dispatch table and host-function registry; needs no game files
 //     --probe-loader    load and relocate the modules, check them against the measured 1.2.1 values
 //     --probe-kernel, --probe-ipc, --probe-ipc-lifetime, --probe-services, --probe-fs    host probes
-//     --probe-dpi       the process DPI awareness (per-monitor v2) and the primary monitor's size; no game files
 //     --probe-gfx-abi   NVN object layouts against nvn.h's reserved sizes; needs no game files
 //     --probe-nvn, --probe-nvn-tex, --probe-window, --probe-shader, --probe-vkmem, --probe-vkexec    graphics probes
 //     --probe-astc      the compute ASTC decoder against astc_decode_ldr; needs no game files
@@ -16,8 +15,8 @@
 //     (no mode)         run the game
 //
 // Also here: the runtime services the generated code calls besides rt_dispatch and rt_svc (rt_brk, rt_udf,
-// rt_ticks, the function profiler hook), logging, SHA-256, and the crash reporter (a vectored exception handler that
-// names the lifted function, the guest registers and the guest frame-pointer chain).
+// rt_ticks, the function profiler hook), logging, SHA-256, and the crash reporter (a signal handler that names the
+// lifted function, the guest registers and the guest frame-pointer chain).
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,9 +32,10 @@
 // ---- logging, tracing, hashing
 unsigned rt_trace;
 
-// Log file. A game run whose stderr is not a file already (started from Explorer, a shortcut or a console) also
-// writes its log to logs\greenhatflute.log next to GreenHatFlute.exe, so a player has one to attach to a report; run_game.py and
-// `2> file` keep their own file. Each start moves the earlier logs to greenhatflute.1.log .. greenhatflute.4.log. A file stops at 64 MiB
+// Log file. A game run whose stderr is not a file already (started from a desktop entry, or a terminal that keeps no
+// log) also writes its log to logs/greenhatflute.log next to GreenHatFlute, so a player has one to attach to a report;
+// play/run.sh, tools/run_game.py and `2> file` keep their own file. Each start moves the earlier logs to
+// greenhatflute.1.log .. greenhatflute.4.log. A file stops at 64 MiB
 // (GHF_TRACE can write that much). Lines from before log_open wait in a static buffer: mem_init runs first so that
 // nothing else lands in the guest address space, and an earlier open would put the CRT's heap there.
 #define LOG_KEEP 5
@@ -439,15 +439,15 @@ static int selftest(void) {
 
 static int usage(const char *argv0) {
     fprintf(stderr, "usage: %s [--exefs DIR] [--romfs DIR] [--profile DIR] [--selftest | --probe-loader | "
-                    "--probe-cfg | --probe-dpi | --probe-kernel | --probe-ipc | --probe-ipc-lifetime | --probe-services | --probe-fs | --probe-gfx-abi | "
+                    "--probe-cfg | --probe-kernel | --probe-ipc | --probe-ipc-lifetime | --probe-services | --probe-fs | --probe-gfx-abi | "
                     "--probe-nvn | --probe-nvn-tex | --probe-window | --probe-shader | --probe-shader-geometry | --probe-vkmem | "
                     "--probe-vkexec | --probe-vkgeometry | --probe-vkgeometry-passthrough | --probe-vkgeometry-passthrough-ordering | --probe-vkclear | --probe-vkcopy-astc | --probe-vkpool | --probe-vkreset | --probe-astc | --probe-movie | --prepare-shaders | --warm-shaders | --boot |--seconds S [--shot PNG]]\n", argv0);
     return 2;
 }
 
 // Paths for a copied folder (tools/package_build.py). Per path: GHF_EXEFS, GHF_ROMFS, GHF_PROFILE_DIR, else the
-// folder next to GreenHatFlute.exe (exefs with main.npdm, romfs with romfs.bin, any profile folder) if it is there, else the
-// path baked in at build time. A relative value is relative to GreenHatFlute.exe's folder.
+// folder next to GreenHatFlute (exefs with main.npdm, romfs with romfs.bin, any profile folder) if it is there, else the
+// path baked in at build time. A relative value is relative to GreenHatFlute's folder.
 static char pp_exefs[PLAT_PATH_MAX * 2], pp_romfs[PLAT_PATH_MAX * 2], pp_profile[PLAT_PATH_MAX * 2],
           pp_data[PLAT_PATH_MAX * 3];
 
@@ -497,8 +497,8 @@ int main(int argc, char **argv) {
     plat_crash_hook(crash_handler);
     parse_trace();
     prof_start();
-    // Timed guest waits (kernel.c block_inner) sleep in whole milliseconds; at the default 15.6 ms tick a 1 ms wait
-    // costs a full tick. GHF_TIMER_1MS=0 keeps the default for comparison.
+    // Timed guest waits (kernel.c block_inner) sleep in whole milliseconds. plat_timer_1ms tightens the OS's wake-up
+    // slack so they land near their deadline; GHF_TIMER_1MS=0 leaves the OS's own timing for comparison.
     if (cfg_bool("GHF_TIMER_1MS")) plat_timer_1ms();
     cfg = (RtConfig){.exefs = rt_default_exefs, .romfs = rt_default_romfs, .profile = rt_default_profile,
                      .gpu = cfg_get("GHF_GPU")};
@@ -540,9 +540,6 @@ int main(int argc, char **argv) {
     if (!strcmp(mode, "--selftest")) return selftest();
     if (!strcmp(mode, "--probe-loader")) return probe_loader();
     if (!strcmp(mode, "--probe-cfg")) return probe_cfg();
-#ifdef _WIN32
-    if (!strcmp(mode, "--probe-dpi")) return probe_dpi();   // the Win32 DPI awareness of greenhatflute.manifest
-#endif
     if (!strcmp(mode, "--probe-kernel")) return probe_kernel();
     if (!strcmp(mode, "--probe-ipc")) return probe_ipc();
     if (!strcmp(mode, "--probe-ipc-lifetime")) return probe_ipc_lifetime();

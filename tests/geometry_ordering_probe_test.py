@@ -215,7 +215,7 @@ def main():
         c = args.out / (name + ".c")
         c.write_text(source(omit))
         for opt in ("-O0", "-O2"):
-            exe = args.out / (name + opt + (".exe" if os.name == "nt" else ""))
+            exe = args.out / (name + opt)
             command = [args.cc, opt, "-Wall", "-Wextra", "-Werror", "-I", str(ROOT / "runtime"), str(c), "-o", str(exe)]
             run = subprocess.run(command, capture_output=True, text=True)
             (args.out / (name + opt + "-compile.log")).write_text(run.stdout + run.stderr)

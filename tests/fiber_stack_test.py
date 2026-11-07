@@ -3,8 +3,8 @@
 Run: python tests/fiber_stack_test.py [--cc /path/to/clang]
 
 The guest's decoders and parsers leave through longjmp as ordinary flow, so a host that cannot take it stops the game
-after it has already loaded in. The mechanism used to be compiled only under _WIN32; this is what proves it holds on
-Linux, where the fibers run on our own mmap'd stacks rather than Windows' TEB-tracked ones.
+after it has already loaded in. This proves the mechanism holds here, where the fibers run on our own mmap'd stacks
+that the platform layer tracks.
 """
 import argparse
 import os
@@ -23,17 +23,12 @@ def main():
         parser.error('pass --cc with the project Clang executable')
     out = ROOT / 'build' / 'tests' / 'fiber-stack'
     out.mkdir(parents=True, exist_ok=True)
-    exe = out / ('fiber_stack.exe' if os.name == 'nt' else 'fiber_stack')
+    exe = out / 'fiber_stack'
     # -no-pie and -march=x86-64-v3 as the runtime build uses (tools/build_game.py RT_FLAGS), so the canary and the
     # control-flow hardening around the stack switch are the ones the game actually runs under.
-    cmd = [args.cc, '-std=gnu11', '-O2', '-g', '-Wall', '-fno-strict-aliasing', '-march=x86-64-v3',
+    cmd = [args.cc, '-no-pie', '-std=gnu11', '-O2', '-g', '-Wall', '-fno-strict-aliasing', '-march=x86-64-v3',
            '-I', str(ROOT / 'runtime'), str(ROOT / 'tests/fiber_stack.c'),
-           str(ROOT / 'runtime/platform/win32.c' if os.name == 'nt' else ROOT / 'runtime/platform/linux.c'),
-           '-pthread', '-o', str(exe)]
-    if os.name == 'nt':
-        cmd.remove('-pthread')          # win32.c needs no pthread, and clang-cl would not know it
-    else:
-        cmd.insert(2, '-no-pie')
+           str(ROOT / 'runtime/platform/linux.c'), '-pthread', '-o', str(exe)]
     subprocess.run(cmd, check=True)
     return subprocess.run([str(exe)], timeout=30).returncode
 

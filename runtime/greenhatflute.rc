@@ -1,4 +1,0 @@
-/* The application manifest of GreenHatFlute.exe (greenhatflute.manifest) and its icon (greenhatflute.ico, also the window icon). tools/build_game.py compiles it with the runtime objects, so it is also a member of
-   libgreenhatflutert.a, which the release links with --whole-archive. */
-1 24 "greenhatflute.manifest"
-1 ICON "greenhatflute.ico"

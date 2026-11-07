@@ -6,7 +6,6 @@ Use --source-root with an unmodified checkout to reproduce the original failure.
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 import re
 import shutil
@@ -34,18 +33,24 @@ def between(text, start, end):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-root', type=Path, default=ROOT)
-    parser.add_argument('--cc', default=os.environ.get('CC'))
-    parser.add_argument('--vulkan-include', type=Path, help='include root containing vulkan/ and vma/')
+    parser.add_argument('--cc', default=shutil.which('clang'))
+    parser.add_argument('--vulkan-include', type=Path, default=Path('/usr/include'),
+                        help='include root holding vulkan/vulkan.h')
+    parser.add_argument('--vma-include', type=Path,
+                        help='include root holding vk_mem_alloc.h (the system one, else toolchain/vma as build_game.py fetches it)')
     parser.add_argument('--out', type=Path, help='generated CPU fixture and results directory')
     args = parser.parse_args()
     source = args.source_root.resolve()
-    package = Path(os.environ['GHF_TOOLCHAIN']) if os.environ.get('GHF_TOOLCHAIN') else None
-    cc = args.cc or shutil.which('clang')
-    if not cc and package:
-        cc = str(package / 'llvm/bin/clang.exe')
-    inc = args.vulkan_include or (package / 'runtime/deps/include' if package else ROOT / 'runtime/deps/include')
-    if not cc or not (inc / 'vulkan/vulkan.h').is_file() or not (inc / 'vma/vk_mem_alloc.h').is_file():
-        parser.error('provide --cc and --vulkan-include, or set GHF_TOOLCHAIN to the dependency package')
+    cc = args.cc
+    vma = args.vma_include or (Path('/usr/include') if (Path('/usr/include') / 'vk_mem_alloc.h').is_file()
+                               else ROOT / 'toolchain/vma')
+    inc = args.vulkan_include
+    if not cc:
+        parser.error('pass --cc with the project Clang executable')
+    if not (inc / 'vulkan/vulkan.h').is_file():
+        parser.error(f'--vulkan-include has no vulkan/vulkan.h: {inc}')
+    if not (vma / 'vk_mem_alloc.h').is_file():
+        parser.error(f'no vk_mem_alloc.h in {vma}; run tools/build_game.py once, or pass --vma-include')
     work = (args.out or ROOT / 'build/test/vk-resource-frontier').resolve()
     work.mkdir(parents=True, exist_ok=True)
     texts = {name: (source / 'runtime' / name).read_text(encoding='utf-8')
@@ -101,9 +106,9 @@ def main():
     generated.write_text(fixture, encoding='utf-8')
     results = []
     for opt in ('-O0', '-O2'):
-        exe = work / f'frontier-{opt[1:]}.exe'
+        exe = work / f'frontier-{opt[1:]}'
         command = [cc, '-std=gnu11', opt, '-Wall', '-Wextra', '-Werror', '-Wno-unused-function',
-                   '-Wno-unused-variable', '-I', str(source / 'runtime'), '-I', str(inc), '-I', str(inc / 'vma'),
+                   '-Wno-unused-variable', '-pthread', '-I', str(source / 'runtime'), '-I', str(inc), '-I', str(vma),
                    str(generated), '-o', str(exe)]
         subprocess.run(command, check=True, timeout=30)
         for scenario in ('alias', 'split', 'empty', 'skipped', 'shutdown'):

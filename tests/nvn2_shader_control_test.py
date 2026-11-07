@@ -295,7 +295,7 @@ def main():
     src.write_text(source())
     failed = 0
     for opt in ('-O0', '-O2'):
-        exe = out / ('control' + opt + ('.exe' if os.name == 'nt' else ''))
+        exe = out / ('control' + opt)
         subprocess.run([args.cc, opt, '-Wall', '-Wextra', '-I', str(ROOT / 'runtime'), str(src), '-o', str(exe)], check=True)
         run = subprocess.run([str(exe)], cwd=out, capture_output=True, text=True)
         (out / (opt + '-run.log')).write_text(run.stdout + run.stderr)

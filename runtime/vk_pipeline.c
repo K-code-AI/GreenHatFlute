@@ -33,7 +33,7 @@
 // binding strides only); and, where VK_EXT_extended_dynamic_state3 offers them, depth clamp, polygon mode, blend enables,
 // equations, write masks and alpha to coverage. The key holds the rest: shaders, target formats, sample count, topology
 // class, depth clip mode, logic op and what is not dynamic on the GPU. The VkPipelineCache persists to
-// pipeline-cache.bin next to GreenHatFlute.exe (GHF_PIPELINE_CACHE overrides the path).
+// pipeline-cache.bin next to GreenHatFlute (GHF_PIPELINE_CACHE overrides the path).
 //
 // Provenance: the NVN -> Vulkan enum mappings (blend factors and equations, compare functions, stencil ops), the vertex
 // format table with its 3-component fallback and the pipeline cache file handling follow LAS Recomp
@@ -147,7 +147,7 @@ static uint64_t fnv(uint64_t h, const void *p, size_t n) {
 // than the lookup. Only the in-memory table uses it; the key file keeps fnv.
 static uint64_t key_hash(const void *k, size_t n) { return nvn_hm_hash(k, (uint32_t)n); }
 
-// The cache file lives next to GreenHatFlute.exe, so every build dir (the main build and each private fork) has its own:
+// The cache file lives next to GreenHatFlute, so every build dir (the main build and each private fork) has its own:
 // forks that shared build\v121's cache broke each other's runs (2026-10-22).
 static void cache_path_init(void) {
     const char *cfg_path = cfg_get("GHF_PIPELINE_CACHE");
@@ -271,15 +271,14 @@ static int ensure_init(void) {
     } else {
         rt_log("vk_pipeline: descriptor update templates unavailable: sets are written with write structs");
     }
-    // GHF_VK_DYN_VERTEX=0/1 forces dynamic vertex input off or on. Default off on Intel's frozen Windows driver for its
-    // older integrated GPUs (UHD 630, Ice Lake: Vulkan 1.3.215 and older), which draws nothing with it; LAS Recomp
-    // turns it off there for the same reason.
+    // GHF_VK_DYN_VERTEX=0/1 forces dynamic vertex input off or on. Default off on Intel's older integrated GPU
+    // drivers (UHD 630, Ice Lake: Vulkan 1.3.215 and older), which draw nothing with it.
     const char *dv = cfg_get("GHF_VK_DYN_VERTEX");   // no fixed default: it depends on the GPU, see above
     int intel_legacy = c->props.vendorID == 0x8086 && c->props.apiVersion <= VK_MAKE_API_VERSION(0, 1, 3, 215);
     int dv_on = dv && *dv ? strcmp(dv, "0") != 0 : !intel_legacy;
     P.dyn_vi = dv_on && c->has_vertex_input_dynamic_state && PROC(set_vi, "vkCmdSetVertexInputEXT");
     if (!dv_on && c->has_vertex_input_dynamic_state)
-        rt_log("vk_pipeline: dynamic vertex input off (%s)", dv && *dv ? "GHF_VK_DYN_VERTEX=0" : "Intel's older Windows driver draws nothing with it");
+        rt_log("vk_pipeline: dynamic vertex input off (%s)", dv && *dv ? "GHF_VK_DYN_VERTEX=0" : "Intel's driver at Vulkan 1.3.215 or older draws nothing with it");
     if (c->has_eds3) {
         P.dyn_clamp = e3.extendedDynamicState3DepthClampEnable && P.f_depth_clamp && PROC(set_clamp, "vkCmdSetDepthClampEnableEXT");
         P.dyn_poly = e3.extendedDynamicState3PolygonMode && PROC(set_poly, "vkCmdSetPolygonModeEXT");
@@ -288,8 +287,8 @@ static int ensure_init(void) {
         P.dyn_wmask = e3.extendedDynamicState3ColorWriteMask && PROC(set_wmask, "vkCmdSetColorWriteMaskEXT");
         P.dyn_a2c = e3.extendedDynamicState3AlphaToCoverageEnable && PROC(set_a2c, "vkCmdSetAlphaToCoverageEnableEXT");
     }
-    // GHF_VK_DYN_A2C=0/1 forces dynamic alpha to coverage off or on. Default off on AMD's Windows driver branch for
-    // RDNA 2 and older (vk_caps.amd_sc), which applies alpha to coverage while the dynamic state says off: on an RX 590
+    // GHF_VK_DYN_A2C=0/1 forces dynamic alpha to coverage off or on. Default off on AMD's driver branch for RDNA 2 and
+    // older (vk_caps.amd_sc), which applies alpha to coverage while the dynamic state says off: on an RX 590
     // (24.9.1) TotK, which never turns it on, drew Link and the NPCs with depth but no colour (black silhouettes) and
     // dithered other surfaces into checkerboards (issue #67, RX 470/570/580). Taken out of the dynamic state, it goes
     // into the pipeline key and the characters draw.
@@ -2054,7 +2053,35 @@ static uint32_t vs_union_missing(const VkPipeState *s, GfxShaderIo fin[32]) {
     return missing;
 }
 
+// What this thread is about to build, named in the log if the driver faults inside a pipeline create: the fault is
+// outside this executable, so nothing else in the run says who was in the driver or what for. The FNV-1a of a stage's
+// SPIR-V names the same shader across runs, which is what points at the stage to look at.
+static void pipe_note(const char *what, const VkPipeState *s) {
+    static _Thread_local char note[256];
+    const GfxShader *st[4] = {s->ts, s->vs, s->gs, s->fs};
+    int at = snprintf(note, sizeof note, "%s, mesh %d task %d:", what, mesh_vs(s), s->ts != NULL);
+    if (at < 0 || at >= (int)sizeof note) at = (int)sizeof note - 1;
+    for (int i = 0; i < 4 && at < (int)sizeof note - 1; i++) {
+        uint64_t w = 0, h = 1469598103934665603ull;
+        const uint32_t *c = st[i] ? gfx_shader_spirv(st[i], &w) : NULL;
+        for (uint64_t j = 0; c && j < w; j++) h = (h ^ c[j]) * 1099511628211ull;
+        if (!c) continue;
+        int n = snprintf(note + at, sizeof note - at, " %s %llu words %016llx", (const char *[]){"ts", "vs", "gs", "fs"}[i],
+                         (unsigned long long)w, (unsigned long long)h);
+        if (n < 0) break;
+        at += n;
+        if (at >= (int)sizeof note) at = (int)sizeof note - 1;
+    }
+    plat_crash_note(note);
+}
+
 static VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Layout *l, uint32_t fs_off) {
+    // A task shader is a mesh pipeline's first half: it has no place as a vertex stage. Reaching the driver with one
+    // crashes the compiler (see prepare_draw, which reads the vertex slot only after waiting for a pending shader).
+    if (gfx_shader_is_task(s->vs) || (s->ts && !mesh_vs(s))) {
+        rt_log("vk_pipeline: a task shader needs its mesh stage");
+        return VK_NULL_HANDLE;
+    }
     if (s->gs && (l->set1 || !k->geometry_input || k->geometry_input > GFX_GEOMETRY_TRIANGLES_ADJACENCY)) return VK_NULL_HANDLE;
     VkShaderModule vm = VK_NULL_HANDLE, fm = VK_NULL_HANDLE, gm = VK_NULL_HANDLE;
     uint64_t vw, fw;
@@ -2222,7 +2249,9 @@ static VkPipeline create_graphics(const VkPipeState *s, const GKey *k, const Lay
         pi.pVertexInputState = NULL, pi.pInputAssemblyState = NULL;
     }
     uint64_t p0 = perf_begin();
+    pipe_note("graphics pipeline", s);
     VkResult r = vkCreateGraphicsPipelines(P.device, P.cache, 1, &pi, NULL, &pipe);
+    plat_crash_note(NULL);
     perf_end(PERF_PIPE, p0);   // counts on the render thread only, so background builds stay out of it
     if (r != VK_SUCCESS) {
         rt_log("vk_pipeline: vkCreateGraphicsPipelines failed (%d)", (int)r);
@@ -2378,7 +2407,9 @@ static VkPipeline lib_create(int kind, const VkPipeState *s, const GKey *k, VkPi
         ri.depthAttachmentFormat = (VkFormat)k->depth, ri.stencilAttachmentFormat = (VkFormat)k->stencil;
         pi.pColorBlendState = &cb, pi.pMultisampleState = &ms;
     }
+    pipe_note("stage library", s);
     if (vkCreateGraphicsPipelines(P.device, P.cache, 1, &pi, NULL, &pipe) != VK_SUCCESS) pipe = VK_NULL_HANDLE;
+    plat_crash_note(NULL);
 out:
     if (m) vkDestroyShaderModule(P.device, m, NULL);
     free(patched);
@@ -3320,6 +3351,7 @@ static uint64_t big_cs_words(void) {
     return w;
 }
 
+static _Thread_local VkPipelineCache cs_build_cache;   // set only on the big compute worker: its own cache, see big_cs_worker
 static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
     uint64_t words;
     const uint32_t *code = gfx_shader_spirv(cs, &words);
@@ -3344,7 +3376,18 @@ static VkPipeline compute_create(const GfxShader *cs, const Layout *l) {
         if (ci.stage.pNext && ls[0] && ls[0] % vk_caps.sg_size == 0) ci.stage.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT;
     }
     VkPipeline pipe = VK_NULL_HANDLE;
-    if (vkCreateComputePipelines(P.device, P.cache, 1, &ci, NULL, &pipe) != VK_SUCCESS) pipe = VK_NULL_HANDLE;
+    {   // named in the log if the driver faults in this create (platform/linux.c fault_report_other)
+        static _Thread_local char note[96];
+        uint64_t h = 1469598103934665603ull;
+        for (uint64_t j = 0; code && j < words; j++) h = (h ^ code[j]) * 1099511628211ull;
+        snprintf(note, sizeof note, "compute pipeline, %llu words %016llx", (unsigned long long)words, (unsigned long long)h);
+        plat_crash_note(note);
+    }
+    // The big compute worker builds in a cache of its own (big_cs_worker): a compile of minutes inside the shared
+    // cache holds every other pipeline on the replay thread behind it.
+    if (vkCreateComputePipelines(P.device, cs_build_cache ? cs_build_cache : P.cache, 1, &ci, NULL, &pipe) != VK_SUCCESS)
+        pipe = VK_NULL_HANDLE;
+    plat_crash_note(NULL);
     vkDestroyShaderModule(P.device, m, NULL);
     return pipe;
 }
@@ -3360,7 +3403,7 @@ static Layout *compute_layout(const GfxShader *cs, Bindings *B, const char **why
 
 // ---- stage library prebuild
 // Two places build what a draw would otherwise build while the game waits:
-// - GreenHatFlute.exe --prepare-shaders (lb_warm_prepared), after the translation, on every core: for each prepared variant
+// - GreenHatFlute --prepare-shaders (lb_warm_prepared), after the translation, on every core: for each prepared variant
 //   (shader-prepared.bin) the pre-rasterization library of a vertex shader, the fragment-shader library of a fragment
 //   shader and the pipeline of a compute shader, each built from a private shader copy and destroyed at once. What
 //   stays is the driver's own disk cache: on AMD a library built again in a later process takes 0.1 ms instead of
@@ -3421,9 +3464,34 @@ static void big_cs_worker(void *arg) {
         Layout *l = compute_layout(cs, &B, &why);
         plat_mutex_unlock(&P.lock);
         uint64_t t0 = plat_now_ns();
+        // A cache of its own: a compile of minutes inside the shared cache holds every other pipeline behind it, the
+        // replay thread included. The result is merged into the shared one when the build is done.
+        VkPipelineCacheCreateInfo cci = {.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO};
+        VkPipelineCache own = VK_NULL_HANDLE;
+        if (P.cache) vkCreatePipelineCache(P.device, &cci, NULL, &own);
+        cs_build_cache = own;
         VkPipeline pipe = why ? VK_NULL_HANDLE : compute_create(cs, l);
-        if (pipe) vkDestroyPipeline(P.device, pipe, NULL);
-        rt_log("vk_pipeline: big compute shader %d built in %.1f s%s", next, (double)(plat_now_ns() - t0) / 1e9, pipe ? "" : " (failed)");
+        cs_build_cache = VK_NULL_HANDLE;
+        // Kept, as lb_compute keeps what it builds: built again on the replay thread instead, the driver's cache
+        // misses and the game pays for the whole compile a second time.
+        int built = pipe != VK_NULL_HANDLE;
+        if (pipe) {
+            struct { const GfxShader *cs; uint32_t compute; } k = {cs, 1};
+            uint64_t h = key_hash(&k, sizeof k);
+            plat_mutex_lock(&P.lock);
+            if (!pipe_find(&k, sizeof k, h)) {
+                pipe_add(&k, sizeof k, h, pipe, l, &B, VK_PIPELINE_BIND_POINT_COMPUTE, 0);
+                P.stats.compute++;
+                pipe = VK_NULL_HANDLE;
+            }
+            plat_mutex_unlock(&P.lock);
+            if (pipe) vkDestroyPipeline(P.device, pipe, NULL);
+        }
+        if (own) {
+            vkMergePipelineCaches(P.device, P.cache, 1, &own);
+            vkDestroyPipelineCache(P.device, own, NULL);
+        }
+        rt_log("vk_pipeline: big compute shader %d built in %.1f s%s", next, (double)(plat_now_ns() - t0) / 1e9, built ? "" : " (failed)");
         __atomic_store_n(&big_cs[next].done, 1, __ATOMIC_RELEASE);
         next++;
     }
@@ -3516,6 +3584,13 @@ static uint32_t vs_union_peek(const GfxShader *vs, GfxShaderIo fin[32]) {
 }
 
 static void lb_compute(const GfxShader *cs) {
+    // A shader at big_cs_words() or more is left to big_cs_worker: one at a time, in a cache of its own, and only once
+    // a dispatch needs it. Here it was built on every prebuild thread at once in the shared cache -- the movie network
+    // reaches 7 million SPIR-V words -- and those compiles ran for minutes (one took 437 s on AMD against 1.5 s on
+    // NVIDIA) while the graphics pipelines waited behind them: the scene after the intro stayed black.
+    uint64_t words = 0;
+    gfx_shader_spirv(cs, &words);
+    if (words >= big_cs_words()) return;
     struct { const GfxShader *cs; uint32_t compute; } k = {cs, 1};
     uint64_t h = key_hash(&k, sizeof k);
     Bindings B = {0};
@@ -3671,7 +3746,7 @@ static void lb_state(const uint32_t pr_hist[16], const uint32_t fs_hist[4]) {
 // Boot: compute shaders of the warm list (recorded and prepared), then the first KEEP recorded graphics variants.
 static void lb_start(const uint32_t pr_hist[16], const uint32_t fs_hist[4]) {
     const char *e = cfg_value("GHF_LIB_PREBUILD"), *ke = cfg_get("GHF_LIB_PREBUILD_KEEP");
-    const char *te = cfg_get("GHF_LIB_PREBUILD_THREADS");   // no fixed default: a quarter of the CPUs when unset
+    const char *te = cfg_get("GHF_LIB_PREBUILD_THREADS");   // explicit overrides keep their meaning
     if (!A.on || !cfg_bool("GHF_LIB_PREBUILD")) return;
     GfxWarmEnt *all = NULL;
     size_t total = gfx_shader_warm_list(&all), n = 0, n_cs = 0;
@@ -3692,7 +3767,11 @@ static void lb_start(const uint32_t pr_hist[16], const uint32_t fs_hist[4]) {
     lb_state(pr_hist, fs_hist);
     LB.idle = 1;
     int cpus = (int)plat_cpu_usable();
-    int t = te && *te ? atoi(te) : cpus / 4;
+    // Speculative builds on NVIDIA slow the foreground replay even at idle worker priority, so the default pool is
+    // one thread there; other vendors keep a quarter of the CPUs. An explicit count is untouched.
+    const VkCtx *ctx = vk_ctx();
+    int default_threads = ctx && ctx->props.vendorID == 0x10de ? 1 : cpus / 4;
+    int t = te && *te ? atoi(te) : default_threads;
     t = t < 1 ? 1 : t > LB_MAX_THREADS ? LB_MAX_THREADS : t;
     if ((size_t)t > n) t = (int)n;
     LB.t0 = now_ms();
@@ -3781,8 +3860,8 @@ static void lb_warm_prepared(const char *dir) {
     free(LB.e), LB.e = NULL, LB.n = 0, LB.next = 0, LB.done = 0;
 }
 
-// GreenHatFlute.exe --prepare-shaders (tools/prepare_shaders.py): the device sets the translator's host answers (they are in every
-// cache key), the seed next to GreenHatFlute.exe is translated on every core, then every prepared variant's stage library or
+// GreenHatFlute --prepare-shaders (tools/prepare_shaders.py): the device sets the translator's host answers (they are in every
+// cache key), the seed next to GreenHatFlute is translated on every core, then every prepared variant's stage library or
 // compute pipeline is built once into the driver's disk cache (lb_warm_prepared). No game runs.
 int vk_pipeline_prepare_shaders(void) {
     if (!ensure_init()) {
@@ -3802,7 +3881,7 @@ int vk_pipeline_prepare_shaders(void) {
     return rc;
 }
 
-// GreenHatFlute.exe --warm-shaders: every variant of shader-prepared.bin built into the driver's disk cache again from the shader
+// GreenHatFlute --warm-shaders: every variant of shader-prepared.bin built into the driver's disk cache again from the shader
 // cache, without translating the seed. The AMD cache is keyed to the exe path (a relink keeps it: 29,587 variants in
 // 1.8 s) and holds a limited amount: preparing another build dir evicted this one's libraries, and a library a draw
 // needed then took 40-220 ms in play instead of 0.2 ms. Seconds when the libraries are still there.

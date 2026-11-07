@@ -22,7 +22,7 @@ def main():
     source = args.source_root.resolve()
     out = ROOT/'build'/'tests'/'nvn-wait-sync'
     out.mkdir(parents=True, exist_ok=True)
-    exe = out/('nvn_wait_sync.exe' if os.name == 'nt' else 'nvn_wait_sync')
+    exe = out/'nvn_wait_sync'
     # gfx_null.c is included by the fixture; compile from the selected source root for an exact baseline comparison.
     fixture = out/'nvn_wait_sync.c'
     text = (ROOT/'tests/nvn_wait_sync.c').read_text().replace(
@@ -35,7 +35,7 @@ def main():
     subprocess.run([args.cc, '-std=gnu11', '-O1', '-Wall', '-Wextra', '-fno-strict-aliasing',
                     '-ffunction-sections', '-fdata-sections', '-I', str(source/'runtime'), str(fixture),
                     str(source/'runtime/nvn_api_cmd.c'), str(source/'runtime/nvn_api_core.c'),
-                    '-Wl,--gc-sections', *([] if os.name == 'nt' else ['-pthread']), '-o', str(exe)], check=True)
+                    '-Wl,--gc-sections', '-pthread', '-o', str(exe)], check=True)
     return subprocess.run([str(exe)], timeout=20).returncode
 
 

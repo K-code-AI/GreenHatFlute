@@ -3,7 +3,7 @@
 // Read-only game RomFS backed by the player's extracted image.
 //
 // Input: <romfs>/romfs.bin (rt_config()->romfs), whose six IVFC levels and SHA-256 tools/extract.py verified, and
-// romfs-index.bin next to GreenHatFlute.exe (GHF_ROMFS_INDEX overrides), which tools/romfs_index.py wrote together with
+// romfs-index.bin next to GreenHatFlute (GHF_ROMFS_INDEX overrides), which tools/romfs_index.py wrote together with
 // romfs_config.h. fs_init checks the index's SHA-256 and layout and the image size. The full 17 GB hash runs only with
 // GHF_ROMFS_VERIFY=full; a proof file (.romfs-verified-v1 next to the index, or in GHF_ROMFS_PROOF_DIR) keyed by
 // the file's volume, file id, size and times skips it on later starts, GHF_ROMFS_VERIFY=force ignores the proof.
@@ -438,7 +438,7 @@ static void overlay_init(void) {
 }
 
 // ---- start
-// romfs-index.bin next to GreenHatFlute.exe, or GHF_ROMFS_INDEX.
+// romfs-index.bin next to GreenHatFlute, or GHF_ROMFS_INDEX.
 static void index_path(char *out, size_t cap) {
     const char *e = cfg_get("GHF_ROMFS_INDEX");
     if (e && *e) {
@@ -461,7 +461,7 @@ static void load_index(void) {
     else strcpy(index_dir, ".");
     uint64_t sz = 0;
     index_bytes = plat_file_read(path, &sz);
-    if (!index_bytes) rt_fatal("RomFS index %s missing (tools/build_game.py writes it next to GreenHatFlute.exe)", path);
+    if (!index_bytes) rt_fatal("RomFS index %s missing (tools/build_game.py writes it next to GreenHatFlute)", path);
     need(sz >= 24 && sz < (128 << 20), "index size");
     index_size = (size_t)sz;
     uint8_t d[32];

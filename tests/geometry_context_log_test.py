@@ -216,7 +216,7 @@ def main():
               ("zero-filter-no-program", "zero-filter-no-program", "1", "0")]
     results = []
     for opt in ("-O0", "-O2"):
-        exe = out / ("geometry_context" + opt + (".exe" if os.name == "nt" else ""))
+        exe = out / ("geometry_context" + opt)
         command = [args.cc, opt, "-Wall", "-Wextra", "-Werror", "-I", str(ROOT / "runtime"),
                    "-I", str(args.deps / "include"), "-I", str(args.deps / "include/vma"), str(fixture), "-o", str(exe)]
         run = subprocess.run(command, capture_output=True, text=True, timeout=60)

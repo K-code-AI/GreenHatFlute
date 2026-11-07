@@ -342,7 +342,7 @@ static Tex *create_tex(const tex_t *t, const TexKey *k, int defer_init) {
         flags |= VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
     }
     // Cube compatible only for cube targets: the replay makes cube views of nothing else (vk_exec_draw.c get_view checks
-    // the image's own view type). The flag on every square array of 6+ layers changed how AMD's Windows driver lays such
+    // the image's own view type). The flag on every square array of 6+ layers changed how AMD's driver lays such
     // an image out, and terrain material arrays sampled through it came out in rainbow blocks that moved with the mip
     // level (Savage Wind Recomp issue #59, BotW on an RX 580 and a 7800 XT).
     if (type == VK_IMAGE_TYPE_2D && layers >= 6 && w == h && samples == 1 &&

@@ -1,6 +1,6 @@
 """Write tools/data/expected-<name>.json for a Donkey Kong Bananza ExeFS: hashes and title id only, no game data.
 
-    .venv\\Scripts\\python tools\\dkb_expected.py --exefs build\\extracted\\dkb100\\exefs --name dkb100 --display 1.0.0
+    .venv/bin/python tools/dkb_expected.py --exefs build/extracted/dkb100/exefs --name dkb100 --display 1.0.0
 """
 import argparse
 import hashlib

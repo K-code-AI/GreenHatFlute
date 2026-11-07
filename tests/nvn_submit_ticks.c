@@ -140,8 +140,8 @@ int main(void) {
         async_mode=mode;reserved=issued;early=!mode;
         for (unsigned trial=0;trial<3;trial++) {
             uint64_t stamp=trial==0?0:trial==1?123:UINT64_MAX;
-            // Windows may place a stack in the emulated GPU-only address window. Static owned records avoid that
-            // invalid fixture input; the production nvn_gpu_only guard must remain active.
+            // A counter inside the emulated GPU-only window is not a valid host address: static owned records avoid
+            // that invalid fixture input, and the production nvn_gpu_only guard must remain active.
             static NVNcounterData out[4];memset(out,0,sizeof out);CHECK(!nvn_gpu_only((uintptr_t)out));Recording r[2];
             for(int k=0;k<2;k++) {
                 r[k].count=2;r[k].reports[0]=(p_report_counter){NVN_COUNTER_TYPE_TIMESTAMP_TOP,(uintptr_t)&out[k*2]};

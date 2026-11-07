@@ -215,7 +215,7 @@ def main():
     require(pointers and len(set(pointers)) == len(pointers) and set(pointers) <= {'normal', 'carry'}, 'invalid pointers')
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=False)
-    runner = out / ('storage-candidates-gpu.exe' if os.name == 'nt' else 'storage-candidates-gpu')
+    runner = out / 'storage-candidates-gpu'
     cc = shutil.which(args.cc) or args.cc
     compile_command = [str(cc), '-std=c11', '-O1', '-Wall', '-Wextra', '-Werror', '-I', str(args.vulkan_include.resolve()),
                        str(ROOT / 'tests/storage_candidates_gpu.c'), str(args.vulkan_library.resolve()), '-o', str(runner)]

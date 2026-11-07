@@ -158,9 +158,9 @@ static int remove_tree(const char *path) {
 // Commit: (1) copy work to new and flush every file (FlushFileBuffers) and directory, a file equal to the newest
 // save's as a hard link to it; (2) rename new to ready-<n>, the commit point, and delete the ready-<n> it supersedes;
 // (3) rename save/<uid> to old; (4) rename ready-<n> to save/<uid>; (5) move old to save-backup/<UTC time> and keep
-// the newest three. Every rename is durable (plat_fs_rename). Windows refuses (3) while any file under save/<uid> is
-// open, in this or another process (a virus scanner, Explorer's preview, a sync tool), and a folder an elevated run
-// made can refuse it too. ready-<n> then stays the newest save: later working copies are made from it, and the next
+// the newest three. Every rename is durable (plat_fs_rename). (3) can still fail: the folder holding save/<uid> may
+// belong to another user or to a run with more rights than this one has. A file another program holds open inside it
+// is no obstacle here. ready-<n> then stays the newest save: later working copies are made from it, and the next
 // Commit and the next start try (3) to (5) again. The game's Commit returns 0 once the steps are queued; a thread runs
 // them (95-135 ms on the game thread before, in the 1.4.3 fight save) while every change to the working copy waits in
 // save_touched, and Unmount and the next Commit wait too. A crash in that time loses this Commit only, and a failed
@@ -380,10 +380,8 @@ static int swap_in(void) {
     if (!*ready_root) return 0;
     rotate_backup();   // an old left by a failed (5): (3) needs its name
     if (exists(save_root) && move_dir(save_root, old_root, SWAP_TRIES)) {
-        char why[512];
-        plat_fs_busy_reason(save_root, why, sizeof why);
-        rt_log("fs: save commit: the committed save cannot be replaced (%s); the commit waits in %s and the next "
-               "Commit or start retries", *why ? why : "a file in it is in use", ready_root);
+        rt_log("fs: save commit: the committed save cannot be replaced; the commit waits in %s and the next "
+               "Commit or start retries", ready_root);
         return -1;
     }
     if (crashed()) return -1;
@@ -624,8 +622,9 @@ static uint32_t mount_add(const char *name, int kind, const char *root) {
     return 0;
 }
 
-// A path component every host stores under exactly this name: not empty, ".", "..", no reserved character, no trailing
-// dot or space (Windows strips those, which would alias two names).
+// A path component we store under exactly this name: not empty, not "." or "..", no reserved character (a backslash
+// is a separator in the paths we take, the rest are the ones a host may not store), no trailing dot or space, which
+// would alias two different names.
 static int component_ok(const char *c, size_t n) {
     if (!n || (n == 1 && c[0] == '.') || (n == 2 && c[0] == '.' && c[1] == '.')) return 0;
     if (c[n - 1] == '.' || c[n - 1] == ' ') return 0;
@@ -1299,7 +1298,8 @@ static void probe_paths(void) {
     static const struct { const char *path, *want; } cases[] = {
         {"rom:/a/b.bin", "a/b.bin"}, {"rom://a/b.bin", "a/b.bin"}, {"rom:///a/b.bin", "a/b.bin"},
         {"rom:/a", "a"},             {"rom:/../main", NULL},       {"rom://../a", NULL},
-        {"rom:/a/../b", NULL},       {"rom:/a/./b", NULL},         {"rom:/a//b", NULL},
+        {"rom:/a/../b", NULL},       {"rom:/a/./b", NULL},         {"rom:/a//b", "a/b"},
+        {"rom:/a//b//c", "a/b/c"},  {"rom:/a//../b", NULL},       {"rom:/a/b//", "a/b"},
         {"rom:/a\\b", NULL},         {"rom:/", NULL},              {"rom://", NULL},
         {"rom:a", NULL},             {"ro:/a", NULL},              {"romx:/a", NULL},
         {"rom:/.", NULL},            {"rom:/..", NULL},            {"ROM:/a", NULL},
@@ -1388,6 +1388,21 @@ static uint64_t probe_romfs(void) {
         CALL(S_CLOSE_FILE, h);
     }
     CHECK(same, "rom:/, rom:// and rom:/// do not open the same file");
+    // A doubled separator inside the path, which is how the game asks for its speech ("content://Voice/Resource//
+    // Stream/x.bwav"): built from a sampled file by doubling one of its own separators, it must name the same file.
+    char doubled[4200];
+    const char *at = strchr(sample, '/');
+    snprintf(doubled, sizeof doubled, "rom:/%.*s//%s", (int)(at - sample), sample, at + 1);
+    type = -1, h = 0, got = 0;
+    int joined = RES(S_ENTRY_TYPE, U(&type), U(doubled)) == 0 && type == FS_ENTRY_FILE;
+    joined = joined && RES(S_OPEN_FILE, U(&h), U(doubled), FS_OPEN_READ) == 0;
+    if (joined) {
+        joined = joined && RES(S_READ_FILE, U(&got), h, 0, U(a), 256) == 0 && got == 256;
+        joined = joined && independent_read(image, b, 256, off) == 256 && !memcmp(a, b, 256);
+        CALL(S_CLOSE_FILE, h);
+    }
+    CHECK(joined, "%s is not the same file as rom:/%s", doubled, sample);
+    printf("romfs: %s opens as rom:/%s with a doubled separator: %s\n", sample, doubled + 5, joined ? "ok" : "FAIL");
     snprintf(path, sizeof path, "rom:/%.*s", (int)(strrchr(sample, '/') - sample), sample);
     CHECK(RES(S_ENTRY_TYPE, U(&type), U(path)) == 0 && type == FS_ENTRY_DIRECTORY, "a sampled file's folder");
     snprintf(path, sizeof path, "rom://../%s", sample);
@@ -1598,9 +1613,8 @@ static void probe_save_tx(const uint64_t *uid) {
           "an Unmount right after Commit lost it");
     committed = gen;
 
-    // a file of the committed save held open by another program (a virus scanner, Explorer's preview, a sync tool):
-    // Windows refuses to rename a directory with an open file under it, so the committed save cannot be swapped out.
-    // The game and a restart still see every Commit, and the first start after the file is closed swaps them in.
+    // a file of the committed save held open by another program while a new Commit swaps the folder: the swap does
+    // not wait for that program here, and the game and a restart see every Commit either way.
     char *held_path = join(save_root, "tx_b.sav");
     PlatFile *held = plat_fs_open(held_path, 0, NULL);
     free(held_path);

@@ -1,7 +1,7 @@
 // Keyboard, mouse and gamepad bindings, free of any window system: the tables map platform-neutral key and pad ids to
-// Switch actions. input_win.c translates Win32 virtual keys and SDL buttons to these ids (one place); a Linux port
-// translates SDL scancodes the same way. The remapping rows of the menu's Controls tab (ui/binds_page.cpp) edits a copy of the tables and writes
-// the bind_ lines; input_win.c applies changed lines while the game runs. Layout in docs/controls.md.
+// Switch actions. input_sdl.c translates SDL scancodes to the key ids, input.c the SDL gamepad buttons and axes to the pad
+// ids (one place each). The remapping rows of the menu's Controls tab (ui/binds_page.cpp) edits a copy of the tables and writes
+// the bind_ lines; input.c applies changed lines while the game runs. Layout in docs/controls.md.
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
@@ -34,7 +34,7 @@ enum {
 };
 
 // Gamepad inputs by position (Nintendo layout, as SDL names them), platform-neutral like the key ids. ZL and ZR are the
-// analog triggers; input_win.c translates SDL buttons and axes to these (one place). The paddles are the back buttons
+// analog triggers; input.c translates SDL buttons and axes to these (one place). The paddles are the back buttons
 // of an Xbox Elite, DualSense Edge or Steam Controller (SDL's LEFT_PADDLE1 and so on); no Switch button has them by
 // default, a bind line or the remapping rows add them.
 enum {

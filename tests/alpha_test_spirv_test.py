@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 ''', encoding='utf-8')
-        cls.exe = args.out / 'harness.exe'
+        cls.exe = args.out / 'harness'
         subprocess.run([str(args.cc), '-O1', '-Wall', '-Wextra', '-Werror', str(harness), '-o', str(cls.exe)], check=True,
                        capture_output=True, text=True, timeout=120)
 

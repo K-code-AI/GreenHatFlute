@@ -1,4 +1,4 @@
-// Between perf.c (frame timing, always built) and the OS's sampling profiler (prof_win.c on Windows).
+// Between perf.c (frame timing, always built) and the OS's sampling profiler, of which this host has none.
 #pragma once
 #include <stdint.h>
 

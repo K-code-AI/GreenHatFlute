@@ -152,7 +152,7 @@ def main():
     out = args.out.resolve();out.relative_to((ROOT / 'build').resolve());out.mkdir(parents=True, exist_ok=False)
     source = args.draw_source or ROOT / 'runtime/vk_exec_draw.c'
     path = out / 'fixture.c';path.write_text(fixture(source.read_text()))
-    exe = out / 'fixture.exe'
+    exe = out / 'fixture'
     command = [args.cc, '-std=gnu11', '-O'+args.opt, '-Wall', '-Wextra', '-Werror', '-I', ROOT / 'runtime',
                '-I', args.deps / 'include', '-I', args.deps / 'include/vma', path, '-o', exe]
     compiled = subprocess.run([str(v) for v in command], capture_output=True, text=True, timeout=60)

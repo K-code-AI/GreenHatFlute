@@ -29,7 +29,7 @@
 # 1 lifts the virtual core gate: guest threads run without the console's limit of one thread per core. For experiments
 # only: the game keeps per-core data without locks and can crash.
 # free_cores = 0
-# Windows timer resolution of 1 ms for steadier frame pacing (0 = the Windows default).
+# Wake timed waits close to their deadline, for steadier frame pacing (0 = leave the OS's own timing).
 # timer_1ms = 1
 
 # Shaders and pipelines.
@@ -38,8 +38,8 @@
 # Which draws are dropped instead of waiting for their pipeline: strict (only draws into per-frame passes), any (also
 # draws into passes whose target the previous frame rendered) or fullscreen (those and full-screen draws).
 # pipe_skip = fullscreen
-# Build shader stage libraries in the background ahead of time, and the threads for it (1 to 16; default: a quarter of
-# the CPU threads).
+# Build shader stage libraries in the background ahead of time. Worker count (1 to 16): default 1 on NVIDIA,
+# otherwise a quarter of the CPU threads. More speculative workers interfere with gameplay on NVIDIA.
 # lib_prebuild = 1
 # lib_prebuild_threads = 4
 # Build known pipelines ahead of time.

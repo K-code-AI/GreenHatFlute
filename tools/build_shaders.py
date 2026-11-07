@@ -1,24 +1,21 @@
 """Compile the runtime's own GLSL and SPIR-V assembly shaders into C headers of SPIR-V words.
 
 Each runtime/shaders/<name>.comp becomes runtime/<name>_spv.h, which declares `static const uint32_t <name>_spv[]`
-and records the SHA-256 of the source it came from. The headers are committed, so building GreenHatFlute.exe needs no shader
+and records the SHA-256 of the source it came from. The headers are committed, so building GreenHatFlute needs no shader
 compiler; tools/build_game.py refuses to build when a header no longer matches its source. Run this after editing a
-shader. Needs glslc and spirv-val from MSYS2 UCRT64 (package mingw-w64-ucrt-x86_64-shaderc, spirv-tools).
+shader. Needs glslc and spirv-val on PATH (packages shaderc and spirv-tools).
 
     python tools/build_shaders.py [--check]
 """
 
 import argparse
 import hashlib
-import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-BIN = Path(r'C:\msys64\ucrt64\bin')   # Windows; elsewhere glslc and spirv-val come from PATH
-WIN = os.name == 'nt'
 TARGET = 'vulkan1.1'
 
 
@@ -61,12 +58,12 @@ def compile_one(src):
     with tempfile.TemporaryDirectory() as tmp:
         spv = Path(tmp) / 'out.spv'
         if src.suffix == '.spvasm':
-            subprocess.run([str(BIN / 'spirv-as.exe') if WIN else 'spirv-as', '--target-env', TARGET,
+            subprocess.run(['spirv-as', '--target-env', TARGET,
                             '-o', str(spv), str(src)], check=True)
         else:
-            subprocess.run([str(BIN / 'glslc.exe') if WIN else 'glslc', '-O', f'--target-env={TARGET}', '-fshader-stage=compute',
+            subprocess.run(['glslc', '-O', f'--target-env={TARGET}', '-fshader-stage=compute',
                             '-o', str(spv), str(src)], check=True)
-        subprocess.run([str(BIN / 'spirv-val.exe') if WIN else 'spirv-val', f'--target-env', TARGET, str(spv)], check=True)
+        subprocess.run(['spirv-val', f'--target-env', TARGET, str(spv)], check=True)
         data = spv.read_bytes()
     words = [int.from_bytes(data[i:i + 4], 'little') for i in range(0, len(data), 4)]
     header_path(src).write_text(header_of(src, words), encoding='utf-8', newline='\n')

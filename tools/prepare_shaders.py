@@ -7,28 +7,27 @@ the translator answers it was translated for. This tool reads the shaders from t
 (tools/shader_census.py inventory), keeps the list's variants whose shader is in this game version, adds each shader's
 default variant (every texture slot a 2D texture, float vertex inputs and colour outputs, as MacNativeGames' seed
 translates every shader for its default bind state: prepare_shader_seed.py all_default), and writes them next to the
-build's GreenHatFlute.exe in the record layouts of runtime/gfx_shader.c ("answers met in play"):
+build's GreenHatFlute in the record layouts of runtime/gfx_shader.c ("answers met in play"):
 
     seed-programs.bin  "GHF_SPRG": stage, length, c1 length, runtime code hash, control section, code, c1
     seed-answers.bin   "GHF_SANS": stage, code hash, input id (zero: the runtime computes it), answers, priority
 
 Priority (the pad byte): 0 shaders the list's warm rows flag as title/menu (t), 1 other warm rows (S, C, R), 2 the
-rest; a default variant takes its shader's priority. Then it runs `GreenHatFlute.exe --prepare-shaders`, which translates every record into the build's shader cache, writes
+rest; a default variant takes its shader's priority. Then it runs `GreenHatFlute --prepare-shaders`, which translates every record into the build's shader cache, writes
 shader-prepared.bin (one record per variant, in priority order) and builds every variant's stage library or compute
 pipeline once, so the GPU driver's own disk cache holds them (vk_pipeline.c "stage library prebuild"). The seed files
 can be deleted afterwards.
 
 Game-derived output stays in the build directory (ignored). The list is read at preparation time from tools/data/shader_list.tsv when that file exists (the installer archive
 bundles it; it stays out of the repository), else from refs/ through git with the rows its history dropped
-(tools/shader_list.py); nothing of it is copied into the repository. Needs Python 3.14 (compression.zstd), so run it in .venv-py314 or the embeddable 3.14:
+(tools/shader_list.py); nothing of it is copied into the repository. Needs Python 3.14 (compression.zstd), so run it in .venv-py314:
 
-    .venv-py314\\Scripts\\python tools\\prepare_shaders.py build\\v121 [--version v121] [--list <tsv>] [--no-run]
-                                                     [--romfs DIR --exefs DIR]   # instead of build\\extracted\\<version>
+    .venv-py314/bin/python tools/prepare_shaders.py build/v121 [--version v121] [--list <tsv>] [--no-run]
+                                          [--romfs DIR --exefs DIR]   # instead of build/extracted/<version>
 """
 import argparse
 import hashlib
 import json
-import os
 import struct
 import subprocess
 import sys
@@ -130,7 +129,7 @@ def code_hash(stage, control, code, length, c1):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument('build', type=Path, help='build directory holding GreenHatFlute.exe (build\\v121)')
+    ap.add_argument('build', type=Path, help='build directory holding GreenHatFlute (build\\v121)')
     ap.add_argument('--version', default='v121', help='build/extracted/<version>')
     ap.add_argument('--romfs', type=Path, help='RomFS directory (default build/extracted/<version>/romfs)')
     ap.add_argument('--exefs', type=Path, help='ExeFS directory (default build/extracted/<version>/exefs)')
@@ -191,9 +190,9 @@ def main():
           f'seed written in {time.monotonic() - t0:.1f} s', flush=True)
     if a.no_run:
         return 0
-    exe = out / ('GreenHatFlute.exe' if os.name == 'nt' else 'GreenHatFlute')
+    exe = out / 'GreenHatFlute'
     r = subprocess.run([str(exe), '--prepare-shaders'], cwd=str(out))
-    print(f'GreenHatFlute.exe --prepare-shaders: rc={r.returncode}; total {time.monotonic() - t0:.1f} s')
+    print(f'GreenHatFlute --prepare-shaders: rc={r.returncode}; total {time.monotonic() - t0:.1f} s')
     return r.returncode
 
 
