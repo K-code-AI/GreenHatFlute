@@ -375,6 +375,15 @@ void plat_file_mkdir_p(const char *path) {
     CreateDirectoryW(tmp, NULL);
 }
 
+// %LOCALAPPDATA% is the per-user, per-application place Windows expects data to live. Read from the environment rather
+// than SHGetKnownFolderPath, which would pull ole32 into the link for one path.
+int plat_user_data_dir(char *out, size_t cap) {
+    const char *a = getenv("LOCALAPPDATA");
+    if (!a || !*a) return 1;
+    if (snprintf(out, cap, "%s", a) >= (int)cap) return 1;
+    return 0;
+}
+
 uint8_t *plat_file_read(const char *path, uint64_t *size) {
     wchar_t w[WPATH];
     if (!widen(path, w, WPATH)) return NULL;

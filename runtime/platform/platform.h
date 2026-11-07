@@ -253,6 +253,10 @@ int plat_dir_exists(const char *path);                    // 1 for a directory
 // path made absolute against the working directory (not resolved further); 0 when it does not fit cap.
 int plat_full_path(const char *path, char *out, size_t cap);
 void plat_file_mkdir_p(const char *path);                 // creates every missing directory of path, itself included
+// Where a user's own data belongs for this OS, as a root the caller names an app folder under: XDG_DATA_HOME when it
+// is set and absolute, else ~/.local/share (Linux); %LOCALAPPDATA% (Windows). 0 on success, 1 when there is no such
+// place (no HOME, no LOCALAPPDATA), in which case out is untouched. Never creates the directory.
+int plat_user_data_dir(char *out, size_t cap);
 // Whole file into a malloc'd buffer with a NUL after the last byte; NULL when missing, empty or over 1 GiB.
 uint8_t *plat_file_read(const char *path, uint64_t *size);
 int plat_file_write(const char *path, const void *data, size_t n);   // create or truncate; 1 when all n bytes landed

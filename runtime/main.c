@@ -448,7 +448,19 @@ static int usage(const char *argv0) {
 // Paths for a copied folder (tools/package_build.py). Per path: TOTK_EXEFS, TOTK_ROMFS, TOTK_PROFILE_DIR, else the
 // folder next to totk.exe (exefs with main.npdm, romfs with romfs.bin, any profile folder) if it is there, else the
 // path baked in at build time. A relative value is relative to totk.exe's folder.
-static char pp_exefs[PLAT_PATH_MAX * 2], pp_romfs[PLAT_PATH_MAX * 2], pp_profile[PLAT_PATH_MAX * 2];
+static char pp_exefs[PLAT_PATH_MAX * 2], pp_romfs[PLAT_PATH_MAX * 2], pp_profile[PLAT_PATH_MAX * 2],
+          pp_data[PLAT_PATH_MAX * 3];
+
+// Save data is the player's, not the program's, so an installed game keeps it out of the program folder: under this
+// OS's per-user data directory (~/.local/share/ocarina-recomp, or %LOCALAPPDATA%\ocarina-recomp). A "profile" folder
+// next to the executable still means a portable copy, and that wins here as it does in portable_path below.
+static const char *profile_home(const char *build_default) {
+    if (plat_user_data_dir(pp_data, sizeof pp_data)) return build_default;
+    size_t n = strlen(pp_data);
+    if (n + sizeof "/ocarina-recomp" > sizeof pp_data) return build_default;
+    memcpy(pp_data + n, "/ocarina-recomp", sizeof "/ocarina-recomp");   // the NUL comes with it
+    return pp_data;
+}
 
 static const char *portable_path(const char *dir, const char *var, const char *sub, const char *must, char *out, size_t cap,
                                  const char *fallback) {
@@ -474,7 +486,8 @@ static void portable_paths(RtConfig *c) {
     *cut = 0;
     c->exefs = portable_path(exe, "TOTK_EXEFS", "exefs", "main.npdm", pp_exefs, sizeof pp_exefs, c->exefs);
     c->romfs = portable_path(exe, "TOTK_ROMFS", "romfs", "romfs.bin", pp_romfs, sizeof pp_romfs, c->romfs);
-    c->profile = portable_path(exe, "TOTK_PROFILE_DIR", "profile", NULL, pp_profile, sizeof pp_profile, c->profile);
+    c->profile = portable_path(exe, "TOTK_PROFILE_DIR", "profile", NULL, pp_profile, sizeof pp_profile,
+                               profile_home(c->profile));
 }
 
 int main(int argc, char **argv) {

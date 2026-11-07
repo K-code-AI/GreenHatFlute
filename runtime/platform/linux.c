@@ -671,6 +671,22 @@ void plat_file_mkdir_p(const char *path) {
     mkdir(tmp, 0755);
 }
 
+// XDG Base Directory: a relative XDG_DATA_HOME is not a valid value, so it falls back to ~/.local/share the way an
+// unset one does. The environment is read rather than a desktop API, so no new library enters the link.
+int plat_user_data_dir(char *out, size_t cap) {
+    const char *x = getenv("XDG_DATA_HOME");
+    if (x && *x == '/') {
+        if (snprintf(out, cap, "%s", x) >= (int)cap) return 1;
+        return 0;
+    }
+    const char *home = getenv("HOME");
+    if (home && *home) {
+        if (snprintf(out, cap, "%s/.local/share", home) >= (int)cap) return 1;
+        return 0;
+    }
+    return 1;
+}
+
 static int write_all(int fd, const void *data, size_t n) {
     const uint8_t *p = data;
     while (n) {
