@@ -129,11 +129,29 @@ The compile takes about 7 minutes on 16 cores and links a 305 MB ELF (`build/oot
 
 ```sh
 build/oot111/ocarina --selftest          # layout, dispatch table, host functions: no game files needed
-instalador/jogar-ocarina.sh              # the same settings as the Windows shortcut
+jogar/jogar-ocarina.sh                   # the same settings as the Windows shortcut
 ```
+
+The window works on **Wayland and X11** alike: SDL3 picks the session's own back end and logs which one it took
+(`gfx: SDL 3.4.18, video driver wayland`). Nothing chooses a driver for you, so an existing `DISPLAY` wins; set
+`SDL_VIDEODRIVER=wayland` or `=x11` to decide.
 
 The probes open a window, so from an SSH session they need the desktop session's display: on Wayland
 `XDG_RUNTIME_DIR=/run/user/$(id -u) WAYLAND_DISPLAY=wayland-1 SDL_VIDEODRIVER=wayland`, on X11 `DISPLAY=:0`.
+
+## 9. Install it as a desktop app (optional)
+
+```sh
+python tools/install_linux.py            # menu entry, icon and ocarina-recomp on PATH
+```
+
+It writes only under XDG paths (`~/.local/share`, `~/.local/bin`), so it needs no root and touches nothing in `/usr`.
+The icon comes from the PNG sizes already inside `runtime/totk.ico`; the menu entry is `jogar/ocarina-recomp.desktop`
+with the launcher's path filled in. `--dry-run` shows what would be written, `--uninstall` removes it.
+
+Saves, cache and the log live in **`~/.local/share/ocarina-recomp`** (or `$XDG_DATA_HOME/ocarina-recomp`), not next to
+the executable, so the build folder can be moved or deleted without losing a game. `TOTK_PROFILE_DIR` or `--profile DIR`
+still overrides that; a `profile` folder next to the executable means a portable copy and wins.
 
 ## What differs from Windows
 
@@ -152,7 +170,7 @@ The probes open a window, so from an SSH session they need the desktop session's
 | `vpx/vp8dx.h: file not found` | `CPATH` is not set to the folder you built libvpx in (step 1) |
 | `undefined reference to dav1d_*` | install dav1d, or point `LIBRARY_PATH` at one you built |
 | `invalid linker name in argument '-fuse-ld=lld'` | an old clang without lld: install lld, or update `build_game.py` (it now falls back to the system `ld`) |
-| `device-local allocation failed (-2)` | the card's free VRAM is smaller than the game's pools: close what holds it and check with `nvidia-smi` |
+| `device-local allocation failed (-2)` | the card's free VRAM is smaller than the game's pools: close what holds it and check with `nvidia-smi`. The run survives on host memory (the log says `keeps the game's storage`) but slowly |
 | `gpu 0 skipped: no graphics+compute+present queue family` | no display for the probe: see step 8 |
 
 Do not share `ocarina`, `generated/` or `build/`: they come from your game.
