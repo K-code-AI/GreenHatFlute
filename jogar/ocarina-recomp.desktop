@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Ocarina Recomp
+Name[pt]=Ocarina Recomp
+Comment=The Legend of Zelda: Ocarina of Time, recompiled to run natively
+Comment[pt]=The Legend of Zelda: Ocarina of Time, recompilado para rodar nativamente
+Exec=@LAUNCHER@
+Icon=ocarina-recomp
+Terminal=false
+Categories=Game;
+Keywords=zelda;oot;nintendo;switch;recomp;
+# Wayland groups a window under the desktop entry whose name matches the app id SDL sets (gfx_window_sdl.c);
+# StartupWMClass does the same on X11. Both say ocarina-recomp.
+StartupWMClass=ocarina-recomp
