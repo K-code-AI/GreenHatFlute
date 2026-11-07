@@ -313,7 +313,7 @@ static void init_paths(void *param) {
         for (char *cut = plat_last_sep(exe); cut; cut = plat_last_sep(exe)) {
             *cut = 0;
             char probe[PATH_CAP + 32];
-            snprintf(probe, sizeof probe, "%s/build/xlate/greenhatflute_xlate" PLAT_EXE_SUFFIX, exe);
+            snprintf(probe, sizeof probe, "%s/build/xlate/greenhatflute_xlate", exe);
             if (file_exists(probe)) {
                 strcpy(root, exe);
                 break;
@@ -322,10 +322,10 @@ static void init_paths(void *param) {
     }
     const char *xlate_cfg = cfg_get("GHF_XLATE"), *cache_cfg = cfg_get("GHF_SHADER_CACHE");
     char beside[PATH_CAP + 32];   // a packaged folder (tools/package_build.py) keeps the translator next to GreenHatFlute
-    if (exe_dir[0]) snprintf(beside, sizeof beside, "%s/greenhatflute_xlate" PLAT_EXE_SUFFIX, exe_dir);
+    if (exe_dir[0]) snprintf(beside, sizeof beside, "%s/greenhatflute_xlate", exe_dir);
     if (xlate_cfg && *xlate_cfg && strlen(xlate_cfg) < sizeof xlate_exe) strcpy(xlate_exe, xlate_cfg);
     else if (exe_dir[0] && file_exists(beside)) strcpy(xlate_exe, beside);
-    else if (root[0]) snprintf(xlate_exe, sizeof xlate_exe, "%s/build/xlate/greenhatflute_xlate" PLAT_EXE_SUFFIX, root);
+    else if (root[0]) snprintf(xlate_exe, sizeof xlate_exe, "%s/build/xlate/greenhatflute_xlate", root);
     if (cache_cfg && *cache_cfg && strlen(cache_cfg) < sizeof cache_dir) strcpy(cache_dir, cache_cfg);
     else if (exe_dir[0]) snprintf(cache_dir, sizeof cache_dir, "%s/shader-cache", exe_dir);
     xlate_identity();

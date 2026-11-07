@@ -403,93 +403,6 @@ static int ap_disabled(const RtThread *t) { return g_ap > 0 && ap_tlr(t)[0]; }
 // in kern_ap_yield and jumps back to kern_ap_rip(), whose value it first stores in the return slot it reserved at
 // entry, so a stack walk sees the interrupted function as its caller. No ret: the jump keeps call/return pairs
 // balanced. The waiter never writes the owner's stack.
-#ifdef _WIN32
-__asm__(".text\n"
-        ".globl kern_ap_stub\n"
-        ".def kern_ap_stub; .scl 2; .type 32; .endef\n"
-        ".p2align 4\n"
-        "kern_ap_stub:\n"
-        ".seh_proc kern_ap_stub\n"
-        "    leaq -8(%rsp), %rsp\n"   // not sub: the flags are still the interrupted code's until pushfq
-        ".seh_stackalloc 8\n"
-        "    pushfq\n"
-        ".seh_stackalloc 8\n"
-        "    pushq %rax\n"
-        ".seh_pushreg %rax\n"
-        "    pushq %rcx\n"
-        ".seh_pushreg %rcx\n"
-        "    pushq %rdx\n"
-        ".seh_pushreg %rdx\n"
-        "    pushq %r8\n"
-        ".seh_pushreg %r8\n"
-        "    pushq %r9\n"
-        ".seh_pushreg %r9\n"
-        "    pushq %r10\n"
-        ".seh_pushreg %r10\n"
-        "    pushq %r11\n"
-        ".seh_pushreg %r11\n"
-        "    pushq %rbp\n"
-        ".seh_pushreg %rbp\n"
-        "    movq %rsp, %rbp\n"
-        ".seh_setframe %rbp, 0\n"
-        ".seh_endprologue\n"
-        "    andq $-32, %rsp\n"
-        "    subq $576, %rsp\n"   // 0: shadow space, 32: MXCSR saved, 36: MXCSR default, 64: YMM0-15
-        "    vmovdqa %ymm0, 64(%rsp)\n"
-        "    vmovdqa %ymm1, 96(%rsp)\n"
-        "    vmovdqa %ymm2, 128(%rsp)\n"
-        "    vmovdqa %ymm3, 160(%rsp)\n"
-        "    vmovdqa %ymm4, 192(%rsp)\n"
-        "    vmovdqa %ymm5, 224(%rsp)\n"
-        "    vmovdqa %ymm6, 256(%rsp)\n"
-        "    vmovdqa %ymm7, 288(%rsp)\n"
-        "    vmovdqa %ymm8, 320(%rsp)\n"
-        "    vmovdqa %ymm9, 352(%rsp)\n"
-        "    vmovdqa %ymm10, 384(%rsp)\n"
-        "    vmovdqa %ymm11, 416(%rsp)\n"
-        "    vmovdqa %ymm12, 448(%rsp)\n"
-        "    vmovdqa %ymm13, 480(%rsp)\n"
-        "    vmovdqa %ymm14, 512(%rsp)\n"
-        "    vmovdqa %ymm15, 544(%rsp)\n"
-        "    stmxcsr 32(%rsp)\n"
-        "    movl $0x1f80, 36(%rsp)\n"
-        "    ldmxcsr 36(%rsp)\n"
-        "    cld\n"
-        "    vzeroupper\n"
-        "    call kern_ap_rip\n"
-        "    movq %rax, 72(%rbp)\n"   // the return slot: rbp + 8 pushes + pushfq
-        "    call kern_ap_yield\n"
-        "    ldmxcsr 32(%rsp)\n"
-        "    vmovdqa 64(%rsp), %ymm0\n"
-        "    vmovdqa 96(%rsp), %ymm1\n"
-        "    vmovdqa 128(%rsp), %ymm2\n"
-        "    vmovdqa 160(%rsp), %ymm3\n"
-        "    vmovdqa 192(%rsp), %ymm4\n"
-        "    vmovdqa 224(%rsp), %ymm5\n"
-        "    vmovdqa 256(%rsp), %ymm6\n"
-        "    vmovdqa 288(%rsp), %ymm7\n"
-        "    vmovdqa 320(%rsp), %ymm8\n"
-        "    vmovdqa 352(%rsp), %ymm9\n"
-        "    vmovdqa 384(%rsp), %ymm10\n"
-        "    vmovdqa 416(%rsp), %ymm11\n"
-        "    vmovdqa 448(%rsp), %ymm12\n"
-        "    vmovdqa 480(%rsp), %ymm13\n"
-        "    vmovdqa 512(%rsp), %ymm14\n"
-        "    vmovdqa 544(%rsp), %ymm15\n"
-        "    movq %rbp, %rsp\n"
-        "    popq %rbp\n"
-        "    popq %r11\n"
-        "    popq %r10\n"
-        "    popq %r9\n"
-        "    popq %r8\n"
-        "    popq %rdx\n"
-        "    popq %rcx\n"
-        "    popq %rax\n"
-        "    popfq\n"
-        "    leaq 8(%rsp), %rsp\n"
-        "    jmpq *-8(%rsp)\n"
-        ".seh_endproc\n");
-#else
 // The System V version: rsi and rdi are volatile there too, and the interrupted code may keep data in the 128 bytes
 // below its stack pointer (the red zone), so the return slot and the saves go below that. Without a red zone in the
 // way the slot is at entry - 136; the exit restores rsp to the entry value and jumps through the slot.
@@ -571,7 +484,6 @@ __asm__(".text\n"
         "    jmpq *-136(%rsp)\n"
         "    .cfi_endproc\n"
         ".size kern_ap_stub, .-kern_ap_stub\n");
-#endif
 
 enum { AP_NONE, AP_RETRY, AP_SENT };
 
@@ -1433,11 +1345,10 @@ static void thread_finish(RtThread *t) {
     unlock();
 }
 
-// ExitThread: back to the thread start with longjmp. On Windows the default MinGW setjmp records the stack frame,
-// which the CRT needs to validate the target when SetContextIpValidation is enabled. The non-SEH variant records a
-// null frame and longjmp fails with FAST_FAIL_INVALID_SET_OF_CONTEXT on such systems.
-// (__builtin_setjmp is not usable: on Win64 LLVM saves the frame address, which is not rbp when the frame register
-// is offset, and the landing code then reads its locals through the wrong base.)
+// ExitThread: back to the thread start with longjmp. setjmp filled t->exit_jmp there (thread_start, guest_main), and
+// that frame is alive for as long as the host thread is: both longjmp only between the setjmp and their own return.
+// (__builtin_setjmp is not usable: it saves the frame address, which is not rbp when the frame register is offset,
+// and the landing code then reads its locals through the wrong base.)
 static __attribute__((noreturn)) void exit_now(RtThread *t) { longjmp(t->exit_jmp, 1); }
 
 // The calling host thread, for ap_try (GHF_ASYNC_PREEMPT) and dg_sample (GHF_CORE_DIAG).
@@ -1461,10 +1372,6 @@ static void thread_main(void *p) {
     Cpu *c = t->cpu;
     c->sp = t->stack_top & ~15ull;
     if (!setjmp(t->exit_jmp)) {
-#ifdef _WIN32   // the CRT needs this frame to validate longjmp when SetContextIpValidation is enabled
-        if (!((_JUMP_BUFFER *)t->exit_jmp)->Frame)
-            rt_fatal("kernel: setjmp recorded no frame; ExitThread would fail fast");
-#endif
         rt_call(c, t->entry, 1, t->arg);
         char d[128];
         rt_fatal("guest thread %#x: entry %s returned (Horizon threads end with ExitThread)", t->handle,
@@ -1525,10 +1432,6 @@ static void guest_main(void *p) {
     Cpu *c;
     kern_main_thread(&c);
     if (!setjmp(tcur->exit_jmp)) {
-#ifdef _WIN32   // the CRT needs this frame to validate longjmp when SetContextIpValidation is enabled
-        if (!((_JUMP_BUFFER *)tcur->exit_jmp)->Frame)
-            rt_fatal("kernel: setjmp recorded no frame; ExitThread would fail fast");
-#endif
         fn(c);
     }
     thread_finish(tcur);
@@ -1541,9 +1444,9 @@ void kern_run_on_guest_main(void (*fn)(Cpu *c)) {
     plat_thread_join(h);
 }
 
-// The OS timer ends a wait late by up to PLAT_WAIT_LATE_NS (Windows' high-resolution waitable timer: 0.3-0.5 ms; the
-// SDK's 20 us polling sleeps, main thread and job workers, about 1.5 per frame each, took 460-515 us). Sleeps up to
-// twice that spin on the clock instead (1 ms on Windows, 120 us on Linux); the virtual core is already given up.
+// The OS timer ends a wait late by up to PLAT_WAIT_LATE_NS (clock_nanosleep with a 1 us timer slack, plus the
+// scheduler's wakeup). The SDK's 20 us polling sleeps, main thread and job workers, about 1.5 per frame each, measured
+// 460-515 us; sleeps up to twice the lateness spin on the clock instead (120 us here). The virtual core is already given up.
 #define SLEEP_SPIN_NS (2 * PLAT_WAIT_LATE_NS)
 static void sleep_ns(RtThread *t, int64_t ns) {
     (void)t;

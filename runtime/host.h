@@ -98,14 +98,9 @@ typedef struct { const char *name; GuestFn fn; } RtHostEntry;
 #define RT_CAT2(a, b) a##b
 #define RT_CAT(a, b) RT_CAT2(a, b)
 // File-scope declarations; fn must be declared before. The loader binds them by symbol name. The entries of every
-// object file meet in one section per kind, which hostfn.c walks: on PE/COFF ".ovr$m", which the linker sorts between
-// hostfn.c's ".ovr$a" and ".ovr$z" markers; on ELF "ghf_ovr", which the linker brackets with __start_ghf_ovr and
-// __stop_ghf_ovr.
-#ifdef _WIN32
-#define RT_HOST_SECTION(kind) section("." #kind "$m")
-#else
+// object file meet in one section per kind, which hostfn.c walks: the linker brackets "ghf_ovr" and "ghf_obs" with
+// __start_ghf_ovr / __stop_ghf_ovr and __start_ghf_obs / __stop_ghf_obs.
 #define RT_HOST_SECTION(kind) section("ghf_" #kind)
-#endif
 #define HOST_OVERRIDE(sym, fn) /* replaces sym in every GOT/GLOB_DAT/ABS64 of every module */                  \
     __attribute__((used, RT_HOST_SECTION(ovr))) static const RtHostEntry RT_CAT(rt_ovr_, __COUNTER__) = {sym, fn}
 #define HOST_OBSERVER(sym, fn) /* JUMP_SLOT only; fn calls rt_original(c) */                                    \

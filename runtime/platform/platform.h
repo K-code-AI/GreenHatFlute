@@ -100,11 +100,7 @@ static inline uint64_t plat_scaled(PlatScale s, uint64_t t) {
 void plat_sleep_ns(uint64_t ns);          // returns no earlier than ns later; overshoot well under 1 ms
 // Sleeps about ns on the OS's high-resolution timer without spinning: wakes up to PLAT_WAIT_LATE_NS late, never early.
 void plat_wait_ns(uint64_t ns);
-#ifdef _WIN32
-#define PLAT_WAIT_LATE_NS 500000u   // high-resolution waitable timer
-#else
 #define PLAT_WAIT_LATE_NS 60000u    // clock_nanosleep with a 1 us timer slack (plat_timer_1ms), scheduler wakeup
-#endif
 static inline uint64_t plat_now_ms(void) { return plat_now_ns() / 1000000u; }
 void plat_sleep_ms(uint32_t ms);          // coarse sleep: the scheduler's granularity, no spinning
 
@@ -271,14 +267,9 @@ int plat_file_replace(const char *from, const char *to);  // rename, replacing t
 int plat_file_write_atomic(const char *path, const void *data, size_t n);
 int plat_file_flush(const char *path);                   // flushes a written file's data to the disk; 1 on success
 int plat_file_sync(FILE *f);                              // fflush, then the file's data to the disk; 1 on success
-// fseek and ftell with 64-bit offsets (a long is 32 bits on Windows).
-#ifdef _WIN32
-static inline int plat_fseek64(FILE *f, int64_t off, int whence) { return _fseeki64(f, off, whence); }
-static inline int64_t plat_ftell64(FILE *f) { return _ftelli64(f); }
-#else
+// fseek and ftell with 64-bit offsets.
 static inline int plat_fseek64(FILE *f, int64_t off, int whence) { return fseeko(f, (off_t)off, whence); }
 static inline int64_t plat_ftell64(FILE *f) { return (int64_t)ftello(f); }
-#endif
 void plat_file_delete(const char *path);
 int plat_file_truncate(const char *path, uint64_t size);  // 1 on success
 int64_t plat_file_size(const char *path);                 // bytes of a file, -1 when missing or unreadable
@@ -340,11 +331,6 @@ uintptr_t plat_exe_base(void);                            // where the executabl
 // address into *base. 0 when none.
 int plat_module_of(uintptr_t addr, char *name, size_t cap, uintptr_t *base);
 #define PLAT_PATH_MAX 1024   // path buffers of the runtime
-#ifdef _WIN32
-#define PLAT_EXE_SUFFIX ".exe"   // of the programs the runtime starts (greenhatflute_xlate)
-#else
-#define PLAT_EXE_SUFFIX ""
-#endif
 // The last directory separator in path ('/' or '\\'), NULL when there is none.
 static inline char *plat_last_sep(const char *path) {
     char *last = NULL;
